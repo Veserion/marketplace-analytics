@@ -157,6 +157,16 @@
   font-size: 14px;
 }
 
+.loader {
+  margin: 10px 0 0;
+  color: #123c72;
+  background: #eaf3ff;
+  padding: 10px 12px;
+  border: 1px solid #c5daf7;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
 .warning {
   margin: 10px 0 0;
   color: #784200;
@@ -222,12 +232,16 @@
 
 .result-row {
   display: grid;
-  grid-template-columns: 1.3fr 0.9fr 1.8fr;
+  grid-template-columns: 1.3fr 0.9fr;
   gap: 12px;
   align-items: center;
   padding: 11px 12px;
   background: #fbfdff;
   border-bottom: 1px solid #e0e8f5;
+}
+
+.result-row-compact {
+  grid-template-columns: 1.3fr 0.9fr;
 }
 
 .result-row:nth-child(even) {
@@ -243,6 +257,9 @@
   color: #35516f;
   font-size: 14px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .metric-value {
@@ -253,11 +270,50 @@
   font-weight: 700;
 }
 
+.metric-value-positive {
+  color: #1f8b4c;
+}
+
+.metric-value-negative {
+  color: #c62828;
+}
+
 .metric-formula {
   margin: 0;
   color: #4f6989;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.metric-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #335b90;
+  cursor: default;
+}
+
+.metric-tooltip svg {
+  width: 20px;
+  height: 20px;
+}
+
+.formula-tooltip-portal {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  min-width: 220px;
+  max-width: min(420px, 65vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1f2d40;
+  color: #f5f9ff;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 8px 22px rgba(15, 30, 55, 0.28);
+  pointer-events: none;
+  z-index: 1000;
 }
 
 @media (max-width: 860px) {
