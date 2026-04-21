@@ -278,13 +278,6 @@
   color: #c62828;
 }
 
-.metric-formula {
-  margin: 0;
-  color: #4f6989;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .metric-tooltip {
   display: inline-flex;
   align-items: center;
