@@ -10,7 +10,6 @@ import {
 } from '@/entities/ozon-report'
 import type {
   AccrualGroup,
-  Marketplace,
   MetricKey,
   OzonCalculationType,
   ReportGroup,
@@ -131,8 +130,7 @@ function renderAccrualPdf(
   }
 }
 
-export function useAnalyticsPage() {
-  const [activeMarketplace, setActiveMarketplace] = useState<Marketplace>('ozon')
+export function useOzonAnalyticsPage() {
   const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('unitEconomics')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
   const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
@@ -149,7 +147,7 @@ export function useAnalyticsPage() {
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
-  const isOzonUnitEconomics = activeMarketplace === 'ozon' && ozonCalculationType === 'unitEconomics'
+  const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
   const selectedMetricSet = useMemo(() => new Set<MetricKey>(selectedMetrics), [selectedMetrics])
   const unitReportBuild = useMemo(() => {
     if (!isOzonUnitEconomics || !unitCsvSource) return { reports: null as ReportGroup[] | null, error: '' }
@@ -187,11 +185,6 @@ export function useAnalyticsPage() {
   const error = uploadError || modeError
   const hasResults = isOzonUnitEconomics ? Boolean(unitReports) : Boolean(accrualReports)
 
-  const onSwitchMarketplace = (marketplace: Marketplace): void => {
-    setActiveMarketplace(marketplace)
-    setUploadError('')
-  }
-
   const onSwitchOzonCalculation = (calcType: OzonCalculationType): void => {
     setOzonCalculationType(calcType)
     setUploadError('')
@@ -227,10 +220,6 @@ export function useAnalyticsPage() {
 
     try {
       const text = await file.text()
-      if (activeMarketplace === 'wildberries') {
-        throw new Error('Расчёт для Wildberries пока не реализован.')
-      }
-
       if (ozonCalculationType === 'accrualReport') {
         setAccrualCsvSource(text)
         setAccrualFileName(file.name)
@@ -268,7 +257,6 @@ export function useAnalyticsPage() {
   }, [taxRatePercent])
 
   useEffect(() => {
-    if (activeMarketplace !== 'ozon') return
     let isCancelled = false
     Promise.all([getCsvRecord('unitEconomics'), getCsvRecord('accrualReport')])
       .then(([unitRecord, accrualRecord]) => {
@@ -290,7 +278,7 @@ export function useAnalyticsPage() {
     return () => {
       isCancelled = true
     }
-  }, [activeMarketplace, ozonCalculationType])
+  }, [ozonCalculationType])
 
   const downloadPdf = async (): Promise<void> => {
     if (isOzonUnitEconomics && !unitReports) return
@@ -334,7 +322,6 @@ export function useAnalyticsPage() {
   return {
     accrualReports,
     accrualArticlePattern,
-    activeMarketplace,
     articlePattern,
     clearMetrics,
     downloadPdf,
@@ -346,7 +333,6 @@ export function useAnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     onFileUpload,
-    onSwitchMarketplace,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,
@@ -357,7 +343,6 @@ export function useAnalyticsPage() {
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
-    showWildberriesWarning: activeMarketplace === 'wildberries',
     taxRatePercent,
     toggleMetric,
     unitReports,

@@ -542,14 +542,12 @@ export function buildAccrualReports(
           formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи"',
           shareText: salesBase ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format((Math.abs(marketplaceExpenses) / salesBase) * 100)}%` : null,
         },
-        ...(accrualCogsFromUnitMap !== null
-          ? [{
-              label: 'Себестоимость',
-              value: accrualCogsFromUnitMap,
-              type: 'currency' as const,
-              formula: 'Σ("Количество" * "Себестоимость артикула"), где "Тип начисления" = "Выручка", а себестоимость артикула берется из отчета "Юнит экономика" за тот же период',
-            }]
-          : []),
+        {
+          label: 'Себестоимость',
+          value: accrualCogsFromUnitMap,
+          type: 'currency',
+          formula: 'Σ("Количество" * "Себестоимость артикула"), где "Тип начисления" = "Выручка", а себестоимость артикула берется из отчета "Юнит экономика" за тот же период',
+        },
         {
           label: 'Налог',
           value: tax11,

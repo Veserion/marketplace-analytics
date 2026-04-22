@@ -1,0 +1,25 @@
+.WildberriesPage {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.WildberriesPage__hero {
+  background: linear-gradient(120deg, #2f264a 0%, #5b3278 55%, #7a3f8f 100%);
+  border-radius: 20px;
+  padding: 26px 28px;
+  color: #f5f9ff;
+  box-shadow: 0 20px 60px rgba(27, 16, 44, 0.22);
+}
+
+.WildberriesPage__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.86;
+}
+
+.WildberriesPage__subtitle {
+  margin-top: 10px;
+  max-width: 760px;
+  opacity: 0.92;
+}

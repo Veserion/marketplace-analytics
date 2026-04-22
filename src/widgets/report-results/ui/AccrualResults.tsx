@@ -17,6 +17,7 @@ const AVERAGE_LABEL = 'Среднее начисление на строку'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
+const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
 
 type AccrualResultsProps = {
@@ -35,6 +36,9 @@ function isSecondaryMetric(label: string): boolean {
 }
 
 function getPrimaryMetricValueClassName(label: string, value: number | null): string {
+  if (label === COGS_LABEL && value === null) {
+    return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--muted`)
+  }
   if (label === CANCELLATIONS_AND_RETURNS_LABEL || label === TAX_LABEL || label === COGS_LABEL) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--negative`)
   }
@@ -45,11 +49,15 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
 }
 
 function toMetricRow(reportTitle: string, metric: AccrualGroup['metrics'][number], valueClassName: string, labelColor?: 'accent' | 'muted'): UiMetricsListRow {
+  const valueText = metric.label === COGS_LABEL && metric.value === null
+    ? COGS_MISSING_VALUE_TEXT
+    : formatValue(metric.value, metric.type)
+
   return {
     id: `${reportTitle}-${metric.label}`,
     label: metric.label,
     formula: metric.formula,
-    valueText: formatValue(metric.value, metric.type),
+    valueText,
     percentText: metric.shareText,
     valueClassName,
     labelColor,

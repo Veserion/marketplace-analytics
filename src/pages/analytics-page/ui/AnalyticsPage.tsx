@@ -1,10 +1,11 @@
 import classNames from 'classnames/bind'
+import { useNavigate } from 'react-router-dom'
 import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { MetricsSelectorPanel } from '@/features/metrics-selector'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
-import { useAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsPage'
+import { useOzonAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsPage'
 import { Typography, UiPanel } from '@/shared/ui-kit'
 import { AccrualResults, UnitEconomicsResults } from '@/widgets/report-results'
 import styles from './AnalyticsPage.module.scss'
@@ -13,10 +14,10 @@ const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AnalyticsPage'
 
 export function AnalyticsPage() {
+  const navigate = useNavigate()
   const {
     accrualReports,
     accrualArticlePattern,
-    activeMarketplace,
     articlePattern,
     clearMetrics,
     downloadPdf,
@@ -28,7 +29,6 @@ export function AnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     onFileUpload,
-    onSwitchMarketplace,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,
@@ -39,12 +39,15 @@ export function AnalyticsPage() {
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
-    showWildberriesWarning,
     taxRatePercent,
     toggleMetric,
     unitReports,
     vatRatePercent,
-  } = useAnalyticsPage()
+  } = useOzonAnalyticsPage()
+
+  const onSwitchMarketplace = (marketplace: 'wildberries' | 'ozon'): void => {
+    navigate(marketplace === 'wildberries' ? '/wildberries' : '/ozon')
+  }
 
   return (
     <main className={cn(BLOCK_NAME)}>
@@ -58,29 +61,25 @@ export function AnalyticsPage() {
         </Typography>
       </header>
 
-      <MarketplaceTabs activeMarketplace={activeMarketplace} onChange={onSwitchMarketplace} />
+      <MarketplaceTabs activeMarketplace="ozon" onChange={onSwitchMarketplace} />
 
-      {activeMarketplace === 'ozon' && (
-        <UiPanel title="Вариант расчёта">
-          <OzonCalculationTabs value={ozonCalculationType} onChange={onSwitchOzonCalculation} />
-        </UiPanel>
-      )}
+      <UiPanel title="Вариант расчёта">
+        <OzonCalculationTabs value={ozonCalculationType} onChange={onSwitchOzonCalculation} />
+      </UiPanel>
 
-      {activeMarketplace === 'ozon' && (
-        <UnitExtraParamsPanel
-          isOpen={isExtraParamsOpen}
-          isAccrualMode={!isOzonUnitEconomics}
-          unitArticlePattern={articlePattern}
-          accrualArticlePattern={accrualArticlePattern}
-          vatRatePercent={vatRatePercent}
-          taxRatePercent={taxRatePercent}
-          onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
-          onUnitArticlePatternChange={setArticlePattern}
-          onAccrualArticlePatternChange={setAccrualArticlePattern}
-          onVatRateChange={onVatRateChange}
-          onTaxRateChange={onTaxRateChange}
-        />
-      )}
+      <UnitExtraParamsPanel
+        isOpen={isExtraParamsOpen}
+        isAccrualMode={!isOzonUnitEconomics}
+        unitArticlePattern={articlePattern}
+        accrualArticlePattern={accrualArticlePattern}
+        vatRatePercent={vatRatePercent}
+        taxRatePercent={taxRatePercent}
+        onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
+        onUnitArticlePatternChange={setArticlePattern}
+        onAccrualArticlePatternChange={setAccrualArticlePattern}
+        onVatRateChange={onVatRateChange}
+        onTaxRateChange={onTaxRateChange}
+      />
 
       {isOzonUnitEconomics && (
         <MetricsSelectorPanel
@@ -98,7 +97,7 @@ export function AnalyticsPage() {
         hasResults={hasResults}
         fileName={fileName}
         error={error}
-        showWildberriesWarning={showWildberriesWarning}
+        showWildberriesWarning={false}
         onFileUpload={onFileUpload}
         onDownloadPdf={downloadPdf}
       />
