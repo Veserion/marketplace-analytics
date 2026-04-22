@@ -1,5 +1,4 @@
 import classNames from 'classnames/bind'
-import { ArticlePatternPanel } from '@/features/article-pattern-filter'
 import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { MetricsSelectorPanel } from '@/features/metrics-selector'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
@@ -71,20 +70,15 @@ export function AnalyticsPage() {
         <UnitExtraParamsPanel
           isOpen={isExtraParamsOpen}
           isAccrualMode={!isOzonUnitEconomics}
+          unitArticlePattern={articlePattern}
           accrualArticlePattern={accrualArticlePattern}
           vatRatePercent={vatRatePercent}
           taxRatePercent={taxRatePercent}
           onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
+          onUnitArticlePatternChange={setArticlePattern}
           onAccrualArticlePatternChange={setAccrualArticlePattern}
           onVatRateChange={onVatRateChange}
           onTaxRateChange={onTaxRateChange}
-        />
-      )}
-
-      {isOzonUnitEconomics && (
-        <ArticlePatternPanel
-          pattern={articlePattern}
-          onPatternChange={setArticlePattern}
         />
       )}
 

@@ -213,7 +213,6 @@ export function buildUnitEconomicsReports(
   }
 
   const matchedRows = dataRows.filter((row) => matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
-  const otherRows = dataRows.filter((row) => !matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
   const printablePattern = articlePattern.trim() || '*'
 
   return [
@@ -224,14 +223,6 @@ export function buildUnitEconomicsReports(
       vatRatePercent,
       taxRatePercent,
       `Артикул соответствует паттерну "${printablePattern}"`,
-    ),
-    buildUnitEconomicsReport(
-      otherRows,
-      headers,
-      getCell,
-      vatRatePercent,
-      taxRatePercent,
-      'Все остальные товары',
     ),
   ]
 }

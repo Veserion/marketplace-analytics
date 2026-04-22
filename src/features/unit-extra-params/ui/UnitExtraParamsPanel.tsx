@@ -8,10 +8,12 @@ const BLOCK_NAME = 'UnitExtraParamsPanel'
 type UnitExtraParamsPanelProps = {
   isOpen: boolean
   isAccrualMode?: boolean
+  unitArticlePattern?: string
   accrualArticlePattern?: string
   vatRatePercent: number
   taxRatePercent: number
   onToggleOpen: () => void
+  onUnitArticlePatternChange?: (pattern: string) => void
   onAccrualArticlePatternChange?: (pattern: string) => void
   onVatRateChange: (value: number) => void
   onTaxRateChange: (value: number) => void
@@ -20,14 +22,22 @@ type UnitExtraParamsPanelProps = {
 export function UnitExtraParamsPanel({
   isOpen,
   isAccrualMode = false,
+  unitArticlePattern = '*',
   accrualArticlePattern = '*',
   vatRatePercent,
   taxRatePercent,
   onToggleOpen,
+  onUnitArticlePatternChange,
   onAccrualArticlePatternChange,
   onVatRateChange,
   onTaxRateChange,
 }: UnitExtraParamsPanelProps) {
+  const activePattern = isAccrualMode ? accrualArticlePattern : unitArticlePattern
+  const onPatternChange = isAccrualMode ? onAccrualArticlePatternChange : onUnitArticlePatternChange
+  const patternHint = isAccrualMode
+    ? 'Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.'
+    : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
+
   return (
     <UiPanel className={cn(BLOCK_NAME)}>
       <UiSectionToggle title="Дополнительные параметры" isOpen={isOpen} onToggle={onToggleOpen} />
@@ -58,18 +68,18 @@ export function UnitExtraParamsPanel({
               />
             </label>
           </div>
-          {isAccrualMode && onAccrualArticlePatternChange && (
-            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="accrualArticlePatternInput">
+          {onPatternChange && (
+            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="articlePatternInput">
               <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
               <input
-                id="accrualArticlePatternInput"
+                id="articlePatternInput"
                 type="text"
-                value={accrualArticlePattern}
-                onChange={(event) => onAccrualArticlePatternChange(event.target.value)}
+                value={activePattern}
+                onChange={(event) => onPatternChange(event.target.value)}
                 placeholder="Например: st*"
               />
               <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
-                Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.
+                {patternHint}
               </Typography>
             </label>
           )}
