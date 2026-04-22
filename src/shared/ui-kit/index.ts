@@ -1,5 +1,8 @@
 export { UiPanel } from '@/shared/ui-kit/panel'
 export { UiSectionToggle } from '@/shared/ui-kit/section-toggle'
+export { UiTable } from '@/shared/ui-kit/table'
 export { UiTabs } from '@/shared/ui-kit/tabs'
+export { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
 export { Typography } from '@/shared/ui-kit/typography'
 export type { TypographyProps, TypographyVariant, TypographyColor, TypographyAlign } from '@/shared/ui-kit/typography'
+export type { UiTableColumn } from '@/shared/ui-kit/table'

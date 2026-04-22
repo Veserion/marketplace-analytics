@@ -1,0 +1,98 @@
+.UiTable {
+  overflow-x: auto;
+}
+
+.UiTable__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid #dbe4f1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.UiTable__head-row {
+  background: #f5f9ff;
+}
+
+.UiTable__th {
+  vertical-align: top;
+  text-align: left;
+  border-bottom: 1px solid #dbe4f1;
+  border-right: 1px solid #e7edf6;
+  padding: 10px;
+}
+
+.UiTable__th:last-child {
+  border-right: none;
+}
+
+.UiTable__head-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.UiTable__head-cell:only-child {
+  margin-bottom: 0;
+}
+
+.UiTable__title {
+  color: #173359;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.UiTable__sort-button {
+  border: 1px solid #c5d2e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #335b90;
+  cursor: pointer;
+  min-width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.UiTable__filter {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #c5d2e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173359;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.UiTable__row:nth-child(even) {
+  background: #fbfdff;
+}
+
+.UiTable__td {
+  border-top: 1px solid #e7edf6;
+  border-right: 1px solid #e7edf6;
+  padding: 10px;
+  font-size: 13px;
+  color: #173359;
+  word-break: break-word;
+}
+
+.UiTable__td:last-child {
+  border-right: none;
+}
+
+.UiTable__empty {
+  text-align: center;
+  color: #5f7391;
+  font-size: 13px;
+  padding: 16px;
+}

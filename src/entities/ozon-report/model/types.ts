@@ -69,4 +69,5 @@ export type AvailabilityGroups = {
 export type ProductMarginItem = {
   article: string
   marginSharePercent: number
+  profitPerUnit: number | null
 }

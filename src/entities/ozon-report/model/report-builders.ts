@@ -158,24 +158,30 @@ function buildUnitEconomicsReport(
     availabilityGroups.enough = sortArticles(enough)
   }
 
-  const productMargins: { article: string, marginSharePercent: number }[] = []
+  const productMargins: { article: string, marginSharePercent: number, profitPerUnit: number | null }[] = []
   if (headerSet.has('Артикул') && headerSet.has('Доля от продаж')) {
-    const marginByArticle = new Map<string, { sum: number, count: number }>()
+    const marginByArticle = new Map<string, { marginSum: number, marginCount: number, profitSum: number, profitCount: number }>()
     for (const row of rowsSubset) {
       const article = normalize(getCell(row, 'Артикул'))
       const margin = parseNumber(getCell(row, 'Доля от продаж'))
+      const profitPerUnit = parseNumber(getCell(row, 'Прибыль за шт'))
       if (!article || margin === null) continue
 
-      const current = marginByArticle.get(article) || { sum: 0, count: 0 }
-      current.sum += margin
-      current.count += 1
+      const current = marginByArticle.get(article) || { marginSum: 0, marginCount: 0, profitSum: 0, profitCount: 0 }
+      current.marginSum += margin
+      current.marginCount += 1
+      if (profitPerUnit !== null) {
+        current.profitSum += profitPerUnit
+        current.profitCount += 1
+      }
       marginByArticle.set(article, current)
     }
 
     for (const [article, stats] of marginByArticle.entries()) {
       productMargins.push({
         article,
-        marginSharePercent: stats.sum / stats.count,
+        marginSharePercent: stats.marginSum / stats.marginCount,
+        profitPerUnit: stats.profitCount > 0 ? stats.profitSum / stats.profitCount : null,
       })
     }
   }
