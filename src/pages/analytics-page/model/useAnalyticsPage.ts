@@ -15,6 +15,7 @@ import type {
   ReportGroup,
 } from '@/entities/ozon-report'
 import { formatValue } from '@/shared/lib/csv'
+import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
@@ -115,7 +116,7 @@ export function useAnalyticsPage() {
   const [activeMarketplace, setActiveMarketplace] = useState<Marketplace>('ozon')
   const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('unitEconomics')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
-  const [accrualReports, setAccrualReports] = useState<AccrualGroup[] | null>(null)
+  const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [fileName, setFileName] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -143,23 +144,33 @@ export function useAnalyticsPage() {
     }
   }, [articlePattern, isOzonUnitEconomics, taxRatePercent, unitCsvSource, vatRatePercent])
   const unitReports = unitReportBuild.reports
-  const error = uploadError || unitReportBuild.error
+  const accrualReportBuild = useMemo(() => {
+    if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
+    try {
+      return {
+        reports: buildAccrualReports(accrualCsvSource),
+        error: '',
+      }
+    } catch (err) {
+      return {
+        reports: null,
+        error: err instanceof Error ? err.message : 'Не удалось построить отчёт по начислениям.',
+      }
+    }
+  }, [accrualCsvSource])
+  const accrualReports = accrualReportBuild.reports
+  const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
+  const error = uploadError || modeError
   const hasResults = isOzonUnitEconomics ? Boolean(unitReports) : Boolean(accrualReports)
-
-  const resetResults = (): void => {
-    setAccrualReports(null)
-    setUnitCsvSource(null)
-    setUploadError('')
-  }
 
   const onSwitchMarketplace = (marketplace: Marketplace): void => {
     setActiveMarketplace(marketplace)
-    resetResults()
+    setUploadError('')
   }
 
   const onSwitchOzonCalculation = (calcType: OzonCalculationType): void => {
     setOzonCalculationType(calcType)
-    resetResults()
+    setUploadError('')
   }
 
   const onVatRateChange = (value: number): void => {
@@ -181,7 +192,12 @@ export function useAnalyticsPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    resetResults()
+    setUploadError('')
+    if (ozonCalculationType === 'unitEconomics') {
+      setUnitCsvSource(null)
+    } else {
+      setAccrualCsvSource(null)
+    }
     setFileName(file.name)
     setIsProcessing(true)
 
@@ -192,15 +208,26 @@ export function useAnalyticsPage() {
       }
 
       if (ozonCalculationType === 'accrualReport') {
-        setUnitCsvSource(null)
-        setAccrualReports(buildAccrualReports(text))
+        setAccrualCsvSource(text)
       } else {
         setUnitCsvSource(text)
+      }
+
+      try {
+        await saveCsvRecord({
+          mode: ozonCalculationType,
+          csvText: text,
+          fileName: file.name,
+          updatedAt: Date.now(),
+        })
+      } catch {
+        // Ignore persistence errors to keep file upload flow functional.
       }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
     } finally {
       setIsProcessing(false)
+      event.target.value = ''
     }
   }
 
@@ -213,6 +240,37 @@ export function useAnalyticsPage() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(TAX_RATE_STORAGE_KEY, String(taxRatePercent))
   }, [taxRatePercent])
+
+  useEffect(() => {
+    if (activeMarketplace !== 'ozon') return
+    let isCancelled = false
+    getCsvRecord(ozonCalculationType)
+      .then((record) => {
+        if (isCancelled) return
+        if (!record) {
+          if (ozonCalculationType === 'unitEconomics') {
+            setUnitCsvSource(null)
+          } else {
+            setAccrualCsvSource(null)
+          }
+          setFileName('')
+          return
+        }
+
+        if (ozonCalculationType === 'unitEconomics') {
+          setUnitCsvSource(record.csvText)
+        } else {
+          setAccrualCsvSource(record.csvText)
+        }
+        setFileName(record.fileName)
+      })
+      .catch(() => {
+        // Ignore persistence errors to keep CSV processing functional without IndexedDB.
+      })
+    return () => {
+      isCancelled = true
+    }
+  }, [activeMarketplace, ozonCalculationType])
 
   const downloadPdf = async (): Promise<void> => {
     if (isOzonUnitEconomics && !unitReports) return
