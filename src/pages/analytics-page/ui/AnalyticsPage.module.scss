@@ -1,0 +1,25 @@
+.AnalyticsPage {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.AnalyticsPage__hero {
+  background: linear-gradient(120deg, #10243f 0%, #1a4872 55%, #2f7691 100%);
+  border-radius: 20px;
+  padding: 26px 28px;
+  color: #f5f9ff;
+  box-shadow: 0 20px 60px rgba(12, 35, 62, 0.22);
+}
+
+.AnalyticsPage__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.86;
+}
+
+.AnalyticsPage__subtitle {
+  margin-top: 10px;
+  max-width: 760px;
+  opacity: 0.92;
+}

@@ -1,0 +1,5 @@
+export { UiPanel } from '@/shared/ui-kit/panel'
+export { UiSectionToggle } from '@/shared/ui-kit/section-toggle'
+export { UiTabs } from '@/shared/ui-kit/tabs'
+export { Typography } from '@/shared/ui-kit/typography'
+export type { TypographyProps, TypographyVariant, TypographyColor, TypographyAlign } from '@/shared/ui-kit/typography'

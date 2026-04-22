@@ -1,0 +1,18 @@
+@use './tokens' as t;
+
+@mixin bordered-card {
+  background: #ffffff;
+  border: 1px solid t.$color-panel-border;
+  border-radius: t.$radius-lg;
+  box-shadow: 0 12px 28px t.$color-panel-shadow;
+}
+
+@mixin control-button {
+  border: 1px solid #b6c4d8;
+  border-radius: 10px;
+  background: #f9fbff;
+  color: #163358;
+  padding: 9px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}

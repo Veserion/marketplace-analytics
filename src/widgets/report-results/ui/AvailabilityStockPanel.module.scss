@@ -1,0 +1,136 @@
+.AvailabilityStockPanel {
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 10px;
+}
+
+.AvailabilityStockPanel__title {
+  margin: 0 0 8px;
+}
+
+.AvailabilityStockPanel__groups {
+  display: grid;
+  gap: 10px;
+}
+
+.AvailabilityStockPanel__group-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.AvailabilityStockPanel__group {
+  border: 1px solid #d6e2f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.AvailabilityStockPanel__summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 42px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.AvailabilityStockPanel__summary::-webkit-details-marker {
+  display: none;
+}
+
+.AvailabilityStockPanel__summary-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.AvailabilityStockPanel__expand-icon {
+  transition: transform 0.18s ease;
+}
+
+.AvailabilityStockPanel__group[open] .AvailabilityStockPanel__expand-icon {
+  transform: rotate(180deg);
+}
+
+.AvailabilityStockPanel__group--red .AvailabilityStockPanel__summary {
+  background: #ffe9ec;
+  color: #a31731;
+}
+
+.AvailabilityStockPanel__group--yellow .AvailabilityStockPanel__summary {
+  background: #fff4d8;
+  color: #8a6400;
+}
+
+.AvailabilityStockPanel__group--green .AvailabilityStockPanel__summary {
+  background: #e6f7ec;
+  color: #1f7a48;
+}
+
+.AvailabilityStockPanel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.AvailabilityStockPanel__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #dfe7f3;
+  background: #fbfdff;
+}
+
+.AvailabilityStockPanel__item code {
+  font-size: 13px;
+  color: #173359;
+}
+
+.AvailabilityStockPanel__copy-article-btn {
+  margin-left: auto;
+  border: 1px solid #b8c8df;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fbff;
+  color: #335b90;
+  cursor: pointer;
+}
+
+.AvailabilityStockPanel__copy-article-btn:hover {
+  background: #ebf3ff;
+}
+
+.AvailabilityStockPanel__copy-group-btn {
+  border: 1px solid #b8c8df;
+  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fbff;
+  color: #335b90;
+  cursor: pointer;
+}
+
+.AvailabilityStockPanel__copy-group-btn:hover:not(:disabled) {
+  background: #ebf3ff;
+}
+
+.AvailabilityStockPanel__copy-group-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

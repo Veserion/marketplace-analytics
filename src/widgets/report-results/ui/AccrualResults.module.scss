@@ -1,0 +1,79 @@
+.AccrualResults {
+  display: grid;
+  gap: 14px;
+}
+
+.AccrualResults__card {
+  background: #ffffff;
+  border: 1px solid #d6e2f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(16, 40, 74, 0.1);
+}
+
+.AccrualResults__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px dashed #cfdbec;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.AccrualResults__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.AccrualResults__row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  background: #fbfdff;
+  border-bottom: 1px solid #e0e8f5;
+}
+
+.AccrualResults__row:nth-child(even) {
+  background: #f4f8ff;
+}
+
+.AccrualResults__row:last-child {
+  border-bottom: none;
+}
+
+.AccrualResults__metric-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.AccrualResults__metric-value {
+  color: #122744;
+  line-height: 1.25;
+}
+
+.AccrualResults__metric-value--positive {
+  color: #1f8b4c;
+}
+
+.AccrualResults__metric-value--negative {
+  color: #c62828;
+}
+
+@media (max-width: 860px) {
+  .AccrualResults__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .AccrualResults__row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

@@ -1,0 +1,73 @@
+.Typography {
+  margin: 0;
+  font-family: inherit;
+}
+
+.Typography--h1 {
+  font-size: clamp(28px, 4.4vw, 42px);
+  line-height: 1.08;
+  font-weight: 700;
+}
+
+.Typography--h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.Typography--h3 {
+  font-size: 19px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.Typography--h4 {
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.Typography--h5 {
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.Typography--body1 {
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.Typography--body2 {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.Typography--body3 {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.Typography--caption {
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+.Typography--align-left { text-align: left; }
+.Typography--align-center { text-align: center; }
+.Typography--align-right { text-align: right; }
+
+.Typography--color-primary { color: #17355d; }
+.Typography--color-muted { color: #4d6786; }
+.Typography--color-light { color: #f5f9ff; }
+.Typography--color-accent { color: #12305d; }
+.Typography--color-positive { color: #1f8b4c; }
+.Typography--color-negative { color: #c62828; }
+.Typography--color-warning { color: #8a6400; }
+
+.Typography--semi-bold { font-weight: 600; }
+.Typography--bold { font-weight: 700; }

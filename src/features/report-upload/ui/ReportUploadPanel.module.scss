@@ -1,0 +1,60 @@
+.ReportUploadPanel__row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.ReportUploadPanel__file-input {
+  border: 1px solid #c5d2e5;
+  border-radius: 10px;
+  padding: 8px;
+  background: #f8fbff;
+  color: #173359;
+  max-width: 100%;
+}
+
+.ReportUploadPanel__download-button {
+  border: 1px solid #b6c4d8;
+  border-radius: 10px;
+  background: #f9fbff;
+  color: #163358;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.ReportUploadPanel__download-button:hover {
+  background: #edf3fd;
+}
+
+.ReportUploadPanel__download-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ReportUploadPanel__notice {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.ReportUploadPanel__notice--loader {
+  background: #eaf3ff;
+  border-color: #c5daf7;
+}
+
+.ReportUploadPanel__notice--warning {
+  background: #fff1d8;
+  border-color: #f2d397;
+}
+
+.ReportUploadPanel__notice--error {
+  background: #ffe8ec;
+  border-color: #f6b7c1;
+}
+
+.ReportUploadPanel__file-meta {
+  margin-top: 12px;
+}

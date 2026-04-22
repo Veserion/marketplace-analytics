@@ -19,5 +19,47 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'Program > FunctionDeclaration[id.name=/^[A-Z][a-zA-Z0-9]*$/]',
+          message:
+            'В одном файле — один React-компонент верхнего уровня.',
+        },
+        {
+          selector:
+            'BlockStatement > FunctionDeclaration[id.name=/^[A-Z][a-zA-Z0-9]*$/]',
+          message:
+            'Вложенные React-компоненты запрещены. Вынесите в отдельный файл.',
+        },
+        {
+          selector:
+            'Program > VariableDeclaration > VariableDeclarator[id.name=/^[A-Z][a-zA-Z0-9]*$/][init.type=/^(ArrowFunctionExpression|FunctionExpression|CallExpression)$/]',
+          message:
+            'В одном файле — один React-компонент верхнего уровня.',
+        },
+        {
+          selector:
+            'BlockStatement > VariableDeclaration > VariableDeclarator[id.name=/^[A-Z][a-zA-Z0-9]*$/][init.type=/^(ArrowFunctionExpression|FunctionExpression|CallExpression)$/]',
+          message:
+            'Вложенные React-компоненты запрещены. Вынесите в отдельный файл.',
+        },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/app/App.tsx'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
   },
 ])

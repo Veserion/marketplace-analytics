@@ -1,0 +1,27 @@
+.UiPanel {
+  background: #ffffff;
+  border: 1px solid #d7e0ec;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 12px 28px rgba(18, 48, 93, 0.08);
+}
+
+.UiPanel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.UiPanel__title {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .UiPanel__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

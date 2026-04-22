@@ -1,0 +1,26 @@
+.UiTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0;
+}
+
+.UiTabs__button {
+  border: 1px solid #b9c7dc;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #12305d;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.UiTabs__button:hover {
+  background: #e2edff;
+}
+
+.UiTabs__button--active {
+  background: #12305d;
+  border-color: #12305d;
+  color: #ffffff;
+}
