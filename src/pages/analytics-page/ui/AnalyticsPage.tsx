@@ -65,7 +65,7 @@ export function AnalyticsPage() {
         </UiPanel>
       )}
 
-      {isOzonUnitEconomics && (
+      {activeMarketplace === 'ozon' && (
         <UnitExtraParamsPanel
           isOpen={isExtraParamsOpen}
           vatRatePercent={vatRatePercent}

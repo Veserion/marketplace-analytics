@@ -7,7 +7,12 @@ import styles from './AccrualResults.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualResults'
-const SECONDARY_INFO_LABELS = new Set(['Строк с плюсами', 'Строк с минусами', 'Строк с нулем'])
+const SECONDARY_INFO_LABELS = new Set([
+  'Среднее начисление на строку',
+  'Строк с плюсами',
+  'Строк с минусами',
+  'Строк с нулем',
+])
 const AVERAGE_LABEL = 'Среднее начисление на строку'
 const STRUCTURE_PREFIX = 'Структура: '
 

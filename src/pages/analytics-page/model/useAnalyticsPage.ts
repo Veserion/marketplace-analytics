@@ -148,7 +148,7 @@ export function useAnalyticsPage() {
     if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
       return {
-        reports: buildAccrualReports(accrualCsvSource),
+        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent),
         error: '',
       }
     } catch (err) {
@@ -157,7 +157,7 @@ export function useAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт по начислениям.',
       }
     }
-  }, [accrualCsvSource])
+  }, [accrualCsvSource, taxRatePercent, vatRatePercent])
   const accrualReports = accrualReportBuild.reports
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
