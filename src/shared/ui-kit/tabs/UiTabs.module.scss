@@ -15,7 +15,7 @@
   transition: all 0.18s ease;
 }
 
-.UiTabs__button:hover {
+.UiTabs__button:not(.UiTabs__button--active):hover {
   background: #e2edff;
 }
 
@@ -23,4 +23,9 @@
   background: #12305d;
   border-color: #12305d;
   color: #ffffff;
+}
+
+.UiTabs__button--active:hover {
+  background: #102a52;
+  border-color: #102a52;
 }
