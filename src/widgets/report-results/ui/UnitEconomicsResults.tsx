@@ -1,8 +1,8 @@
 import classNames from 'classnames/bind'
 import type { MetricKey, ReportGroup } from '@/entities/ozon-report/model/types'
 import { getUnitMetricClassValue, getUnitMetricDisplay } from '@/entities/ozon-report/model/unit-metric-view'
-import { Typography } from '@/shared/ui-kit'
-import { FormulaTooltipIcon } from '@/shared/ui/formula-tooltip-icon'
+import { Typography, UiMetricsList } from '@/shared/ui-kit'
+import type { UiMetricsListRow } from '@/shared/ui-kit'
 import { AvailabilityStockPanel } from '@/widgets/report-results/ui/AvailabilityStockPanel'
 import { ProductMarginPanel } from '@/widgets/report-results/ui/ProductMarginPanel'
 import styles from './UnitEconomicsResults.module.scss'
@@ -34,30 +34,19 @@ export function UnitEconomicsResults({ reports, selectedMetricSet }: UnitEconomi
               <Typography variant="body2" color="muted">Строк товаров: {report.rowCount}</Typography>
             </header>
 
-            <div className={cn(`${BLOCK_NAME}__list`)}>
-              {visibleMetrics.map((metric) => {
+            <UiMetricsList
+              rows={visibleMetrics.map<UiMetricsListRow>((metric) => {
                 const display = getUnitMetricDisplay(metric, report)
-                return (
-                  <div key={metric.key} className={cn(`${BLOCK_NAME}__row`, `${BLOCK_NAME}__row--with-share`)}>
-                    <div className={cn(`${BLOCK_NAME}__metric-title`)}>
-                      <Typography as="span" variant="body2" color="accent" semiBold>{metric.label}</Typography>
-                      <FormulaTooltipIcon formula={metric.formula} />
-                    </div>
-                    <Typography
-                      as="span"
-                      variant="body1"
-                      className={getValueClassName(getUnitMetricClassValue(metric))}
-                      semiBold
-                    >
-                      {display.valueText}
-                    </Typography>
-                    <Typography as="span" variant="body2" color="muted" semiBold className={cn(`${BLOCK_NAME}__metric-share`)}>
-                      {display.shareText || ''}
-                    </Typography>
-                  </div>
-                )
+                return {
+                  id: metric.key,
+                  label: metric.label,
+                  formula: metric.formula,
+                  valueText: display.valueText,
+                  percentText: display.shareText,
+                  valueClassName: getValueClassName(getUnitMetricClassValue(metric)),
+                }
               })}
-            </div>
+            />
 
             {report.availabilityGroups && (
               <div className={cn(`${BLOCK_NAME}__availability`)}>

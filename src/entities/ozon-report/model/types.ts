@@ -52,6 +52,7 @@ export type AccrualMetric = {
   value: number | null
   type: ValueType
   formula: string
+  shareText?: string | null
 }
 
 export type AccrualGroup = {

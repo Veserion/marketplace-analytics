@@ -21,38 +21,6 @@
   margin-bottom: 12px;
 }
 
-.AccrualResults__list {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #d8e3f2;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.AccrualResults__row {
-  display: grid;
-  grid-template-columns: 1.3fr 0.9fr;
-  gap: 12px;
-  align-items: center;
-  padding: 11px 12px;
-  background: #fbfdff;
-  border-bottom: 1px solid #e0e8f5;
-}
-
-.AccrualResults__row:nth-child(even) {
-  background: #f4f8ff;
-}
-
-.AccrualResults__row:last-child {
-  border-bottom: none;
-}
-
-.AccrualResults__metric-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .AccrualResults__metric-value {
   color: #122744;
   line-height: 1.25;
@@ -66,14 +34,72 @@
   color: #c62828;
 }
 
+.AccrualResults__metric-value--muted {
+  color: #6b7f9f;
+}
+
+.AccrualResults__secondary-details {
+  margin-top: 10px;
+}
+
+.AccrualResults__secondary-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  border: 1px dashed #cfdbec;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.AccrualResults__secondary-summary::-webkit-details-marker {
+  display: none;
+}
+
+.AccrualResults__list--secondary {
+  margin-top: 8px;
+}
+
+.AccrualResults__structure-details {
+  border: 1px solid #d6e2f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 40, 74, 0.1);
+  padding: 12px;
+}
+
+.AccrualResults__structure-summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px dashed #cfdbec;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px 12px;
+}
+
+.AccrualResults__structure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.AccrualResults__structure-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.AccrualResults__structure-item {
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fbfdff;
+}
+
+.AccrualResults__structure-item-title {
+  margin: 0 0 8px;
+}
+
 @media (max-width: 860px) {
   .AccrualResults__header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .AccrualResults__row {
-    grid-template-columns: 1fr;
-    gap: 6px;
   }
 }

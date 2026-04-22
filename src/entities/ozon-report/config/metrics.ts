@@ -10,7 +10,7 @@ export const METRICS: MetricView[] = [
   { key: 'revenueAfterSpp', label: 'Выручка после СПП', formula: 'SUM("Выручка")', type: 'currency' },
   { key: 'accruedPoints', label: 'Баллы за СПП', formula: 'SUM("Баллы за скидки")', type: 'currency' },
   { key: 'partnerCompensation', label: 'Компенсация прог.партнеров', formula: 'SUM("Программы партнёров")', type: 'currency' },
-  { key: 'commission', label: 'Комиссия', formula: 'Сумма: SUM("Вознаграждение Ozon"), доля: ABS(Комиссия) / Выручка до СПП * 100%', type: 'currency' },
+  { key: 'commission', label: 'Комиссия', formula: 'Сумма: SUM("Комиссия Ozon"), доля: ABS(Комиссия) / Выручка до СПП * 100%', type: 'currency' },
   { key: 'logistics', label: 'Логистика', formula: 'Сумма: SUM("Обработка отправления" + "Логистика" + "Доставка до места выдачи"), доля: ABS(Логистика) / Выручка до СПП * 100%', type: 'currency' },
   { key: 'reverseLogistics', label: 'Обратная логистика', formula: 'SUM("Обработка возврата" + "Обратная логистика")', type: 'currency' },
   { key: 'acquiring', label: 'Эквайринг', formula: 'Сумма: SUM("Эквайринг"), доля: ABS(Эквайринг) / Выручка до СПП * 100%', type: 'currency' },

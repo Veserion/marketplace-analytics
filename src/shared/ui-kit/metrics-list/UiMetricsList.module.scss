@@ -1,0 +1,43 @@
+.UiMetricsList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.UiMetricsList__row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.45fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  background: #fbfdff;
+  border-bottom: 1px solid #e0e8f5;
+}
+
+.UiMetricsList__row:nth-child(even) {
+  background: #f4f8ff;
+}
+
+.UiMetricsList__row:last-child {
+  border-bottom: none;
+}
+
+.UiMetricsList__metric-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.UiMetricsList__metric-percent {
+  text-align: right;
+  line-height: 1.25;
+}
+
+@media (max-width: 860px) {
+  .UiMetricsList__row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

@@ -46,7 +46,7 @@ function buildUnitEconomicsReport(
   const revenue = sumCol('Выручка')
   const accruedPoints = sumCol('Баллы за скидки') ?? sumCol('Баллы за скидки, руб.')
   const partnerCompensation = sumCol('Программы партнёров') ?? sumCol('Программы партнеров')
-  const commission = sumCol('Вознаграждение Ozon')
+  const commission = sumCol('Комиссия Ozon')
   const sumDefinedCols = (names: string[]): number | null => {
     const values = names.map((name) => sumCol(name)).filter((v): v is number => v !== null)
     if (values.length === 0) return null
@@ -259,10 +259,8 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
   }
 
   const sumByGroup = new Map<string, number>()
-  const sumByType = new Map<string, number>()
   const sumByDate = new Map<string, number>()
   const sumByScheme = new Map<string, number>()
-  const sumByPlatform = new Map<string, number>()
   const groupTypeBreakdown = new Map<string, Map<string, number>>()
 
   let total = 0
@@ -283,8 +281,7 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
     const group = normalize(getCell(row, 'Группа услуг')) || 'Без группы'
     const type = normalize(getCell(row, 'Тип начисления')) || 'Без типа'
     const date = normalize(getCell(row, 'Дата начисления')) || 'Без даты'
-    const scheme = normalize(getCell(row, 'Схема работы')) || '(пусто)'
-    const platform = normalize(getCell(row, 'Платформа продажи')) || '(пусто)'
+    const scheme = normalize(getCell(row, 'Схема работы'))
 
     total += amount
     if (amount > 0) {
@@ -298,10 +295,10 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
     }
 
     addToMap(sumByGroup, group, amount)
-    addToMap(sumByType, type, amount)
     addToMap(sumByDate, date, amount)
-    addToMap(sumByScheme, scheme, amount)
-    addToMap(sumByPlatform, platform, amount)
+    if (scheme) {
+      addToMap(sumByScheme, scheme, amount)
+    }
 
     if (!groupTypeBreakdown.has(group)) {
       groupTypeBreakdown.set(group, new Map<string, number>())
@@ -318,6 +315,72 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
     type: ValueType = 'currency',
   ): AccrualMetric[] =>
     entries.map(([label, value]) => ({ label, value, type, formula: formulaBuilder(label) }))
+
+  const salesBase = positive > 0 ? positive : null
+  const formatSalesShare = (value: number): string | null => {
+    if (!salesBase) return null
+    const sharePercent = (Math.abs(value) / salesBase) * 100
+    const formattedShare = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(sharePercent)
+    return `${formattedShare}%`
+  }
+  const classifyGroup = (rawLabel: string): { label: string, withSalesShare: boolean } => {
+    const normalizedLabel = normalize(rawLabel).toLowerCase().replace(/ё/g, 'е')
+
+    if (
+      (normalizedLabel.includes('вознагражден') && normalizedLabel.includes('ozon'))
+      || (normalizedLabel.includes('вознагражден') && normalizedLabel.includes('озон'))
+    ) {
+      return { label: 'Комиссия Ozon', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('услуги доставки')) {
+      return { label: 'Логистика', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('возврат')) {
+      return { label: 'Возвраты', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('продвижен') && normalizedLabel.includes('реклам')) {
+      return { label: 'Продвижение', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('услуги фбо') || normalizedLabel.includes('fbo')) {
+      return { label: 'Услуги ФБО', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('услуги партнер')) {
+      return { label: 'Услуги партнеров', withSalesShare: true }
+    }
+    if (normalizedLabel.includes('другие услуги') || normalizedLabel.includes('штраф')) {
+      return { label: 'Другие услуги и штрафы', withSalesShare: true }
+    }
+    return { label: rawLabel, withSalesShare: false }
+  }
+  const groupedAccrualByLabel = new Map<string, { value: number, withSalesShare: boolean, sourceLabels: Set<string> }>()
+  for (const [rawLabel, value] of sortByAbsDesc(Array.from(sumByGroup.entries()))) {
+    const group = classifyGroup(rawLabel)
+    const current = groupedAccrualByLabel.get(group.label) || {
+      value: 0,
+      withSalesShare: group.withSalesShare,
+      sourceLabels: new Set<string>(),
+    }
+    current.value += value
+    current.withSalesShare = current.withSalesShare || group.withSalesShare
+    current.sourceLabels.add(rawLabel)
+    groupedAccrualByLabel.set(group.label, current)
+  }
+  const groupMetrics = sortByAbsDesc(
+    Array.from(groupedAccrualByLabel.entries()).map(([label, data]) => [label, data.value] as [string, number]),
+  ).map(([label, value]) => {
+    const data = groupedAccrualByLabel.get(label)!
+    const labelsForFormula = Array.from(data.sourceLabels)
+    const formula = labelsForFormula.length === 1
+      ? `SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "${labelsForFormula[0]}"`
+      : `SUM("Сумма итого, руб."), фильтр: "Группа услуг" IN (${labelsForFormula.map((item) => `"${item}"`).join(', ')})`
+    return {
+      label,
+      value,
+      type: 'currency' as const,
+      formula,
+      shareText: data.withSalesShare ? formatSalesShare(value) : null,
+    }
+  })
 
   const groupSummaries: AccrualGroup[] = Array.from(groupTypeBreakdown.entries())
     .map(([group, types]) => {
@@ -340,9 +403,9 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
       title: 'Итоги периода',
       rowCount: dataRows.length,
       metrics: [
-        { label: 'Итог по начислениям', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.")' },
-        { label: 'Положительные начисления', value: positive, type: 'currency', formula: 'SUM("Сумма итого, руб." > 0)' },
-        { label: 'Отрицательные начисления', value: negative, type: 'currency', formula: 'SUM("Сумма итого, руб." < 0)' },
+        { label: 'Перевод в банк', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.")' },
+        { label: 'Выручка по магазину', value: positive, type: 'currency', formula: 'SUM("Сумма итого, руб." > 0)' },
+        { label: 'Расходы по магазину', value: negative, type: 'currency', formula: 'SUM("Сумма итого, руб." < 0)' },
         { label: 'Среднее начисление на строку', value: dataRows.length ? total / dataRows.length : null, type: 'currency', formula: 'SUM("Сумма итого, руб.") / COUNT(строк)' },
         { label: 'Строк с плюсами', value: positiveCount, type: 'number', formula: 'COUNT("Сумма итого, руб." > 0)' },
         { label: 'Строк с минусами', value: negativeCount, type: 'number', formula: 'COUNT("Сумма итого, руб." < 0)' },
@@ -350,31 +413,14 @@ export function buildAccrualReports(rawCsv: string): AccrualGroup[] {
       ],
     },
     {
-      title: 'Группы услуг',
-      metrics: toMetrics(
-        sortByAbsDesc(Array.from(sumByGroup.entries())),
-        (label) => `SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "${label}"`,
-      ),
-    },
-    {
-      title: 'Типы начислений (топ 15)',
-      metrics: toMetrics(
-        sortByAbsDesc(Array.from(sumByType.entries())).slice(0, 15),
-        (label) => `SUM("Сумма итого, руб."), фильтр: "Тип начисления" = "${label}"`,
-      ),
+      title: 'Начисления по группам',
+      metrics: groupMetrics,
     },
     {
       title: 'Схема работы',
       metrics: toMetrics(
         sortByAbsDesc(Array.from(sumByScheme.entries())),
         (label) => `SUM("Сумма итого, руб."), фильтр: "Схема работы" = "${label}"`,
-      ),
-    },
-    {
-      title: 'Платформа продажи',
-      metrics: toMetrics(
-        sortByAbsDesc(Array.from(sumByPlatform.entries())),
-        (label) => `SUM("Сумма итого, руб."), фильтр: "Платформа продажи" = "${label}"`,
       ),
     },
     {
