@@ -4,7 +4,7 @@ import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { MetricsSelectorPanel } from '@/features/metrics-selector'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
-import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
+import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
 import { useAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsPage'
 import { Typography, UiPanel } from '@/shared/ui-kit'
 import { AccrualResults, UnitEconomicsResults } from '@/widgets/report-results'
@@ -16,6 +16,7 @@ const BLOCK_NAME = 'AnalyticsPage'
 export function AnalyticsPage() {
   const {
     accrualReports,
+    accrualArticlePattern,
     activeMarketplace,
     articlePattern,
     clearMetrics,
@@ -36,6 +37,7 @@ export function AnalyticsPage() {
     selectAllMetrics,
     selectedMetricSet,
     setArticlePattern,
+    setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
     showWildberriesWarning,
@@ -68,9 +70,12 @@ export function AnalyticsPage() {
       {activeMarketplace === 'ozon' && (
         <UnitExtraParamsPanel
           isOpen={isExtraParamsOpen}
+          isAccrualMode={!isOzonUnitEconomics}
+          accrualArticlePattern={accrualArticlePattern}
           vatRatePercent={vatRatePercent}
           taxRatePercent={taxRatePercent}
           onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
+          onAccrualArticlePatternChange={setAccrualArticlePattern}
           onVatRateChange={onVatRateChange}
           onTaxRateChange={onTaxRateChange}
         />

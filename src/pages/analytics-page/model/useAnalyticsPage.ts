@@ -143,6 +143,7 @@ export function useAnalyticsPage() {
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
   const [isMetricsOpen, setIsMetricsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('st*')
+  const [accrualArticlePattern, setAccrualArticlePattern] = useState('*')
   const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
   const [unitFileName, setUnitFileName] = useState('')
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
@@ -171,7 +172,7 @@ export function useAnalyticsPage() {
       const samePeriod = hasSamePeriod(unitFileName, accrualFileName)
       const unitArticleCogsMap = samePeriod && unitCsvSource ? buildUnitArticleCogsMap(unitCsvSource) : null
       return {
-        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent, unitArticleCogsMap),
+        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent, unitArticleCogsMap, accrualArticlePattern),
         error: '',
       }
     } catch (err) {
@@ -180,7 +181,7 @@ export function useAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт по начислениям.',
       }
     }
-  }, [accrualCsvSource, accrualFileName, taxRatePercent, unitCsvSource, unitFileName, vatRatePercent])
+  }, [accrualArticlePattern, accrualCsvSource, accrualFileName, taxRatePercent, unitCsvSource, unitFileName, vatRatePercent])
   const accrualReports = accrualReportBuild.reports
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
@@ -332,6 +333,7 @@ export function useAnalyticsPage() {
 
   return {
     accrualReports,
+    accrualArticlePattern,
     activeMarketplace,
     articlePattern,
     clearMetrics,
@@ -352,6 +354,7 @@ export function useAnalyticsPage() {
     selectAllMetrics,
     selectedMetricSet,
     setArticlePattern,
+    setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
     showWildberriesWarning: activeMarketplace === 'wildberries',

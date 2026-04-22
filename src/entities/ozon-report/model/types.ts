@@ -58,6 +58,7 @@ export type AccrualMetric = {
 export type AccrualGroup = {
   title: string
   rowCount?: number
+  periodLabel?: string
   metrics: AccrualMetric[]
 }
 

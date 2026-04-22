@@ -14,7 +14,9 @@ const SECONDARY_INFO_LABELS = new Set([
   'Строк с нулем',
 ])
 const AVERAGE_LABEL = 'Среднее начисление на строку'
-const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмена и возвраты'
+const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
+const TAX_LABEL = 'Налог'
+const COGS_LABEL = 'Себестоимость'
 const STRUCTURE_PREFIX = 'Структура: '
 
 type AccrualResultsProps = {
@@ -33,7 +35,7 @@ function isSecondaryMetric(label: string): boolean {
 }
 
 function getPrimaryMetricValueClassName(label: string, value: number | null): string {
-  if (label === CANCELLATIONS_AND_RETURNS_LABEL) {
+  if (label === CANCELLATIONS_AND_RETURNS_LABEL || label === TAX_LABEL || label === COGS_LABEL) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--negative`)
   }
   if (label === AVERAGE_LABEL) {
@@ -64,11 +66,14 @@ export function AccrualResults({ reports }: AccrualResultsProps) {
         const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
         const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
         const showSecondary = report.title === 'Итоги периода' && secondaryMetrics.length > 0
+        const reportTitle = report.title === 'Итоги периода' && report.periodLabel
+          ? `${report.title} ${report.periodLabel}`
+          : report.title
 
         return (
           <article className={cn(`${BLOCK_NAME}__card`)} key={report.title}>
             <header className={cn(`${BLOCK_NAME}__header`)}>
-              <Typography variant="h3" color="accent">{report.title}</Typography>
+              <Typography variant="h3" color="accent">{reportTitle}</Typography>
               {typeof report.rowCount === 'number' && (
                 <Typography variant="body2" color="muted">Строк начислений: {report.rowCount}</Typography>
               )}

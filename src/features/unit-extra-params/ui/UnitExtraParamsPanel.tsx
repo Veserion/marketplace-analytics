@@ -7,18 +7,24 @@ const BLOCK_NAME = 'UnitExtraParamsPanel'
 
 type UnitExtraParamsPanelProps = {
   isOpen: boolean
+  isAccrualMode?: boolean
+  accrualArticlePattern?: string
   vatRatePercent: number
   taxRatePercent: number
   onToggleOpen: () => void
+  onAccrualArticlePatternChange?: (pattern: string) => void
   onVatRateChange: (value: number) => void
   onTaxRateChange: (value: number) => void
 }
 
 export function UnitExtraParamsPanel({
   isOpen,
+  isAccrualMode = false,
+  accrualArticlePattern = '*',
   vatRatePercent,
   taxRatePercent,
   onToggleOpen,
+  onAccrualArticlePatternChange,
   onVatRateChange,
   onTaxRateChange,
 }: UnitExtraParamsPanelProps) {
@@ -52,6 +58,21 @@ export function UnitExtraParamsPanel({
               />
             </label>
           </div>
+          {isAccrualMode && onAccrualArticlePatternChange && (
+            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="accrualArticlePatternInput">
+              <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
+              <input
+                id="accrualArticlePatternInput"
+                type="text"
+                value={accrualArticlePattern}
+                onChange={(event) => onAccrualArticlePatternChange(event.target.value)}
+                placeholder="Например: st*"
+              />
+              <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
+                Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.
+              </Typography>
+            </label>
+          )}
         </div>
       )}
     </UiPanel>
