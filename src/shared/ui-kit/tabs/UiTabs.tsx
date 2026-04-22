@@ -1,4 +1,5 @@
 import classNames from 'classnames/bind'
+import type { CSSProperties } from 'react'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './UiTabs.module.scss'
 
@@ -23,8 +24,10 @@ export function UiTabs<T extends string>({
   onChange,
   ariaLabel,
 }: UiTabsProps<T>) {
+  const style = { '--ui-tabs-count': items.length } as CSSProperties
+
   return (
-    <section className={cn(BLOCK_NAME)} aria-label={ariaLabel}>
+    <section className={cn(BLOCK_NAME)} aria-label={ariaLabel} style={style}>
       {items.map((item) => (
         <button
           key={item.key}

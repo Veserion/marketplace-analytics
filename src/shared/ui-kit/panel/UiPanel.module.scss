@@ -1,10 +1,10 @@
 .UiPanel {
-  background: #ffffff;
-  border: 1px solid #d7e0ec;
+  background: var(--color-panel-bg, #ffffff);
+  border: 1px solid var(--color-panel-border, #d7e0ec);
   border-radius: 16px;
   padding: 18px;
   margin-bottom: 16px;
-  box-shadow: 0 12px 28px rgba(18, 48, 93, 0.08);
+  box-shadow: 0 12px 28px var(--color-panel-shadow, rgba(18, 48, 93, 0.08));
 }
 
 .UiPanel__head {

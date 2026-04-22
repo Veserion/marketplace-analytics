@@ -8,6 +8,33 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --color-text-primary: #17355d;
+  --color-text-muted: #4d6786;
+  --color-text-light: #f5f9ff;
+  --color-accent: #12305d;
+  --color-positive: #1f8b4c;
+  --color-negative: #c62828;
+  --color-warning: #8a6400;
+
+  --color-panel-bg: #ffffff;
+  --color-panel-border: #d7e0ec;
+  --color-panel-shadow: rgba(18, 48, 93, 0.08);
+
+  --color-tabs-border: #b9c7dc;
+  --color-tabs-bg: #eef4ff;
+  --color-tabs-text: #12305d;
+  --color-tabs-hover: #d7e5fc;
+  --color-tabs-active-bg: #12305d;
+  --color-tabs-active-border: #12305d;
+  --color-tabs-active-text: #ffffff;
+  --color-tabs-active-hover-bg: #194483;
+  --color-tabs-active-hover-border: #102a52;
+
+  --color-page-radial-start: rgba(54, 131, 189, 0.2);
+  --color-page-radial-end: rgba(8, 50, 95, 0.2);
+  --color-page-gradient-start: #f4f8ff;
+  --color-page-gradient-end: #e8eff8;
 }
 
 * {
@@ -18,9 +45,38 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 2% 12%, rgba(54, 131, 189, 0.2), transparent 28%),
-    radial-gradient(circle at 95% 88%, rgba(8, 50, 95, 0.2), transparent 32%),
-    linear-gradient(180deg, #f4f8ff 0%, #e8eff8 100%);
+    radial-gradient(circle at 2% 12%, var(--color-page-radial-start), transparent 28%),
+    radial-gradient(circle at 95% 88%, var(--color-page-radial-end), transparent 32%),
+    linear-gradient(180deg, var(--color-page-gradient-start) 0%, var(--color-page-gradient-end) 100%);
+}
+
+body[data-theme='purple'] {
+  --color-text-primary: #3a2554;
+  --color-text-muted: #6b5382;
+  --color-text-light: #f8f3ff;
+  --color-accent: #6b4c8e;
+  --color-positive: #2e8d58;
+  --color-negative: #c62828;
+  --color-warning: #8a6400;
+
+  --color-panel-bg: #ffffff;
+  --color-panel-border: #e2d5ef;
+  --color-panel-shadow: rgba(78, 44, 114, 0.12);
+
+  --color-tabs-border: #d7c3ea;
+  --color-tabs-bg: #f4ecff;
+  --color-tabs-text: #4e2c72;
+  --color-tabs-hover: #e9dbfb;
+  --color-tabs-active-bg: #5c3283;
+  --color-tabs-active-border: #5c3283;
+  --color-tabs-active-text: #ffffff;
+  --color-tabs-active-hover-bg: #6b3d97;
+  --color-tabs-active-hover-border: #56307b;
+
+  --color-page-radial-start: rgba(242, 230, 246, 0.5);
+  --color-page-radial-end: rgba(237, 227, 246, 0.5);
+  --color-page-gradient-start: #faf5ff;
+  --color-page-gradient-end: #f7f3fc;
 }
 
 button,

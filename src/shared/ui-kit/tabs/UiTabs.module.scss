@@ -1,31 +1,31 @@
 .UiTabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--ui-tabs-count, 2), minmax(0, 1fr));
   gap: 10px;
   margin: 22px 0;
 }
 
 .UiTabs__button {
-  border: 1px solid #b9c7dc;
+  border: 1px solid var(--color-tabs-border, #b9c7dc);
   border-radius: 12px;
-  background: #eef4ff;
-  color: #12305d;
+  background: var(--color-tabs-bg, #eef4ff);
+  color: var(--color-tabs-text, #12305d);
   padding: 12px;
   cursor: pointer;
   transition: all 0.18s ease;
 }
 
 .UiTabs__button:not(.UiTabs__button--active):hover {
-  background: #d7e5fc;
+  background: var(--color-tabs-hover, #d7e5fc);
 }
 
 .UiTabs__button--active {
-  background: #12305d;
-  border-color: #12305d;
-  color: #ffffff;
+  background: var(--color-tabs-active-bg, #12305d);
+  border-color: var(--color-tabs-active-border, #12305d);
+  color: var(--color-tabs-active-text, #ffffff);
 }
 
 .UiTabs__button--active:hover {
-  background: #194483;
-  border-color: #102a52;
+  background: var(--color-tabs-active-hover-bg, #194483);
+  border-color: var(--color-tabs-active-hover-border, #102a52);
 }

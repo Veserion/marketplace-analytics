@@ -17,6 +17,7 @@ const AVERAGE_LABEL = 'Среднее начисление на строку'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
+const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
 
@@ -39,7 +40,12 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
   if (label === COGS_LABEL && value === null) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--muted`)
   }
-  if (label === CANCELLATIONS_AND_RETURNS_LABEL || label === TAX_LABEL || label === COGS_LABEL) {
+  if (
+    label === CANCELLATIONS_AND_RETURNS_LABEL
+    || label === TAX_LABEL
+    || label === COGS_LABEL
+    || label === MARKETPLACE_EXPENSES_LABEL
+  ) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--negative`)
   }
   if (label === AVERAGE_LABEL) {

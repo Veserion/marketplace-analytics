@@ -61,13 +61,13 @@
 .Typography--align-center { text-align: center; }
 .Typography--align-right { text-align: right; }
 
-.Typography--color-primary { color: #17355d; }
-.Typography--color-muted { color: #4d6786; }
-.Typography--color-light { color: #f5f9ff; }
-.Typography--color-accent { color: #12305d; }
-.Typography--color-positive { color: #1f8b4c; }
-.Typography--color-negative { color: #c62828; }
-.Typography--color-warning { color: #8a6400; }
+.Typography--color-primary { color: var(--color-text-primary, #17355d); }
+.Typography--color-muted { color: var(--color-text-muted, #4d6786); }
+.Typography--color-light { color: var(--color-text-light, #f5f9ff); }
+.Typography--color-accent { color: var(--color-accent, #12305d); }
+.Typography--color-positive { color: var(--color-positive, #1f8b4c); }
+.Typography--color-negative { color: var(--color-negative, #c62828); }
+.Typography--color-warning { color: var(--color-warning, #8a6400); }
 
 .Typography--semi-bold { font-weight: 600; }
 .Typography--bold { font-weight: 700; }

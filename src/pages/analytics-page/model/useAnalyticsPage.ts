@@ -140,7 +140,7 @@ export function useOzonAnalyticsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
   const [isMetricsOpen, setIsMetricsOpen] = useState(false)
-  const [articlePattern, setArticlePattern] = useState('st*')
+  const [articlePattern, setArticlePattern] = useState('')
   const [accrualArticlePattern, setAccrualArticlePattern] = useState('*')
   const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
   const [unitFileName, setUnitFileName] = useState('')
