@@ -1,6 +1,8 @@
 import type { MetricKey, ReportGroup } from '../types/reports'
-import { formatValue } from '../utils/csv'
+import { getUnitMetricClassValue, getUnitMetricDisplay } from '../features/ozon/unitMetricView'
+import { AvailabilityStockPanel } from './AvailabilityStockPanel'
 import { FormulaTooltipIcon } from './FormulaTooltipIcon'
+import { ProductMarginPanel } from './ProductMarginPanel'
 
 type UnitEconomicsResultsProps = {
   reports: ReportGroup[]
@@ -25,18 +27,34 @@ export function UnitEconomicsResults({
             </header>
 
             <div className="result-list">
-              {visibleMetrics.map((metric) => (
-                <div key={metric.key} className="result-row">
-                  <p className="metric-title">
-                    {metric.label}
-                    <FormulaTooltipIcon formula={metric.formula} />
-                  </p>
-                  <p className={getMetricValueClassName(metric.ok ? metric.value : null)}>
-                    {metric.ok ? formatValue(metric.value, metric.type) : 'нет данных'}
-                  </p>
-                </div>
-              ))}
+              {visibleMetrics.map((metric) => {
+                const display = getUnitMetricDisplay(metric, report)
+                return (
+                  <div key={metric.key} className="result-row result-row-with-share">
+                    <p className="metric-title">
+                      {metric.label}
+                      <FormulaTooltipIcon formula={metric.formula} />
+                    </p>
+                    <p className={getMetricValueClassName(getUnitMetricClassValue(metric))}>
+                      {display.valueText}
+                    </p>
+                    <p className="metric-share">{display.shareText || ''}</p>
+                  </div>
+                )
+              })}
             </div>
+
+            {report.availabilityGroups && (
+              <div className="report-availability-block">
+                <AvailabilityStockPanel groups={report.availabilityGroups} />
+              </div>
+            )}
+
+            {report.productMargins && (
+              <div className="report-product-margin-block">
+                <ProductMarginPanel items={report.productMargins} />
+              </div>
+            )}
           </article>
         )
       })}

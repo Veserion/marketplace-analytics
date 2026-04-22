@@ -1,13 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import { AccrualResults } from './components/AccrualResults'
 import { UnitEconomicsResults } from './components/UnitEconomicsResults'
 import { METRICS } from './constants/metrics'
 import { buildAccrualReports, buildUnitEconomicsReports } from './features/ozon/reportBuilders'
+import { getUnitMetricDisplayValue } from './features/ozon/unitMetricView'
 import type { AccrualGroup, Marketplace, MetricKey, OzonCalculationType, ReportGroup } from './types/reports'
 import { configurePdfFont } from './utils/pdf'
 import { formatValue } from './utils/csv'
 import './App.css'
+
+const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
+const TAX_RATE_STORAGE_KEY = 'unit_economics_tax_rate_percent'
+const DEFAULT_VAT_RATE = 5
+const DEFAULT_TAX_RATE = 6
+
+function readStoredRate(key: string, fallback: number): number {
+  if (typeof window === 'undefined') return fallback
+  const raw = window.localStorage.getItem(key)
+  const parsed = raw === null ? Number.NaN : Number(raw)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
 
 function getMetricValueClassName(value: number | null): string {
   if (value === null) return 'metric-value'
@@ -39,7 +52,7 @@ function renderUnitEconomicsPdf(
 
     const selected = report.metrics.filter((metric) => selectedMetricSet.has(metric.key))
     for (const metric of selected) {
-      const line1 = `${metric.label}: ${metric.ok ? formatValue(metric.value, metric.type) : 'нет данных'}`
+      const line1 = `${metric.label}: ${getUnitMetricDisplayValue(metric, report)}`
       const line2 = `Формула: ${metric.formula}`
       const lines = [...doc.splitTextToSize(line1, contentWidth - 6), ...doc.splitTextToSize(line2, contentWidth - 6)]
       const rowHeight = Math.max(10, lines.length * 4 + 4)
@@ -110,6 +123,12 @@ function App() {
   const [error, setError] = useState('')
   const [fileName, setFileName] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false)
+  const [articlePattern, setArticlePattern] = useState('st*')
+  const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
+  const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
+  const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
   const isOzonUnitEconomics = activeTab === 'ozon' && ozonCalculationType === 'unitEconomics'
   const selectedMetricSet = useMemo(() => new Set<MetricKey>(selectedMetrics), [selectedMetrics])
@@ -117,6 +136,7 @@ function App() {
   const resetResults = (): void => {
     setReports(null)
     setAccrualReports(null)
+    setUnitCsvSource(null)
     setError('')
   }
 
@@ -152,9 +172,11 @@ function App() {
       }
 
       if (ozonCalculationType === 'accrualReport') {
+        setUnitCsvSource(null)
         setAccrualReports(buildAccrualReports(text))
       } else {
-        setReports(buildUnitEconomicsReports(text))
+        setUnitCsvSource(text)
+        setReports(buildUnitEconomicsReports(text, articlePattern, vatRatePercent, taxRatePercent))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
@@ -162,6 +184,27 @@ function App() {
       setIsProcessing(false)
     }
   }
+
+  useEffect(() => {
+    if (!isOzonUnitEconomics) return
+    if (!unitCsvSource) return
+    try {
+      setReports(buildUnitEconomicsReports(unitCsvSource, articlePattern, vatRatePercent, taxRatePercent))
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось применить фильтр по артикулу.')
+    }
+  }, [articlePattern, isOzonUnitEconomics, unitCsvSource, vatRatePercent, taxRatePercent])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(VAT_RATE_STORAGE_KEY, String(vatRatePercent))
+  }, [vatRatePercent])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(TAX_RATE_STORAGE_KEY, String(taxRatePercent))
+  }, [taxRatePercent])
 
   const downloadPdf = async (): Promise<void> => {
     if (isOzonUnitEconomics && !reports) return
@@ -236,23 +279,102 @@ function App() {
       )}
 
       {isOzonUnitEconomics && (
+        <section className="panel extra-params-panel">
+          <button
+            className="metrics-toggle"
+            type="button"
+            onClick={() => setIsExtraParamsOpen((prev) => !prev)}
+            aria-expanded={isExtraParamsOpen}
+          >
+            <span>Дополнительные параметры</span>
+            <span className={`metrics-toggle-icon ${isExtraParamsOpen ? 'open' : ''}`} aria-hidden="true">▾</span>
+          </button>
+
+          {isExtraParamsOpen && (
+            <div className="extra-params-content">
+              <div className="tax-rates-grid">
+                <label className="tax-rate-field" htmlFor="vatRateInput">
+                  <span>НДС, %</span>
+                  <input
+                    id="vatRateInput"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={vatRatePercent}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setVatRatePercent(Number.isFinite(next) ? next : 0)
+                    }}
+                  />
+                </label>
+                <label className="tax-rate-field" htmlFor="taxRateInput">
+                  <span>Налог, %</span>
+                  <input
+                    id="taxRateInput"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={taxRatePercent}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      setTaxRatePercent(Number.isFinite(next) ? next : 0)
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {isOzonUnitEconomics && (
         <section className="panel">
           <div className="panel-head">
-            <h2>Метрики для расчёта</h2>
-            <div className="panel-actions">
-              <button type="button" onClick={selectAllMetrics}>Выбрать всё</button>
-              <button type="button" onClick={clearMetrics}>Снять всё</button>
-            </div>
+            <h2>Фильтр артикулов</h2>
           </div>
+          <div className="article-filter">
+            <label htmlFor="articlePatternInput">Паттерн</label>
+            <input
+              id="articlePatternInput"
+              type="text"
+              value={articlePattern}
+              onChange={(event) => setArticlePattern(event.target.value)}
+              placeholder="Например: st*"
+            />
+            <p className="filter-hint">Поддерживаются шаблоны: `*` — любые символы, `?` — один символ.</p>
+          </div>
+        </section>
+      )}
 
-          <div className="metrics-grid">
-            {METRICS.map((metric) => (
-              <label key={metric.key} className="metric-item">
-                <input type="checkbox" checked={selectedMetricSet.has(metric.key)} onChange={() => toggleMetric(metric.key)} />
-                <span>{metric.label}</span>
-              </label>
-            ))}
-          </div>
+      {isOzonUnitEconomics && (
+        <section className="panel metrics-panel">
+          <button
+            className="metrics-toggle"
+            type="button"
+            onClick={() => setIsMetricsOpen((prev) => !prev)}
+            aria-expanded={isMetricsOpen}
+          >
+            <span>Метрики для расчёта</span>
+            <span className={`metrics-toggle-icon ${isMetricsOpen ? 'open' : ''}`} aria-hidden="true">▾</span>
+          </button>
+
+          {isMetricsOpen && (
+            <div className="metrics-content">
+              <div className="panel-actions">
+                <button type="button" onClick={selectAllMetrics}>Выбрать всё</button>
+                <button type="button" onClick={clearMetrics}>Снять всё</button>
+              </div>
+
+              <div className="metrics-grid">
+                {METRICS.map((metric) => (
+                  <label key={metric.key} className="metric-item">
+                    <input type="checkbox" checked={selectedMetricSet.has(metric.key)} onChange={() => toggleMetric(metric.key)} />
+                    <span>{metric.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 

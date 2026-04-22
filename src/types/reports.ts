@@ -5,11 +5,16 @@ export type ValueType = 'number' | 'currency' | 'percent'
 export type MetricKey =
   | 'sales'
   | 'returns'
+  | 'cancellations'
   | 'buyout'
   | 'buyoutRate'
   | 'revenueBeforeSpp'
+  | 'revenueAfterSpp'
+  | 'accruedPoints'
+  | 'partnerCompensation'
   | 'commission'
   | 'logistics'
+  | 'reverseLogistics'
   | 'acquiring'
   | 'tax'
   | 'cogs'
@@ -17,7 +22,6 @@ export type MetricKey =
   | 'otherExpenses'
   | 'netRevenue'
   | 'marginRate'
-  | 'drr'
 
 export type MetricView = {
   key: MetricKey
@@ -39,6 +43,8 @@ export type ReportGroup = {
   title: string
   rowCount: number
   metrics: ReportMetric[]
+  availabilityGroups?: AvailabilityGroups
+  productMargins?: ProductMarginItem[]
 }
 
 export type AccrualMetric = {
@@ -52,4 +58,15 @@ export type AccrualGroup = {
   title: string
   rowCount?: number
   metrics: AccrualMetric[]
+}
+
+export type AvailabilityGroups = {
+  urgent: string[]
+  maintain: string[]
+  enough: string[]
+}
+
+export type ProductMarginItem = {
+  article: string
+  marginSharePercent: number
 }

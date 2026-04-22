@@ -1,11 +1,31 @@
-import { AD_COLS, METRICS, OTHER_EXPENSE_COLS } from '../../constants/metrics'
-import type { AccrualGroup, AccrualMetric, ReportGroup, ValueType } from '../../types/reports'
+import { AD_COLS, LOGISTICS_COLS, METRICS, OTHER_EXPENSE_COLS, REVERSE_LOGISTICS_COLS } from '../../constants/metrics'
+import type { AccrualGroup, AccrualMetric, AvailabilityGroups, ReportGroup, ValueType } from '../../types/reports'
 import { normalize, parseCsv, parseNumber } from '../../utils/csv'
+
+function patternToRegex(pattern: string): RegExp | null {
+  const normalized = pattern.trim()
+  if (!normalized) return null
+
+  const escaped = normalized
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.')
+
+  return new RegExp(`^${escaped}$`, 'i')
+}
+
+function matchesArticlePattern(article: string, pattern: string): boolean {
+  const regex = patternToRegex(pattern)
+  if (!regex) return true
+  return regex.test(article)
+}
 
 function buildUnitEconomicsReport(
   rowsSubset: string[][],
   headers: string[],
   getCell: (row: string[], colName: string) => string,
+  vatRatePercent: number,
+  taxRatePercent: number,
   title: string,
 ): ReportGroup {
   const headerSet = new Set(headers)
@@ -24,17 +44,24 @@ function buildUnitEconomicsReport(
   const delivered = sumCol('Доставлено товаров, шт')
   const returns = sumCol('Возвращено товаров, шт')
   const revenue = sumCol('Выручка')
+  const accruedPoints = sumCol('Баллы за скидки') ?? sumCol('Баллы за скидки, руб.')
+  const partnerCompensation = sumCol('Программы партнёров') ?? sumCol('Программы партнеров')
   const commission = sumCol('Вознаграждение Ozon')
-  const logistics = sumCol('Логистика')
+  const sumDefinedCols = (names: string[]): number | null => {
+    const values = names.map((name) => sumCol(name)).filter((v): v is number => v !== null)
+    if (values.length === 0) return null
+    return values.reduce((acc, value) => acc + value, 0)
+  }
+
+  const logistics = sumDefinedCols(LOGISTICS_COLS)
+  const reverseLogistics = sumDefinedCols(REVERSE_LOGISTICS_COLS)
   const acquiring = sumCol('Эквайринг')
   const periodProfit = sumCol('Прибыль за период')
-  const tax = revenue !== null ? revenue * 0.11 : null
 
   const hasAdsCols = AD_COLS.every((col) => headerSet.has(col))
   const adsCost = hasAdsCols ? AD_COLS.reduce((acc, col) => acc + (sumCol(col) || 0), 0) : null
 
-  const hasOtherCols = OTHER_EXPENSE_COLS.every((col) => headerSet.has(col))
-  const otherExpenses = hasOtherCols ? OTHER_EXPENSE_COLS.reduce((acc, col) => acc + (sumCol(col) || 0), 0) : null
+  const otherExpenses = sumDefinedCols(OTHER_EXPENSE_COLS)
 
   const cogs = rowsSubset.reduce((acc, row) => {
     const unitCost = parseNumber(getCell(row, 'Себестоимость'))
@@ -45,19 +72,31 @@ function buildUnitEconomicsReport(
   }, 0)
 
   const buyout = delivered !== null && returns !== null ? delivered - returns : null
-  const buyoutRate = buyout !== null && sales && sales !== 0 ? (buyout / sales) * 100 : null
+  const buyoutRate = buyout !== null && returns !== null && buyout + returns !== 0
+    ? (buyout / (buyout + returns)) * 100
+    : null
+  const hasRevenueBeforeSppParts = revenue !== null || accruedPoints !== null || partnerCompensation !== null
+  const revenueBeforeSpp = hasRevenueBeforeSppParts
+    ? (revenue ?? 0) + (accruedPoints ?? 0) + (partnerCompensation ?? 0)
+    : null
+  const totalRate = (vatRatePercent + taxRatePercent) / 100
+  const tax = revenueBeforeSpp !== null ? revenueBeforeSpp * totalRate : null
   const netRevenue = periodProfit !== null && tax !== null ? periodProfit - tax : null
   const marginRate = netRevenue !== null && revenue && revenue !== 0 ? (netRevenue / revenue) * 100 : null
-  const drr = adsCost !== null && revenue && revenue !== 0 ? (adsCost / revenue) * 100 : null
 
   const values: Record<(typeof METRICS)[number]['key'], number | null> = {
     sales,
     returns,
+    cancellations: null,
     buyout,
     buyoutRate,
-    revenueBeforeSpp: revenue,
+    revenueBeforeSpp,
+    revenueAfterSpp: revenue,
+    accruedPoints,
+    partnerCompensation,
     commission,
     logistics,
+    reverseLogistics,
     acquiring,
     tax,
     cogs,
@@ -65,19 +104,91 @@ function buildUnitEconomicsReport(
     otherExpenses,
     netRevenue,
     marginRate,
-    drr,
   }
 
-  const metrics = METRICS.map((metric) => ({
-    ...metric,
-    value: values[metric.key],
-    ok: values[metric.key] !== null,
-  }))
+  const metrics = METRICS.map((metric) => {
+    const value = values[metric.key]
+    if (metric.key === 'tax') {
+      return {
+        ...metric,
+        value,
+        ok: value !== null,
+        formula: `Налог(${taxRatePercent}%) + НДС(${vatRatePercent}%)`,
+      }
+    }
+    return {
+      ...metric,
+      value,
+      ok: value !== null,
+    }
+  })
 
-  return { title, rowCount: rowsSubset.length, metrics }
+  const availabilityGroups: AvailabilityGroups = {
+    urgent: [],
+    maintain: [],
+    enough: [],
+  }
+
+  if (headerSet.has('Артикул') && headerSet.has('Доступность товаров')) {
+    const urgent = new Set<string>()
+    const maintain = new Set<string>()
+    const enough = new Set<string>()
+
+    for (const row of rowsSubset) {
+      const article = normalize(getCell(row, 'Артикул'))
+      const availability = normalize(getCell(row, 'Доступность товаров')).toLowerCase()
+      if (!article || !availability) continue
+
+      if (availability === 'срочно поставить') {
+        urgent.add(article)
+        continue
+      }
+      if (availability === 'поддерживайте остаток') {
+        maintain.add(article)
+        continue
+      }
+      if (availability === 'пока хватает') {
+        enough.add(article)
+      }
+    }
+
+    const sortArticles = (set: Set<string>): string[] => Array.from(set).sort((a, b) => a.localeCompare(b, 'ru'))
+    availabilityGroups.urgent = sortArticles(urgent)
+    availabilityGroups.maintain = sortArticles(maintain)
+    availabilityGroups.enough = sortArticles(enough)
+  }
+
+  const productMargins: { article: string, marginSharePercent: number }[] = []
+  if (headerSet.has('Артикул') && headerSet.has('Доля от продаж')) {
+    const marginByArticle = new Map<string, { sum: number, count: number }>()
+    for (const row of rowsSubset) {
+      const article = normalize(getCell(row, 'Артикул'))
+      const margin = parseNumber(getCell(row, 'Доля от продаж'))
+      if (!article || margin === null) continue
+
+      const current = marginByArticle.get(article) || { sum: 0, count: 0 }
+      current.sum += margin
+      current.count += 1
+      marginByArticle.set(article, current)
+    }
+
+    for (const [article, stats] of marginByArticle.entries()) {
+      productMargins.push({
+        article,
+        marginSharePercent: stats.sum / stats.count,
+      })
+    }
+  }
+
+  return { title, rowCount: rowsSubset.length, metrics, availabilityGroups, productMargins }
 }
 
-export function buildUnitEconomicsReports(rawCsv: string): ReportGroup[] {
+export function buildUnitEconomicsReports(
+  rawCsv: string,
+  articlePattern: string,
+  vatRatePercent: number,
+  taxRatePercent: number,
+): ReportGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex((row) => normalize(row[0]) === 'SKU')
   if (headerIndex === -1) {
@@ -95,12 +206,27 @@ export function buildUnitEconomicsReports(rawCsv: string): ReportGroup[] {
     return row[idx] || ''
   }
 
-  const stRows = dataRows.filter((row) => normalize(getCell(row, 'Артикул')).toLowerCase().startsWith('st'))
-  const otherRows = dataRows.filter((row) => !normalize(getCell(row, 'Артикул')).toLowerCase().startsWith('st'))
+  const matchedRows = dataRows.filter((row) => matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
+  const otherRows = dataRows.filter((row) => !matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
+  const printablePattern = articlePattern.trim() || '*'
 
   return [
-    buildUnitEconomicsReport(stRows, headers, getCell, 'Артикул начинается с "st"'),
-    buildUnitEconomicsReport(otherRows, headers, getCell, 'Все остальные товары'),
+    buildUnitEconomicsReport(
+      matchedRows,
+      headers,
+      getCell,
+      vatRatePercent,
+      taxRatePercent,
+      `Артикул соответствует паттерну "${printablePattern}"`,
+    ),
+    buildUnitEconomicsReport(
+      otherRows,
+      headers,
+      getCell,
+      vatRatePercent,
+      taxRatePercent,
+      'Все остальные товары',
+    ),
   ]
 }
 
