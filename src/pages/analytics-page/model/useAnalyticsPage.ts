@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import {
   buildAccrualReports,
+  buildUnitArticleCogsMap,
   buildUnitEconomicsReports,
   getUnitMetricDisplayValue,
   METRICS,
@@ -28,6 +29,24 @@ function readStoredRate(key: string, fallback: number): number {
   const raw = window.localStorage.getItem(key)
   const parsed = raw === null ? Number.NaN : Number(raw)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function getPeriodKeyFromFileName(fileName: string): string | null {
+  const normalized = fileName.trim()
+  if (!normalized) return null
+  const match = normalized.match(/(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}(?:\.\d{4})?)/)
+  if (!match) return null
+  const start = match[1]
+  const endRaw = match[2]
+  const year = start.split('.')[2]
+  const end = /^\d{2}\.\d{2}$/.test(endRaw) ? `${endRaw}.${year}` : endRaw
+  return `${start}-${end}`
+}
+
+function hasSamePeriod(unitFileName: string, accrualFileName: string): boolean {
+  const unitPeriod = getPeriodKeyFromFileName(unitFileName)
+  const accrualPeriod = getPeriodKeyFromFileName(accrualFileName)
+  return Boolean(unitPeriod && accrualPeriod && unitPeriod === accrualPeriod)
 }
 
 function renderUnitEconomicsPdf(
@@ -117,6 +136,7 @@ export function useAnalyticsPage() {
   const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('unitEconomics')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
   const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
+  const [accrualFileName, setAccrualFileName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [fileName, setFileName] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -124,6 +144,7 @@ export function useAnalyticsPage() {
   const [isMetricsOpen, setIsMetricsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('st*')
   const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
+  const [unitFileName, setUnitFileName] = useState('')
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
@@ -147,8 +168,10 @@ export function useAnalyticsPage() {
   const accrualReportBuild = useMemo(() => {
     if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
+      const samePeriod = hasSamePeriod(unitFileName, accrualFileName)
+      const unitArticleCogsMap = samePeriod && unitCsvSource ? buildUnitArticleCogsMap(unitCsvSource) : null
       return {
-        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent),
+        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent, unitArticleCogsMap),
         error: '',
       }
     } catch (err) {
@@ -157,7 +180,7 @@ export function useAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт по начислениям.',
       }
     }
-  }, [accrualCsvSource, taxRatePercent, vatRatePercent])
+  }, [accrualCsvSource, accrualFileName, taxRatePercent, unitCsvSource, unitFileName, vatRatePercent])
   const accrualReports = accrualReportBuild.reports
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
@@ -209,8 +232,10 @@ export function useAnalyticsPage() {
 
       if (ozonCalculationType === 'accrualReport') {
         setAccrualCsvSource(text)
+        setAccrualFileName(file.name)
       } else {
         setUnitCsvSource(text)
+        setUnitFileName(file.name)
       }
 
       try {
@@ -244,25 +269,19 @@ export function useAnalyticsPage() {
   useEffect(() => {
     if (activeMarketplace !== 'ozon') return
     let isCancelled = false
-    getCsvRecord(ozonCalculationType)
-      .then((record) => {
+    Promise.all([getCsvRecord('unitEconomics'), getCsvRecord('accrualReport')])
+      .then(([unitRecord, accrualRecord]) => {
         if (isCancelled) return
-        if (!record) {
-          if (ozonCalculationType === 'unitEconomics') {
-            setUnitCsvSource(null)
-          } else {
-            setAccrualCsvSource(null)
-          }
-          setFileName('')
-          return
-        }
 
+        setUnitCsvSource(unitRecord?.csvText ?? null)
+        setAccrualCsvSource(accrualRecord?.csvText ?? null)
+        setUnitFileName(unitRecord?.fileName ?? '')
+        setAccrualFileName(accrualRecord?.fileName ?? '')
         if (ozonCalculationType === 'unitEconomics') {
-          setUnitCsvSource(record.csvText)
+          setFileName(unitRecord?.fileName ?? '')
         } else {
-          setAccrualCsvSource(record.csvText)
+          setFileName(accrualRecord?.fileName ?? '')
         }
-        setFileName(record.fileName)
       })
       .catch(() => {
         // Ignore persistence errors to keep CSV processing functional without IndexedDB.

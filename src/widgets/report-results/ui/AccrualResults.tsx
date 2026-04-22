@@ -14,6 +14,7 @@ const SECONDARY_INFO_LABELS = new Set([
   'Строк с нулем',
 ])
 const AVERAGE_LABEL = 'Среднее начисление на строку'
+const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмена и возвраты'
 const STRUCTURE_PREFIX = 'Структура: '
 
 type AccrualResultsProps = {
@@ -32,6 +33,9 @@ function isSecondaryMetric(label: string): boolean {
 }
 
 function getPrimaryMetricValueClassName(label: string, value: number | null): string {
+  if (label === CANCELLATIONS_AND_RETURNS_LABEL) {
+    return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--negative`)
+  }
   if (label === AVERAGE_LABEL) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--muted`)
   }

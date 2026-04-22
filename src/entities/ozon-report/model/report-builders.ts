@@ -236,10 +236,48 @@ export function buildUnitEconomicsReports(
   ]
 }
 
+function normalizeArticleKey(article: string): string {
+  return normalize(article).toLowerCase()
+}
+
+export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | null {
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const headerIndex = rows.findIndex((row) => normalize(row[0]) === 'SKU')
+  if (headerIndex === -1) return null
+
+  const headers = rows[headerIndex].map((cell) => normalize(cell))
+  const colIndex = new Map(headers.map((header, idx) => [header, idx]))
+  const articleIdx = colIndex.get('Артикул')
+  const unitCostIdx = colIndex.get('Себестоимость')
+  if (articleIdx === undefined || unitCostIdx === undefined) {
+    return null
+  }
+
+  const dataRows = rows.slice(headerIndex + 1).filter((row) => normalize(row[0]) !== '')
+  const byArticle = new Map<string, { sum: number, count: number }>()
+  for (const row of dataRows) {
+    const article = normalizeArticleKey(row[articleIdx] || '')
+    const unitCost = parseNumber(row[unitCostIdx] || '')
+    if (!article || unitCost === null) continue
+    const current = byArticle.get(article) || { sum: 0, count: 0 }
+    current.sum += unitCost
+    current.count += 1
+    byArticle.set(article, current)
+  }
+
+  const result = new Map<string, number>()
+  for (const [article, stats] of byArticle.entries()) {
+    if (stats.count === 0) continue
+    result.set(article, stats.sum / stats.count)
+  }
+  return result
+}
+
 export function buildAccrualReports(
   rawCsv: string,
   vatRatePercent = 5,
   taxRatePercent = 6,
+  unitArticleCogsMap: Map<string, number> | null = null,
 ): AccrualGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex(
@@ -262,6 +300,26 @@ export function buildAccrualReports(
     return row[idx] || ''
   }
 
+  const accrualCogsFromUnitMap = (() => {
+    if (!unitArticleCogsMap || unitArticleCogsMap.size === 0) return null
+    if (!colIndex.has('Артикул') || !colIndex.has('Количество') || !colIndex.has('Тип начисления')) return null
+
+    let total = 0
+    let matchedRows = 0
+    for (const row of dataRows) {
+      const accrualType = normalize(getCell(row, 'Тип начисления')).toLowerCase().replace(/ё/g, 'е')
+      if (accrualType !== 'выручка') continue
+      const articleKey = normalizeArticleKey(getCell(row, 'Артикул'))
+      const quantity = parseNumber(getCell(row, 'Количество'))
+      if (!articleKey || quantity === null) continue
+      const unitCost = unitArticleCogsMap.get(articleKey)
+      if (unitCost === undefined) continue
+      total += quantity * unitCost
+      matchedRows += 1
+    }
+    return matchedRows > 0 ? total : null
+  })()
+
   const sumByGroup = new Map<string, number>()
   const sumByDate = new Map<string, number>()
   const sumByScheme = new Map<string, number>()
@@ -274,6 +332,8 @@ export function buildAccrualReports(
   let negativeCount = 0
   let zeroCount = 0
   let sppPoints = 0
+  let salesQuantity = 0
+  let cancellationsAndReturnsQuantity = 0
 
   const addToMap = (map: Map<string, number>, key: string, value: number): void => {
     map.set(key, (map.get(key) || 0) + value)
@@ -303,6 +363,13 @@ export function buildAccrualReports(
 
     const groupLower = normalizeLower(group)
     const typeLower = normalizeLower(type)
+    const quantity = parseNumber(getCell(row, 'Количество'))
+    if (typeLower === 'выручка' && quantity !== null) {
+      salesQuantity += quantity
+    }
+    if (typeLower === 'обратная логистика' && quantity !== null) {
+      cancellationsAndReturnsQuantity += quantity
+    }
     if (
       (groupLower.includes('балл') && groupLower.includes('скид'))
       || (typeLower.includes('балл') && typeLower.includes('скид'))
@@ -451,6 +518,26 @@ export function buildAccrualReports(
           formula: 'SUM("Сумма итого, руб." < 0)',
           shareText: salesBase ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format((Math.abs(marketplaceExpenses) / salesBase) * 100)}%` : null,
         },
+        {
+          label: 'Количество продаж',
+          value: salesQuantity,
+          type: 'number',
+          formula: 'SUM("Количество"), фильтр: "Тип начисления" = "Выручка"',
+        },
+        {
+          label: 'Отмена и возвраты',
+          value: cancellationsAndReturnsQuantity,
+          type: 'number',
+          formula: 'SUM("Количество"), фильтр: "Тип начисления" = "Обратная логистика"',
+        },
+        ...(accrualCogsFromUnitMap !== null
+          ? [{
+              label: 'Себестоимость',
+              value: accrualCogsFromUnitMap,
+              type: 'currency' as const,
+              formula: 'Σ("Количество" * "Себестоимость артикула"), где "Тип начисления" = "Выручка", а себестоимость артикула берется из отчета "Юнит экономика" за тот же период',
+            }]
+          : []),
         {
           label: 'Налог',
           value: tax11,
