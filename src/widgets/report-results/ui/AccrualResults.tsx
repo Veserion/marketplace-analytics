@@ -20,10 +20,28 @@ const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
+const REVENUE_BEFORE_SPP_LABEL = 'Выручка до СПП'
+const REVENUE_WITHOUT_SPP_LABEL = 'Выручка без СПП'
+const RETURNS_LABEL = 'Возвраты'
+const SPP_AND_PROMOTIONS_LABEL = 'СПП и акции'
+const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
+const SALES_GROUP_LABEL = 'Продажи'
+const MAX_OVERVIEW_ITEMS = 8
+const OVERVIEW_COLORS = [
+  'var(--color-accent, #12305d)',
+  'var(--color-positive, #1f8b4c)',
+  '#58b8cf',
+  '#e6b766',
+  '#9f91d8',
+  '#ee8f68',
+  '#d96b9f',
+  '#7f93ae',
+]
 
 type AccrualResultsProps = {
   reports: AccrualGroup[]
   cogsMissingValueText?: string
+  showAccrualOverview?: boolean
 }
 
 function getValueClassName(value: number | null): string {
@@ -77,15 +95,198 @@ function toMetricRow(
   }
 }
 
+type OverviewItem = {
+  label: string
+  value: number
+  formula: string
+  color: string
+}
+
+type OverviewModel = {
+  salesTotal: AccrualGroup['metrics'][number] | null
+  salesItems: OverviewItem[]
+  accrualTotal: AccrualGroup['metrics'][number] | null
+  accrualItems: OverviewItem[]
+  transferTotal: AccrualGroup['metrics'][number] | null
+}
+
+function getMetric(report: AccrualGroup | undefined, label: string): AccrualGroup['metrics'][number] | null {
+  if (!report) return null
+  return report.metrics.find((metric) => metric.label === label) ?? null
+}
+
+function getOverviewColor(index: number): string {
+  return OVERVIEW_COLORS[index % OVERVIEW_COLORS.length]
+}
+
+function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
+  const totalsReport = reports.find((report) => report.title === 'Итоги периода')
+  const groupedReport = reports.find((report) => report.title === 'Начисления по группам')
+  if (!totalsReport || !groupedReport) return null
+
+  const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
+  const returns = getMetric(totalsReport, RETURNS_LABEL)
+  const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
+  const salesTotal = getMetric(totalsReport, REVENUE_BEFORE_SPP_LABEL)
+  const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
+  const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
+
+  const salesItems: OverviewItem[] = [revenueWithoutSpp, returns, sppAndPromotions]
+    .filter((metric): metric is AccrualGroup['metrics'][number] => Boolean(metric && metric.value !== null))
+    .map((metric, index) => ({
+      label: metric.label,
+      value: metric.value || 0,
+      formula: metric.formula,
+      color: getOverviewColor(index),
+    }))
+
+  const groupedItems = groupedReport.metrics
+    .filter((metric) => metric.label !== SALES_GROUP_LABEL && metric.label !== RETURNS_LABEL && metric.value !== null)
+    .map((metric, index) => ({
+      label: metric.label,
+      value: metric.value || 0,
+      formula: metric.formula,
+      color: getOverviewColor(index + 2),
+    }))
+
+  const accrualItems = groupedItems.slice(0, MAX_OVERVIEW_ITEMS)
+  if (groupedItems.length > MAX_OVERVIEW_ITEMS) {
+    const otherSum = groupedItems.slice(MAX_OVERVIEW_ITEMS).reduce((acc, item) => acc + item.value, 0)
+    accrualItems.push({
+      label: 'Прочие начисления',
+      value: otherSum,
+      formula: `SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "${SALES_GROUP_LABEL}" и вне топ-${MAX_OVERVIEW_ITEMS}`,
+      color: getOverviewColor(MAX_OVERVIEW_ITEMS + 2),
+    })
+  }
+
+  return {
+    salesTotal,
+    salesItems,
+    accrualTotal,
+    accrualItems,
+    transferTotal,
+  }
+}
+
+function getSegmentPercent(value: number, sumAbs: number): number {
+  if (sumAbs === 0) return 0
+  return (Math.abs(value) / sumAbs) * 100
+}
+
+function formatOverviewCurrency(value: number | null): string {
+  if (value === null) return formatValue(value, 'currency')
+  return formatValue(Math.round(value), 'currency')
+}
+
 export function AccrualResults({
   reports,
   cogsMissingValueText = DEFAULT_COGS_MISSING_VALUE_TEXT,
+  showAccrualOverview = false,
 }: AccrualResultsProps) {
   const structureReports = reports.filter((report) => report.title.startsWith('Структура:'))
   const baseReports = reports.filter((report) => !report.title.startsWith('Структура:'))
+  const overviewModel = showAccrualOverview ? buildOverviewModel(reports) : null
+  const salesAbsSum = overviewModel
+    ? overviewModel.salesItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
+    : 0
+  const accrualAbsSum = overviewModel
+    ? overviewModel.accrualItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
+    : 0
 
   return (
     <section className={cn(BLOCK_NAME)}>
+      {overviewModel && (
+        <article className={cn(`${BLOCK_NAME}__overview`)}>
+          <section className={cn(`${BLOCK_NAME}__overview-column`)}>
+            <Typography variant="h2" color="accent">Продажи и возвраты</Typography>
+            <Typography
+              variant="h2"
+              color="primary"
+              className={getPrimaryMetricValueClassName(overviewModel.salesTotal?.label || '', overviewModel.salesTotal?.value ?? null)}
+            >
+              {formatOverviewCurrency(overviewModel.salesTotal?.value ?? null)}
+            </Typography>
+            <div className={cn(`${BLOCK_NAME}__overview-bar`)}>
+              {overviewModel.salesItems.map((item) => (
+                <span
+                  key={item.label}
+                  className={cn(`${BLOCK_NAME}__overview-bar-segment`)}
+                  style={{ width: `${getSegmentPercent(item.value, salesAbsSum)}%`, backgroundColor: item.color }}
+                />
+              ))}
+            </div>
+            <ul className={cn(`${BLOCK_NAME}__overview-list`)}>
+              {overviewModel.salesItems.map((item) => (
+                <li className={cn(`${BLOCK_NAME}__overview-item`)} key={item.label}>
+                  <div className={cn(`${BLOCK_NAME}__overview-item-label`)}>
+                    <span className={cn(`${BLOCK_NAME}__overview-dot`)} style={{ backgroundColor: item.color }} />
+                    <Typography variant="body2" color="primary">{item.label}</Typography>
+                  </div>
+                  <Typography
+                    variant="body2"
+                    color="primary"
+                    semiBold
+                    className={cn(`${BLOCK_NAME}__value-nowrap`)}
+                  >
+                    {formatOverviewCurrency(item.value)}
+                  </Typography>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={cn(`${BLOCK_NAME}__overview-column`, `${BLOCK_NAME}__overview-column--wide`)}>
+            <Typography variant="h2" color="accent">Начисления</Typography>
+            <Typography
+              variant="h2"
+              color="primary"
+              className={getPrimaryMetricValueClassName(overviewModel.accrualTotal?.label || '', overviewModel.accrualTotal?.value ?? null)}
+            >
+              {formatOverviewCurrency(overviewModel.accrualTotal?.value ?? null)}
+            </Typography>
+            <div className={cn(`${BLOCK_NAME}__overview-bar`)}>
+              {overviewModel.accrualItems.map((item) => (
+                <span
+                  key={item.label}
+                  className={cn(`${BLOCK_NAME}__overview-bar-segment`)}
+                  style={{ width: `${getSegmentPercent(item.value, accrualAbsSum)}%`, backgroundColor: item.color }}
+                />
+              ))}
+            </div>
+            <ul className={cn(`${BLOCK_NAME}__overview-list`, `${BLOCK_NAME}__overview-list--two-columns`)}>
+              {overviewModel.accrualItems.map((item) => (
+                <li className={cn(`${BLOCK_NAME}__overview-item`)} key={item.label}>
+                  <div className={cn(`${BLOCK_NAME}__overview-item-label`)}>
+                    <span className={cn(`${BLOCK_NAME}__overview-dot`)} style={{ backgroundColor: item.color }} />
+                    <Typography variant="body2" color="primary">{item.label}</Typography>
+                  </div>
+                  <Typography
+                    variant="body2"
+                    color="primary"
+                    semiBold
+                    className={cn(`${BLOCK_NAME}__value-nowrap`)}
+                  >
+                    {formatOverviewCurrency(item.value)}
+                  </Typography>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={cn(`${BLOCK_NAME}__overview-column`, `${BLOCK_NAME}__overview-column--narrow`)}>
+            <Typography variant="h2" color="accent">Итог</Typography>
+            <Typography
+              variant="h2"
+              color="primary"
+              className={getPrimaryMetricValueClassName(overviewModel.transferTotal?.label || '', overviewModel.transferTotal?.value ?? null)}
+            >
+              {formatOverviewCurrency(overviewModel.transferTotal?.value ?? null)}
+            </Typography>
+          </section>
+        </article>
+      )}
+
       {baseReports.map((report) => {
         const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
         const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))

@@ -325,9 +325,10 @@ export function buildAccrualReports(
   let zeroCount = 0
   let salesQuantity = 0
   let cancellationsAndReturnsQuantity = 0
-  let revenueWithoutSpp = 0
-  let revenueBeforeSpp = 0
+  let revenueWithoutSppSales = 0
+  let revenueBeforeSppSales = 0
   let marketplaceExpenses = 0
+  let returnsAmount = 0
 
   const addToMap = (map: Map<string, number>, key: string, value: number): void => {
     map.set(key, (map.get(key) || 0) + value)
@@ -355,17 +356,21 @@ export function buildAccrualReports(
 
     const groupLower = normalizeLower(group)
     const typeLower = normalizeLower(type)
+    const isReturnRow = groupLower.includes('возврат')
     const quantity = parseNumber(getCell(row, 'Количество'))
     if (typeLower === 'выручка' && quantity !== null) {
       salesQuantity += quantity
     }
     if (groupLower === 'продажи' && typeLower === 'выручка') {
-      revenueWithoutSpp += amount
+      revenueWithoutSppSales += amount
     }
     if (groupLower === 'продажи') {
-      revenueBeforeSpp += amount
-    } else {
+      revenueBeforeSppSales += amount
+    } else if (!isReturnRow) {
       marketplaceExpenses += amount
+    }
+    if (isReturnRow) {
+      returnsAmount += amount
     }
     if (typeLower === 'обратная логистика' && quantity !== null) {
       cancellationsAndReturnsQuantity += quantity
@@ -392,8 +397,8 @@ export function buildAccrualReports(
   ): AccrualMetric[] =>
     entries.map(([label, value]) => ({ label, value, type, formula: formulaBuilder(label) }))
 
-  const revenueByStore = revenueWithoutSpp
-  const amountBeforeSpp = revenueBeforeSpp
+  const revenueByStore = revenueWithoutSppSales + returnsAmount
+  const amountBeforeSpp = revenueBeforeSppSales + returnsAmount
   const salesBase = amountBeforeSpp > 0 ? amountBeforeSpp : null
   const sppAndPromotions = amountBeforeSpp - revenueByStore
   const totalTaxRate = (vatRatePercent + taxRatePercent) / 100
@@ -521,13 +526,19 @@ export function buildAccrualReports(
           label: 'Выручка до СПП',
           value: amountBeforeSpp,
           type: 'currency',
-          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "Продажи"',
+          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "Продажи" + SUM возвратов',
         },
         {
           label: 'Выручка без СПП',
           value: revenueByStore,
           type: 'currency',
-          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "Продажи" и "Тип начисления" = "Выручка"',
+          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "Продажи" и "Тип начисления" = "Выручка" + SUM возвратов',
+        },
+        {
+          label: 'Возвраты',
+          value: returnsAmount,
+          type: 'currency',
+          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" содержит "возврат"',
         },
         {
           label: 'СПП и акции',
@@ -539,7 +550,7 @@ export function buildAccrualReports(
           label: 'Общие затраты по Маркетплейсу',
           value: marketplaceExpenses,
           type: 'currency',
-          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи"',
+          formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи" и исключая возвраты',
           shareText: salesBase ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format((Math.abs(marketplaceExpenses) / salesBase) * 100)}%` : null,
         },
         {

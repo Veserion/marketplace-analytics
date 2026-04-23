@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
-import { useState } from 'react'
-import type { ChangeEvent } from 'react'
-import { Typography, UiPanel } from '@/shared/ui-kit'
+import {useState} from 'react'
+import type {ChangeEvent} from 'react'
+import {Typography, UiPanel} from '@/shared/ui-kit'
 import styles from './ReportUploadPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -25,21 +25,21 @@ type ReportUploadPanelProps = {
 }
 
 export function ReportUploadPanel({
-  isProcessing,
-  hasResults,
-  fileName,
-  primaryFileLabel = '',
-  secondaryFileName = '',
-  secondaryFileLabel = 'CSV себестоимости товаров (опционально)',
-  secondaryFileHint = '',
-  secondaryMissingArticles = [],
-  secondaryAlertText = '',
-  error,
-  showWildberriesWarning,
-  onFileUpload,
-  onSecondaryFileUpload,
-  onDownloadPdf,
-}: ReportUploadPanelProps) {
+                                    isProcessing,
+                                    hasResults,
+                                    fileName,
+                                    primaryFileLabel = '',
+                                    secondaryFileName = '',
+                                    secondaryFileLabel = 'CSV себестоимости товаров (опционально)',
+                                    secondaryFileHint = '',
+                                    secondaryMissingArticles = [],
+                                    secondaryAlertText = '',
+                                    error,
+                                    showWildberriesWarning,
+                                    onFileUpload,
+                                    onSecondaryFileUpload,
+                                    onDownloadPdf,
+                                  }: ReportUploadPanelProps) {
   const [isMissingCopied, setIsMissingCopied] = useState(false)
   const hasMissingArticles = secondaryMissingArticles.length > 0
 
@@ -64,18 +64,19 @@ export function ReportUploadPanel({
             </Typography>
           )}
           <div className={cn(`${BLOCK_NAME}__row`)}>
-            <input className={cn(`${BLOCK_NAME}__file-input`)} type="file" accept=".csv,text/csv" onChange={onFileUpload} disabled={isProcessing} />
+            <input className={cn(`${BLOCK_NAME}__file-input`)} type="file" accept=".csv,text/csv"
+                   onChange={onFileUpload} disabled={isProcessing}/>
             <button
               className={cn(`${BLOCK_NAME}__download-button`)}
               type="button"
               onClick={onDownloadPdf}
               disabled={isProcessing || !hasResults}
             >
-              <Typography as="span" variant="body2" color="accent">Скачать отчет</Typography>
+              <Typography as="span" variant="body2" color="accent" semiBold>Скачать отчет</Typography>
             </button>
           </div>
           {fileName && (
-            <Typography variant="body2" color="accent" className={cn(`${BLOCK_NAME}__file-meta`)}>
+            <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__file-meta`)}>
               Файл: {fileName}
             </Typography>
           )}
@@ -89,7 +90,7 @@ export function ReportUploadPanel({
               {secondaryFileLabel}
             </Typography>
             {secondaryFileHint && (
-              <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__secondary-hint`)}>
+              <Typography variant="body3" color="muted" semiBold className={cn(`${BLOCK_NAME}__secondary-hint`)}>
                 {secondaryFileHint}
               </Typography>
             )}
@@ -101,7 +102,7 @@ export function ReportUploadPanel({
               disabled={isProcessing}
             />
             {secondaryFileName && (
-              <Typography variant="body2" color="accent" className={cn(`${BLOCK_NAME}__file-meta`)}>
+              <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__file-meta`)}>
                 Файл себестоимости: {secondaryFileName}
               </Typography>
             )}
@@ -136,17 +137,20 @@ export function ReportUploadPanel({
       )}
 
       {isProcessing && (
-        <Typography variant="body2" color="accent" className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--loader`)}>
+        <Typography variant="body2" color="accent"
+                    className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--loader`)}>
           Анализирую файл, подождите…
         </Typography>
       )}
       {showWildberriesWarning && (
-        <Typography variant="body2" color="warning" className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--warning`)}>
+        <Typography variant="body2" color="warning"
+                    className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--warning`)}>
           Расчёт для Wildberries пока в разработке. Переключитесь на вкладку Ozon.
         </Typography>
       )}
       {error && (
-        <Typography variant="body2" color="negative" className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--error`)}>
+        <Typography variant="body2" color="negative"
+                    className={cn(`${BLOCK_NAME}__notice`, `${BLOCK_NAME}__notice--error`)}>
           {error}
         </Typography>
       )}

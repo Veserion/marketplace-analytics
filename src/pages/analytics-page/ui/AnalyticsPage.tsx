@@ -112,6 +112,7 @@ export function AnalyticsPage() {
       {accrualReports && !isOzonUnitEconomics && (
         <AccrualResults
           reports={accrualReports}
+          showAccrualOverview
           cogsMissingValueText='Нет данных: загрузите "Юнит экономика" за тот же период'
         />
       )}
