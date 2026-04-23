@@ -78,6 +78,27 @@ function absValue(value: number): number {
   return Math.abs(value)
 }
 
+function hasNonZero(value: number): boolean {
+  return Math.abs(value) > 0
+}
+
+function pickSignedAmount(
+  payout: number,
+  fallback: number,
+  expected: 'negative' | 'positive' | 'any',
+): number {
+  if (hasNonZero(payout)) return payout
+  if (!hasNonZero(fallback)) return 0
+
+  if (expected === 'negative') return fallback > 0 ? -fallback : fallback
+  if (expected === 'positive') return fallback < 0 ? -fallback : fallback
+  return fallback
+}
+
+function includesAny(value: string, needles: string[]): boolean {
+  return needles.some((needle) => value.includes(needle))
+}
+
 function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
   const normalized = rawCsv.replace(/^\uFEFF/, '')
   const semicolonRows = parseCsv(normalized, ';')
@@ -189,40 +210,75 @@ function toDateTimestamp(label: string): number | null {
 
 function getRowAmount(row: WbRow): number {
   const reason = normalizeLower(row.reason)
+  const payout = row.payout
 
   if (reason === 'продажа' || reason === 'возврат') {
-    return row.payout
-  }
-  if (reason === 'логистика' || reason === 'коррекция логистики') {
-    return -absValue(row.logisticsCost)
-  }
-  if (reason === 'возмещение за выдачу и возврат товаров на пвз') {
-    return -absValue(row.pvzCompensation)
-  }
-  if (reason === 'возмещение издержек по перевозке/по складским операциям с товаром') {
-    return -absValue(row.transportReimbursement)
-  }
-  if (reason === 'хранение') {
-    return -absValue(row.storageCost)
-  }
-  if (reason === 'удержание') {
-    return -absValue(row.withholdings)
-  }
-  if (reason === 'штраф') {
-    return -absValue(row.fines)
-  }
-  if (reason === 'компенсация скидки по программе лояльности') {
-    return absValue(row.loyaltyCompensation) - absValue(row.loyaltyProgramCost) - absValue(row.loyaltyPointsWithheld)
+    return payout
   }
 
-  const fallbackExpenses =
-    absValue(row.logisticsCost)
-    + absValue(row.pvzCompensation)
-    + absValue(row.transportReimbursement)
-    + absValue(row.storageCost)
-    + absValue(row.withholdings)
-    + absValue(row.fines)
-  const fallback = row.payout - fallbackExpenses
+  if (reason === 'компенсация скидки по программе лояльности') {
+    const loyaltyAmount = absValue(row.loyaltyCompensation) - absValue(row.loyaltyProgramCost) - absValue(row.loyaltyPointsWithheld)
+    return hasNonZero(loyaltyAmount) ? loyaltyAmount : payout
+  }
+
+  if (includesAny(reason, ['логистика', 'коррекция логистики'])) {
+    return pickSignedAmount(payout, absValue(row.logisticsCost), 'negative')
+  }
+
+  if (reason === 'возмещение за выдачу и возврат товаров на пвз') {
+    return pickSignedAmount(payout, absValue(row.pvzCompensation), 'negative')
+  }
+
+  if (reason === 'возмещение издержек по перевозке/по складским операциям с товаром') {
+    return pickSignedAmount(payout, absValue(row.transportReimbursement), 'negative')
+  }
+
+  if (reason === 'хранение') {
+    return pickSignedAmount(payout, absValue(row.storageCost), 'negative')
+  }
+
+  if (reason === 'обработка товара') {
+    return pickSignedAmount(payout, absValue(row.withholdings), 'negative')
+  }
+
+  if (includesAny(reason, ['удержан', 'услуга платной доставки', 'бронирование товара через самовывоз', 'разовое изменение срока перечисления'])) {
+    return pickSignedAmount(payout, absValue(row.withholdings), 'negative')
+  }
+
+  if (reason === 'штраф') {
+    return pickSignedAmount(payout, absValue(row.fines), 'negative')
+  }
+
+  if (includesAny(reason, ['компенсация ущерба', 'добровольная компенсация при возврате'])) {
+    return pickSignedAmount(payout, 0, 'positive')
+  }
+
+  if (includesAny(reason, ['коррекция продаж', 'коррекция эквайринга'])) {
+    return pickSignedAmount(payout, row.vvCorrection, 'any')
+  }
+
+  if (reason === 'стоимость участия в программе лояльности') {
+    return pickSignedAmount(payout, absValue(row.loyaltyProgramCost), 'negative')
+  }
+
+  if (reason === 'сумма удержанная за начисленные баллы программы лояльности') {
+    return pickSignedAmount(payout, absValue(row.loyaltyPointsWithheld), 'negative')
+  }
+
+  if (hasNonZero(payout)) return payout
+
+  const fallbackKnownAmount =
+    row.vvCorrection
+    + absValue(row.loyaltyCompensation)
+    - absValue(row.loyaltyProgramCost)
+    - absValue(row.loyaltyPointsWithheld)
+    - absValue(row.logisticsCost)
+    - absValue(row.pvzCompensation)
+    - absValue(row.transportReimbursement)
+    - absValue(row.storageCost)
+    - absValue(row.withholdings)
+    - absValue(row.fines)
+  const fallback = fallbackKnownAmount
   return fallback !== 0 ? fallback : 0
 }
 
@@ -243,11 +299,35 @@ function classifyGroup(rawLabel: string): ClassifiedGroup {
   if (normalized.includes('хранен')) {
     return { label: 'Хранение', withSalesShare: true }
   }
+  if (normalized.includes('обработк')) {
+    return { label: 'Обработка товара', withSalesShare: true }
+  }
   if (normalized.includes('удержан')) {
     return { label: 'Удержания', withSalesShare: true }
   }
   if (normalized.includes('штраф')) {
     return { label: 'Штрафы', withSalesShare: true }
+  }
+  if (normalized.includes('компенсац') && normalized.includes('ущерб')) {
+    return { label: 'Компенсация ущерба', withSalesShare: true }
+  }
+  if (normalized.includes('добровольн') && normalized.includes('компенсац') && normalized.includes('возврат')) {
+    return { label: 'Добровольная компенсация', withSalesShare: true }
+  }
+  if (normalized.includes('коррекц') && normalized.includes('продаж')) {
+    return { label: 'Коррекция продаж', withSalesShare: true }
+  }
+  if (normalized.includes('коррекц') && normalized.includes('эквайр')) {
+    return { label: 'Коррекция эквайринга', withSalesShare: true }
+  }
+  if (normalized.includes('платн') && normalized.includes('доставк')) {
+    return { label: 'Платная доставка', withSalesShare: true }
+  }
+  if (normalized.includes('бронирован')) {
+    return { label: 'Бронирование', withSalesShare: true }
+  }
+  if (normalized.includes('разов') && normalized.includes('срок') && normalized.includes('перечислен')) {
+    return { label: 'Вывести сейчас', withSalesShare: true }
   }
   if (normalized.includes('лояльност')) {
     return { label: 'Лояльность', withSalesShare: true }
@@ -391,7 +471,8 @@ export function buildWildberriesAccrualReports(
   const salesDateRangeMap = new Map<string, number>()
   const groupTypeBreakdown = new Map<string, Map<string, number>>()
 
-  let totalTransfer = 0
+  let totalTransferFromRows = 0
+  let nonSalesNetAmount = 0
   let positiveCount = 0
   let negativeCount = 0
   let zeroCount = 0
@@ -411,7 +492,7 @@ export function buildWildberriesAccrualReports(
     const reason = row.reason || 'Без обоснования'
     const amount = getRowAmount(row)
 
-    totalTransfer += amount
+    totalTransferFromRows += amount
     if (amount > 0) {
       positiveCount += 1
     } else if (amount < 0) {
@@ -437,6 +518,9 @@ export function buildWildberriesAccrualReports(
         }
       }
     }
+    if (reasonLower !== 'продажа' && reasonLower !== 'возврат') {
+      nonSalesNetAmount += amount
+    }
 
     returnsAndCancellationsQuantity += row.returnCount
 
@@ -456,12 +540,13 @@ export function buildWildberriesAccrualReports(
   }
 
   const sppAndPromotions = revenueBeforeSpp - revenueWithoutSpp
-  const marketplaceExpenses = revenueWithoutSpp - totalTransfer
+  const marketplaceExpenses = -nonSalesNetAmount
+  const transferToBank = revenueBeforeSpp - marketplaceExpenses
   const totalRate = (vatRatePercent + taxRatePercent) / 100
   const taxAmount = revenueBeforeSpp !== 0 ? revenueBeforeSpp * totalRate : 0
   const cogs: number | null = cogsMatchedRows > 0 ? cogsFromFile : null
-  const netProfit = totalTransfer - taxAmount - (cogs ?? 0)
-  const marginRate = revenueWithoutSpp !== 0 ? (netProfit / revenueWithoutSpp) * 100 : null
+  const netProfit = transferToBank - taxAmount - (cogs ?? 0)
+  const marginRate = revenueBeforeSpp !== 0 ? (netProfit / revenueBeforeSpp) * 100 : null
 
   const salesBase = revenueBeforeSpp > 0 ? revenueBeforeSpp : null
   const formatSalesShare = (value: number): string | null => {
@@ -560,7 +645,7 @@ export function buildWildberriesAccrualReports(
           label: 'Общие затраты по Маркетплейсу',
           value: marketplaceExpenses,
           type: 'currency',
-          formula: 'Выручка без СПП - Перевод в банк',
+          formula: 'Сумма net effect по строкам, кроме "Продажа" и "Возврат" (взята с обратным знаком)',
           shareText: formatSalesShare(marketplaceExpenses),
         },
         {
@@ -590,17 +675,17 @@ export function buildWildberriesAccrualReports(
           label: 'Маржинальность',
           value: marginRate,
           type: 'percent',
-          formula: 'Чистая прибыль / Выручка без СПП * 100%',
+          formula: 'Чистая прибыль / Выручка до СПП * 100%',
         },
         {
           label: 'Перевод в банк',
-          value: totalTransfer,
+          value: transferToBank,
           type: 'currency',
-          formula: 'Сумма net effect по строкам отчёта',
+          formula: 'Выручка до СПП - Общие затраты по Маркетплейсу',
         },
         {
           label: 'Среднее начисление на строку',
-          value: parsedRows.length ? totalTransfer / parsedRows.length : null,
+          value: parsedRows.length ? transferToBank / parsedRows.length : null,
           type: 'currency',
           formula: 'Перевод в банк / COUNT(строк)',
         },
