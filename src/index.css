@@ -85,9 +85,9 @@
   --color-panel-border: var(--color-border-base);
   --color-panel-shadow: var(--shadow-panel);
   --color-tabs-border: var(--color-border-control);
-  --color-tabs-bg: var(--color-bg-surface-subtle);
+  --color-tabs-bg: var(--color-bg-surface-info);
   --color-tabs-text: var(--color-text-accent);
-  --color-tabs-hover: var(--color-bg-surface-info);
+  --color-tabs-hover: var(--color-bg-surface-subtle);
   --color-tabs-active-bg: var(--color-text-accent);
   --color-tabs-active-border: var(--color-text-accent);
   --color-tabs-active-text: var(--color-bg-surface);
@@ -108,6 +108,7 @@ body {
     linear-gradient(180deg, var(--color-page-gradient-start) 0%, var(--color-page-gradient-end) 100%);
 }
 
+:root[data-theme='purple'],
 body[data-theme='purple'] {
   --color-bg-page: #faf5ff;
   --color-bg-surface: #ffffff;
@@ -156,6 +157,23 @@ body[data-theme='purple'] {
   --color-page-radial-end: rgba(237, 227, 246, 0.5);
   --color-page-gradient-start: #faf5ff;
   --color-page-gradient-end: #f7f3fc;
+
+  --color-accent: var(--color-text-accent);
+  --color-positive: var(--color-text-positive);
+  --color-negative: var(--color-text-negative);
+  --color-warning: var(--color-text-warning);
+  --color-panel-bg: var(--color-bg-surface);
+  --color-panel-border: var(--color-border-base);
+  --color-panel-shadow: var(--shadow-panel);
+  --color-tabs-border: var(--color-border-control);
+  --color-tabs-bg: var(--color-bg-surface-info);
+  --color-tabs-text: var(--color-text-accent);
+  --color-tabs-hover: var(--color-bg-surface-subtle);
+  --color-tabs-active-bg: var(--color-text-accent);
+  --color-tabs-active-border: var(--color-text-accent);
+  --color-tabs-active-text: var(--color-bg-surface);
+  --color-tabs-active-hover-bg: var(--color-text-accent-strong);
+  --color-tabs-active-hover-border: var(--color-text-accent-deep);
 }
 
 button,

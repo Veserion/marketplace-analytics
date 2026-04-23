@@ -11,11 +11,14 @@ const BLOCK_NAME = 'App'
 
 function App() {
   const location = useLocation()
-  const appTheme = location.pathname.startsWith('/wildberries') ? 'purple' : 'blue'
+  const isWildberriesRoute = location.pathname.includes('/wildberries')
+  const appTheme = isWildberriesRoute ? 'purple' : 'blue'
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-theme', appTheme)
     document.body.setAttribute('data-theme', appTheme)
     return () => {
+      document.documentElement.removeAttribute('data-theme')
       document.body.removeAttribute('data-theme')
     }
   }, [appTheme])

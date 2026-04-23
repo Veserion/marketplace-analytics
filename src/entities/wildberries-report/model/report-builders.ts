@@ -297,13 +297,13 @@ function classifyGroup(rawLabel: string): ClassifiedGroup {
     return { label: 'Логистика', withSalesShare: true }
   }
   if (normalized.includes('хранен')) {
-    return { label: 'Хранение', withSalesShare: true }
+    return { label: 'Хранение ФБО', withSalesShare: true }
   }
   if (normalized.includes('обработк')) {
     return { label: 'Обработка товара', withSalesShare: true }
   }
   if (normalized.includes('удержан')) {
-    return { label: 'Удержания', withSalesShare: true }
+    return { label: 'Расход на рекламу', withSalesShare: true }
   }
   if (normalized.includes('штраф')) {
     return { label: 'Штрафы', withSalesShare: true }
@@ -330,7 +330,7 @@ function classifyGroup(rawLabel: string): ClassifiedGroup {
     return { label: 'Вывести сейчас', withSalesShare: true }
   }
   if (normalized.includes('лояльност')) {
-    return { label: 'Лояльность', withSalesShare: true }
+    return { label: 'Компенсация скидки', withSalesShare: true }
   }
 
   return { label, withSalesShare: true }
@@ -468,6 +468,7 @@ export function buildWildberriesAccrualReports(
   const sumByGroup = new Map<string, number>()
   const sumByScheme = new Map<string, number>()
   const sumByDate = new Map<string, number>()
+  const sumByDateAndReason = new Map<string, Map<string, number>>()
   const salesDateRangeMap = new Map<string, number>()
   const groupTypeBreakdown = new Map<string, Map<string, number>>()
 
@@ -531,6 +532,10 @@ export function buildWildberriesAccrualReports(
 
     const date = row.salesDate || 'Без даты'
     addToMap(sumByDate, date, amount)
+    if (!sumByDateAndReason.has(date)) {
+      sumByDateAndReason.set(date, new Map<string, number>())
+    }
+    addToMap(sumByDateAndReason.get(date)!, reason, amount)
 
     const breakdownType = row.logisticsKind || row.documentType || 'Без подтипа'
     if (!groupTypeBreakdown.has(reason)) {
@@ -549,6 +554,7 @@ export function buildWildberriesAccrualReports(
   const marginRate = revenueBeforeSpp !== 0 ? (netProfit / revenueBeforeSpp) * 100 : null
 
   const salesBase = revenueBeforeSpp > 0 ? revenueBeforeSpp : null
+  const rubleIntegerFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 })
   const formatSalesShare = (value: number): string | null => {
     if (!salesBase) return null
     const sharePercent = (Math.abs(value) / salesBase) * 100
@@ -731,12 +737,34 @@ export function buildWildberriesAccrualReports(
           if (bTime === null) return -1
           return aTime - bTime
         })
-        .map(([label, value]) => ({
-          label,
-          value,
-          type: 'currency' as const,
-          formula: `SUM(net effect), фильтр: "Дата продажи" = "${label}"`,
-        })),
+        .map(([dateLabel, value]) => {
+          const reasonsByDate = sumByDateAndReason.get(dateLabel)
+          const topNegativeReasonEntry = reasonsByDate
+            ? Array.from(reasonsByDate.entries())
+              .filter(([, reasonValue]) => reasonValue < 0)
+              .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0]
+            : null
+          const topNegativeReason = topNegativeReasonEntry?.[0]
+          const topNegativeAmount = topNegativeReasonEntry ? Math.abs(topNegativeReasonEntry[1]) : null
+
+          const accrualTypeLabel = value > 0
+            ? 'Выручка'
+            : value < 0
+              ? (topNegativeReason && topNegativeAmount !== null
+                ? `${topNegativeReason} (${rubleIntegerFormatter.format(topNegativeAmount)}р)`
+                : 'Списание')
+              : 'Нейтрально'
+
+          return {
+            label: dateLabel,
+            value,
+            type: 'currency' as const,
+            shareText: accrualTypeLabel,
+            formula: value < 0 && topNegativeReason
+              ? `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}" и списание = "${topNegativeReason}"`
+              : `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}"`,
+          }
+        }),
     },
     ...structureSummaries,
   ]
