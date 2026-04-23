@@ -32,6 +32,9 @@ type ClassifiedGroup = {
   withSalesShare: boolean
 }
 
+type CogsByArticleMap = Map<string, number>
+export type CogsMatchingMode = 'full' | 'digits'
+
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
   if (!normalized) return null
@@ -54,8 +57,110 @@ function normalizeLower(value: string): string {
   return normalize(value).toLowerCase().replace(/ё/g, 'е')
 }
 
+function normalizeArticleKey(article: string): string {
+  return normalize(article).toLowerCase()
+}
+
+function extractDigitsPattern(article: string): string {
+  return normalizeArticleKey(article).replace(/\D/g, '')
+}
+
+function resolveCogsLookupKey(article: string, mode: CogsMatchingMode): string {
+  const normalizedArticle = normalizeArticleKey(article)
+  if (mode === 'digits') {
+    const digitsPattern = extractDigitsPattern(normalizedArticle)
+    if (digitsPattern) return `digits:${digitsPattern}`
+  }
+  return `full:${normalizedArticle}`
+}
+
 function absValue(value: number): number {
   return Math.abs(value)
+}
+
+function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
+  const normalized = rawCsv.replace(/^\uFEFF/, '')
+  const semicolonRows = parseCsv(normalized, ';')
+  if (semicolonRows.some((row) => row.length > 1)) return semicolonRows
+  return parseCsv(normalized, ',')
+}
+
+function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
+  const normalizedHeaders = headers.map((header) => normalizeLower(header))
+  const articleIdx = normalizedHeaders.findIndex((header) => header === 'артикул')
+  if (articleIdx === -1) return null
+
+  const cogsIdx = normalizedHeaders.findIndex((header) => header === 'себестоимость')
+  if (cogsIdx === -1) return null
+
+  return { articleIdx, cogsIdx }
+}
+
+type CogsRow = {
+  article: string
+  cogs: number
+}
+
+function parseWildberriesCogsRows(rawCsv: string): CogsRow[] | null {
+  const rows = parseCsvWithDelimiterFallback(rawCsv)
+  const headerIndex = rows.findIndex((row) => findCogsHeader(row) !== null)
+  if (headerIndex === -1) return null
+
+  const header = findCogsHeader(rows[headerIndex])
+  if (!header) return null
+
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => normalize(cell) !== ''))
+
+  const result: CogsRow[] = []
+  for (const row of dataRows) {
+    const article = normalize(row[header.articleIdx] || '')
+    const cogs = parseNumber(row[header.cogsIdx] || '')
+    if (!article || cogs === null) continue
+    result.push({ article, cogs })
+  }
+  return result
+}
+
+function escapeCsvCell(value: string): string {
+  if (!/[;"\r\n]/.test(value)) return value
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+export function extractWildberriesCogsCsv(rawCsv: string): string | null {
+  const parsedRows = parseWildberriesCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const lines = ['Артикул;Себестоимость']
+  for (const row of parsedRows) {
+    lines.push(`${escapeCsvCell(row.article)};${String(row.cogs)}`)
+  }
+  return lines.join('\n')
+}
+
+export function buildWildberriesCogsMap(
+  rawCsv: string,
+  mode: CogsMatchingMode = 'full',
+): CogsByArticleMap | null {
+  const parsedRows = parseWildberriesCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const byArticle = new Map<string, { sum: number, count: number }>()
+  for (const row of parsedRows) {
+    const articleKey = resolveCogsLookupKey(row.article, mode)
+    const current = byArticle.get(articleKey) || { sum: 0, count: 0 }
+    current.sum += row.cogs
+    current.count += 1
+    byArticle.set(articleKey, current)
+  }
+
+  const cogsMap: CogsByArticleMap = new Map()
+  for (const [articleKey, stats] of byArticle.entries()) {
+    if (stats.count === 0) continue
+    cogsMap.set(articleKey, stats.sum / stats.count)
+  }
+  return cogsMap
 }
 
 function toDateTimestamp(label: string): number | null {
@@ -182,11 +287,52 @@ function toMetrics(
   }))
 }
 
+export function getWildberriesMissingCogsArticles(
+  rawCsv: string,
+  cogsByArticleMap: CogsByArticleMap | null,
+  articlePattern = '*',
+  cogsMatchingMode: CogsMatchingMode = 'full',
+): string[] {
+  if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
+
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const headerIndex = rows.findIndex(
+    (row) => normalize(row[0]) === '№' && normalize(row[1]) === 'Номер поставки',
+  )
+  if (headerIndex === -1) return []
+
+  const headers = rows[headerIndex].map((cell) => normalize(cell))
+  const colIndex = new Map(headers.map((header, idx) => [header, idx]))
+  const articleIdx = colIndex.get('Артикул поставщика')
+  if (articleIdx === undefined) return []
+
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => normalize(cell) !== ''))
+
+  const missingByKey = new Map<string, string>()
+  for (const row of dataRows) {
+    const article = normalize(row[articleIdx] || '')
+    if (!article) continue
+    if (!matchesArticlePattern(article, articlePattern)) continue
+
+    const articleKey = resolveCogsLookupKey(article, cogsMatchingMode)
+    if (cogsByArticleMap.has(articleKey)) continue
+    if (!missingByKey.has(articleKey)) {
+      missingByKey.set(articleKey, article)
+    }
+  }
+
+  return Array.from(missingByKey.values()).sort((a, b) => a.localeCompare(b, 'ru'))
+}
+
 export function buildWildberriesAccrualReports(
   rawCsv: string,
   vatRatePercent = 5,
   taxRatePercent = 6,
   articlePattern = '*',
+  cogsByArticleMap: CogsByArticleMap | null = null,
+  cogsMatchingMode: CogsMatchingMode = 'full',
 ): AccrualGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex(
@@ -254,6 +400,8 @@ export function buildWildberriesAccrualReports(
   let returnsAndCancellationsQuantity = 0
   let revenueBeforeSpp = 0
   let revenueWithoutSpp = 0
+  let cogsFromFile = 0
+  let cogsMatchedRows = 0
 
   const addToMap = (map: Map<string, number>, key: string, value: number): void => {
     map.set(key, (map.get(key) || 0) + value)
@@ -279,6 +427,15 @@ export function buildWildberriesAccrualReports(
       revenueWithoutSpp += row.sellerRealized
       const saleDate = row.salesDate || 'Без даты'
       addToMap(salesDateRangeMap, saleDate, 0)
+
+      if (cogsByArticleMap && cogsByArticleMap.size > 0) {
+        const articleKey = resolveCogsLookupKey(row.article, cogsMatchingMode)
+        const unitCogs = cogsByArticleMap.get(articleKey)
+        if (articleKey && unitCogs !== undefined) {
+          cogsFromFile += row.quantity * unitCogs
+          cogsMatchedRows += 1
+        }
+      }
     }
 
     returnsAndCancellationsQuantity += row.returnCount
@@ -302,8 +459,8 @@ export function buildWildberriesAccrualReports(
   const marketplaceExpenses = revenueWithoutSpp - totalTransfer
   const totalRate = (vatRatePercent + taxRatePercent) / 100
   const taxAmount = revenueBeforeSpp !== 0 ? revenueBeforeSpp * totalRate : 0
-  const cogs: number | null = null
-  const netProfit = totalTransfer - taxAmount
+  const cogs: number | null = cogsMatchedRows > 0 ? cogsFromFile : null
+  const netProfit = totalTransfer - taxAmount - (cogs ?? 0)
   const marginRate = revenueWithoutSpp !== 0 ? (netProfit / revenueWithoutSpp) * 100 : null
 
   const salesBase = revenueBeforeSpp > 0 ? revenueBeforeSpp : null
@@ -410,7 +567,10 @@ export function buildWildberriesAccrualReports(
           label: 'Себестоимость',
           value: cogs,
           type: 'currency',
-          formula: 'В отчёте Wildberries поле себестоимости отсутствует',
+          formula: cogs !== null
+            ? 'SUM(Кол-во продаж * Себестоимость из загруженного CSV себестоимости)'
+            : 'Нет данных: загрузите CSV с себестоимостью товаров',
+          shareText: cogs !== null ? formatSalesShare(cogs) : null,
         },
         {
           label: 'Налог',
@@ -422,7 +582,9 @@ export function buildWildberriesAccrualReports(
           label: 'Чистая прибыль',
           value: netProfit,
           type: 'currency',
-          formula: 'Перевод в банк - Налог - Себестоимость',
+          formula: cogs !== null
+            ? 'Перевод в банк - Налог - Себестоимость'
+            : 'Перевод в банк - Налог',
         },
         {
           label: 'Маржинальность',

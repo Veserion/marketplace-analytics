@@ -1,4 +1,8 @@
-type CsvStorageMode = 'unitEconomics' | 'accrualReport'
+type CsvStorageMode =
+  | 'unitEconomics'
+  | 'accrualReport'
+  | 'wildberriesAccrualReport'
+  | 'wildberriesCogs'
 
 type CsvStorageRecord = {
   mode: CsvStorageMode

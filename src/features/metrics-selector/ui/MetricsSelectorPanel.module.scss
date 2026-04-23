@@ -1,15 +1,18 @@
 .MetricsSelectorPanel {
-  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .MetricsSelectorPanel__content {
-  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .MetricsSelectorPanel__actions {
   display: flex;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
 .MetricsSelectorPanel__action-button {

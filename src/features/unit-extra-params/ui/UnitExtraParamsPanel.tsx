@@ -10,11 +10,13 @@ type UnitExtraParamsPanelProps = {
   isAccrualMode?: boolean
   unitArticlePattern?: string
   accrualArticlePattern?: string
+  cogsMatchingMode?: 'full' | 'digits'
   vatRatePercent: number
   taxRatePercent: number
   onToggleOpen: () => void
   onUnitArticlePatternChange?: (pattern: string) => void
   onAccrualArticlePatternChange?: (pattern: string) => void
+  onCogsMatchingModeChange?: (mode: 'full' | 'digits') => void
   onVatRateChange: (value: number) => void
   onTaxRateChange: (value: number) => void
 }
@@ -24,11 +26,13 @@ export function UnitExtraParamsPanel({
   isAccrualMode = false,
   unitArticlePattern = '*',
   accrualArticlePattern = '*',
+  cogsMatchingMode = 'full',
   vatRatePercent,
   taxRatePercent,
   onToggleOpen,
   onUnitArticlePatternChange,
   onAccrualArticlePatternChange,
+  onCogsMatchingModeChange,
   onVatRateChange,
   onTaxRateChange,
 }: UnitExtraParamsPanelProps) {
@@ -82,6 +86,33 @@ export function UnitExtraParamsPanel({
                 {patternHint}
               </Typography>
             </label>
+          )}
+          {onCogsMatchingModeChange && (
+            <div className={cn(`${BLOCK_NAME}__radio-group`)}>
+              <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__radio-title`)}>
+                Сопоставление себестоимости
+              </Typography>
+              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
+                <input
+                  type="radio"
+                  name="cogsMatchingMode"
+                  value="full"
+                  checked={cogsMatchingMode === 'full'}
+                  onChange={() => onCogsMatchingModeChange('full')}
+                />
+                <Typography as="span" variant="body2" color="accent">Точное</Typography>
+              </label>
+              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
+                <input
+                  type="radio"
+                  name="cogsMatchingMode"
+                  value="digits"
+                  checked={cogsMatchingMode === 'digits'}
+                  onChange={() => onCogsMatchingModeChange('digits')}
+                />
+                <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
+              </label>
+            </div>
           )}
         </div>
       )}

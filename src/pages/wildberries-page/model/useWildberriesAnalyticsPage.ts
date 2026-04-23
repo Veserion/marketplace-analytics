@@ -2,14 +2,37 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
-import { buildWildberriesAccrualReports } from '@/entities/wildberries-report'
+import {
+  buildWildberriesAccrualReports,
+  buildWildberriesCogsMap,
+  type CogsMatchingMode,
+  extractWildberriesCogsCsv,
+  getWildberriesMissingCogsArticles,
+} from '@/entities/wildberries-report'
 import { formatValue } from '@/shared/lib/csv'
-import { configurePdfFont } from '@/shared/lib/pdf'
+import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
+import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'wildberries_accrual_vat_rate_percent'
 const TAX_RATE_STORAGE_KEY = 'wildberries_accrual_tax_rate_percent'
+const COGS_MATCHING_MODE_STORAGE_KEY = 'wildberries_cogs_matching_mode'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
+const SECONDARY_INFO_LABELS = new Set([
+  'Среднее начисление на строку',
+  'Строк с плюсами',
+  'Строк с минусами',
+  'Строк с нулем',
+])
+const AVERAGE_LABEL = 'Среднее начисление на строку'
+const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
+const TAX_LABEL = 'Налог'
+const COGS_LABEL = 'Себестоимость'
+const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
+const STRUCTURE_PREFIX = 'Структура: '
+const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
+const COGS_FILE_ALIAS = 'Себестоимость'
 
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
@@ -18,65 +41,124 @@ function readStoredRate(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-function renderAccrualPdf(
-  doc: jsPDF,
-  reports: AccrualGroup[],
-  margin: number,
-  contentWidth: number,
-  startY: number,
-  ensureSpace: (height: number) => void,
-): void {
-  let y = startY
-  for (const report of reports) {
-    ensureSpace(16)
-    doc.setFillColor(33, 85, 140)
-    doc.roundedRect(margin, y, contentWidth, 12, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(11)
-    doc.text(report.title, margin + 4, y + 7)
-    doc.setFontSize(9)
-    if (typeof report.rowCount === 'number') {
-      doc.text(`Строк начислений: ${report.rowCount}`, margin + 4, y + 10.5)
-    }
-    y += 15
+function readStoredCogsMatchingMode(): CogsMatchingMode {
+  if (typeof window === 'undefined') return 'full'
+  const raw = window.localStorage.getItem(COGS_MATCHING_MODE_STORAGE_KEY)
+  return raw === 'digits' ? 'digits' : 'full'
+}
 
-    for (const metric of report.metrics) {
-      const valueText = formatValue(metric.value, metric.type)
-      const line = metric.shareText
-        ? `${metric.label}: ${valueText} — ${metric.shareText}`
-        : `${metric.label}: ${valueText}`
-      const lines = doc.splitTextToSize(line, contentWidth - 6)
-      const rowHeight = Math.max(10, lines.length * 4 + 4)
-      ensureSpace(rowHeight + 2)
+function isSecondaryMetric(label: string): boolean {
+  return SECONDARY_INFO_LABELS.has(label)
+}
 
-      doc.setFillColor(255, 255, 255)
-      doc.setDrawColor(219, 226, 237)
-      doc.roundedRect(margin, y, contentWidth, rowHeight, 1.5, 1.5, 'FD')
-      doc.setTextColor(20, 31, 48)
-      doc.setFontSize(9)
-      doc.text(lines, margin + 3, y + 5)
-      y += rowHeight + 2
-    }
+function getValueTone(value: number | null): PdfMetricTone {
+  if (value === null) return 'muted'
+  if (value > 0) return 'positive'
+  if (value < 0) return 'negative'
+  return 'default'
+}
 
-    y += 4
+function getWbMetricTone(label: string, value: number | null): PdfMetricTone {
+  if (label === AVERAGE_LABEL) return 'muted'
+  if (label === COGS_LABEL && value === null) return 'muted'
+  if (
+    label === CANCELLATIONS_AND_RETURNS_LABEL
+    || label === TAX_LABEL
+    || label === COGS_LABEL
+    || label === MARKETPLACE_EXPENSES_LABEL
+  ) {
+    return 'negative'
   }
+  return getValueTone(value)
+}
+
+function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
+  const sections: PdfSection[] = []
+  const baseReports = reports.filter((report) => !report.title.startsWith(STRUCTURE_PREFIX))
+  const structureReports = reports.filter((report) => report.title.startsWith(STRUCTURE_PREFIX))
+
+  for (const report of baseReports) {
+    const reportTitle = report.title === 'Итоги периода' && report.periodLabel
+      ? `${report.title} ${report.periodLabel}`
+      : report.title
+    const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
+    const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
+    const rows: PdfSection['rows'] = primaryMetrics.map((metric) => ({
+      label: metric.label,
+      value: metric.label === COGS_LABEL && metric.value === null
+        ? COGS_MISSING_VALUE_TEXT
+        : formatValue(metric.value, metric.type),
+      extra: metric.shareText ?? null,
+      tone: getWbMetricTone(metric.label, metric.value),
+    }))
+
+    if (secondaryMetrics.length > 0) {
+      rows.push(...secondaryMetrics.map((metric) => ({
+        label: `Доп. ${metric.label}`,
+        value: formatValue(metric.value, metric.type),
+        tone: 'muted' as const,
+        labelMuted: true,
+      })))
+    }
+
+    sections.push({
+      title: reportTitle,
+      subtitle: typeof report.rowCount === 'number' ? `Строк начислений: ${report.rowCount}` : undefined,
+      rows,
+    })
+  }
+
+  for (const report of structureReports) {
+    const cleanTitle = report.title.startsWith(STRUCTURE_PREFIX) ? report.title.slice(STRUCTURE_PREFIX.length) : report.title
+    sections.push({
+      title: `Структура: ${cleanTitle}`,
+      rows: report.metrics.map((metric) => ({
+        label: metric.label,
+        value: formatValue(metric.value, metric.type),
+        extra: metric.shareText ?? null,
+        tone: getValueTone(metric.value),
+      })),
+    })
+  }
+
+  return sections
 }
 
 export function useWildberriesAnalyticsPage() {
   const [csvSource, setCsvSource] = useState<string | null>(null)
   const [fileName, setFileName] = useState('')
+  const [cogsCsvSource, setCogsCsvSource] = useState<string | null>(null)
+  const [cogsFileName, setCogsFileName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('*')
+  const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
+
+  const cogsByArticleMap = useMemo(() => {
+    if (!cogsCsvSource) return null
+    return buildWildberriesCogsMap(cogsCsvSource, cogsMatchingMode)
+  }, [cogsCsvSource, cogsMatchingMode])
+
+  const missingCogsArticles = useMemo(() => {
+    if (!csvSource) return [] as string[]
+    return getWildberriesMissingCogsArticles(csvSource, cogsByArticleMap, articlePattern, cogsMatchingMode)
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource])
 
   const reportBuild = useMemo(() => {
     if (!csvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
       return {
-        reports: buildWildberriesAccrualReports(csvSource, vatRatePercent, taxRatePercent, articlePattern),
+        reports: buildWildberriesAccrualReports(
+          csvSource,
+          vatRatePercent,
+          taxRatePercent,
+          articlePattern,
+          cogsByArticleMap,
+          cogsMatchingMode,
+        ),
         error: '',
       }
     } catch (err) {
@@ -85,7 +167,7 @@ export function useWildberriesAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт Wildberries.',
       }
     }
-  }, [articlePattern, csvSource, taxRatePercent, vatRatePercent])
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent])
 
   const reports = reportBuild.reports
   const error = uploadError || reportBuild.error
@@ -111,13 +193,79 @@ export function useWildberriesAnalyticsPage() {
     try {
       const text = await file.text()
       setCsvSource(text)
+      try {
+        await saveCsvRecord({
+          mode: 'wildberriesAccrualReport',
+          csvText: text,
+          fileName: file.name,
+          updatedAt: Date.now(),
+        })
+      } catch {
+        // Ignore persistence errors to keep file upload flow functional.
+      }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
     } finally {
       setIsProcessing(false)
-      event.target.value = ''
     }
   }
+
+  const onCogsFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadError('')
+    setIsProcessing(true)
+
+    try {
+      const text = await file.text()
+      const compactCsv = extractWildberriesCogsCsv(text)
+      if (!compactCsv) {
+        setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
+        return
+      }
+      const parsedMap = buildWildberriesCogsMap(compactCsv, cogsMatchingMode)
+      if (!parsedMap) {
+        setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
+        return
+      }
+
+      setCogsCsvSource(compactCsv)
+      setCogsFileName(COGS_FILE_ALIAS)
+      try {
+        await saveCsvRecord({
+          mode: 'wildberriesCogs',
+          csvText: compactCsv,
+          fileName: COGS_FILE_ALIAS,
+          updatedAt: Date.now(),
+        })
+      } catch {
+        // Ignore persistence errors to keep file upload flow functional.
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+    Promise.all([getCsvRecord('wildberriesAccrualReport'), getCsvRecord('wildberriesCogs')])
+      .then(([mainRecord, cogsRecord]) => {
+        if (isCancelled) return
+        setCsvSource(mainRecord?.csvText ?? null)
+        setFileName(mainRecord?.fileName ?? '')
+        setCogsCsvSource(cogsRecord?.csvText ?? null)
+        setCogsFileName(cogsRecord?.csvText ? COGS_FILE_ALIAS : '')
+      })
+      .catch(() => {
+        // Ignore persistence errors to keep CSV processing functional without IndexedDB.
+      })
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -129,47 +277,41 @@ export function useWildberriesAnalyticsPage() {
     window.localStorage.setItem(TAX_RATE_STORAGE_KEY, String(taxRatePercent))
   }, [taxRatePercent])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(COGS_MATCHING_MODE_STORAGE_KEY, cogsMatchingMode)
+  }, [cogsMatchingMode])
+
   const downloadPdf = async (): Promise<void> => {
     if (!reports) return
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
     await configurePdfFont(doc)
-
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 12
-    const contentWidth = pageWidth - margin * 2
-    let y = margin
-
-    const ensureSpace = (height: number): void => {
-      if (y + height <= pageHeight - margin) return
-      doc.addPage()
-      doc.setFont('ArialCustom')
-      y = margin
-    }
-
-    doc.setFillColor(10, 30, 60)
-    doc.roundedRect(margin, y, contentWidth, 20, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(15)
-    doc.text('Marketplace Analytics — Wildberries / Отчет по поступлениям', margin + 4, y + 8)
-    doc.setFontSize(9)
-    doc.text(`Источник: ${fileName}`, margin + 4, y + 14)
-    y += 26
-
-    renderAccrualPdf(doc, reports, margin, contentWidth, y, ensureSpace)
+    renderPdfReport({
+      doc,
+      theme: PDF_THEMES.wildberries,
+      title: 'Marketplace Analytics',
+      subtitle: 'Wildberries / Отчет по поступлениям',
+      source: fileName,
+      sections: buildWildberriesPdfSections(reports),
+    })
     doc.save(`wildberries-analytics-${Date.now()}.pdf`)
   }
 
   return {
     articlePattern,
+    cogsFileName,
+    cogsMatchingMode,
     downloadPdf,
     error,
     fileName,
     hasResults,
     isExtraParamsOpen,
     isProcessing,
+    missingCogsArticles,
+    onCogsFileUpload,
     onFileUpload,
+    setCogsMatchingMode,
     onTaxRateChange,
     onVatRateChange,
     reports,

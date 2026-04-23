@@ -3,10 +3,13 @@
   border-radius: 12px;
   background: #fbfdff;
   padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .AvailabilityStockPanel__title {
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 .AvailabilityStockPanel__groups {

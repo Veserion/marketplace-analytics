@@ -5,7 +5,8 @@ import {
   buildAccrualReports,
   buildUnitArticleCogsMap,
   buildUnitEconomicsReports,
-  getUnitMetricDisplayValue,
+  getUnitMetricClassValue,
+  getUnitMetricDisplay,
   METRICS,
 } from '@/entities/ozon-report'
 import type {
@@ -16,12 +17,26 @@ import type {
 } from '@/entities/ozon-report'
 import { formatValue } from '@/shared/lib/csv'
 import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
-import { configurePdfFont } from '@/shared/lib/pdf'
+import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
 const TAX_RATE_STORAGE_KEY = 'unit_economics_tax_rate_percent'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
+const SECONDARY_INFO_LABELS = new Set([
+  'Среднее начисление на строку',
+  'Строк с плюсами',
+  'Строк с минусами',
+  'Строк с нулем',
+])
+const AVERAGE_LABEL = 'Среднее начисление на строку'
+const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
+const TAX_LABEL = 'Налог'
+const COGS_LABEL = 'Себестоимость'
+const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
+const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
+const STRUCTURE_PREFIX = 'Структура: '
 
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
@@ -48,86 +63,181 @@ function hasSamePeriod(unitFileName: string, accrualFileName: string): boolean {
   return Boolean(unitPeriod && accrualPeriod && unitPeriod === accrualPeriod)
 }
 
-function renderUnitEconomicsPdf(
-  doc: jsPDF,
-  reports: ReportGroup[],
-  selectedMetricSet: Set<MetricKey>,
-  margin: number,
-  contentWidth: number,
-  startY: number,
-  ensureSpace: (height: number) => void,
-): void {
-  let y = startY
-  for (const report of reports) {
-    ensureSpace(16)
-    doc.setFillColor(33, 85, 140)
-    doc.roundedRect(margin, y, contentWidth, 12, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(11)
-    doc.text(report.title, margin + 4, y + 7)
-    doc.setFontSize(9)
-    doc.text(`Строк товаров: ${report.rowCount}`, margin + 4, y + 10.5)
-    y += 15
-
-    const selectedMetrics = report.metrics.filter((metric) => selectedMetricSet.has(metric.key))
-    for (const metric of selectedMetrics) {
-      const line = `${metric.label}: ${getUnitMetricDisplayValue(metric, report)}`
-      const lines = doc.splitTextToSize(line, contentWidth - 6)
-      const rowHeight = Math.max(10, lines.length * 4 + 4)
-      ensureSpace(rowHeight + 2)
-
-      doc.setFillColor(255, 255, 255)
-      doc.setDrawColor(219, 226, 237)
-      doc.roundedRect(margin, y, contentWidth, rowHeight, 1.5, 1.5, 'FD')
-      doc.setTextColor(20, 31, 48)
-      doc.setFontSize(9)
-      doc.text(lines, margin + 3, y + 5)
-      y += rowHeight + 2
-    }
-
-    y += 4
-  }
+function isSecondaryMetric(label: string): boolean {
+  return SECONDARY_INFO_LABELS.has(label)
 }
 
-function renderAccrualPdf(
-  doc: jsPDF,
-  reports: AccrualGroup[],
-  margin: number,
-  contentWidth: number,
-  startY: number,
-  ensureSpace: (height: number) => void,
-): void {
-  let y = startY
-  for (const report of reports) {
-    ensureSpace(16)
-    doc.setFillColor(33, 85, 140)
-    doc.roundedRect(margin, y, contentWidth, 12, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(11)
-    doc.text(report.title, margin + 4, y + 7)
-    doc.setFontSize(9)
-    if (typeof report.rowCount === 'number') {
-      doc.text(`Строк начислений: ${report.rowCount}`, margin + 4, y + 10.5)
-    }
-    y += 15
+function getValueTone(value: number | null): PdfMetricTone {
+  if (value === null) return 'muted'
+  if (value > 0) return 'positive'
+  if (value < 0) return 'negative'
+  return 'default'
+}
 
-    for (const metric of report.metrics) {
-      const line = `${metric.label}: ${formatValue(metric.value, metric.type)}`
-      const lines = doc.splitTextToSize(line, contentWidth - 6)
-      const rowHeight = Math.max(10, lines.length * 4 + 4)
-      ensureSpace(rowHeight + 2)
+function summarizeArticles(items: string[]): string {
+  if (items.length === 0) return 'Нет артикулов'
+  const limit = 20
+  if (items.length <= limit) return items.join(', ')
+  return `${items.slice(0, limit).join(', ')}, ... (+${items.length - limit})`
+}
 
-      doc.setFillColor(255, 255, 255)
-      doc.setDrawColor(219, 226, 237)
-      doc.roundedRect(margin, y, contentWidth, rowHeight, 1.5, 1.5, 'FD')
-      doc.setTextColor(20, 31, 48)
-      doc.setFontSize(9)
-      doc.text(lines, margin + 3, y + 5)
-      y += rowHeight + 2
-    }
+function getProductMarginLevel(marginPercent: number): 'risk' | 'warning' | 'normal' | 'super' {
+  if (marginPercent >= 50) return 'super'
+  if (marginPercent >= 25) return 'normal'
+  if (marginPercent >= 15) return 'warning'
+  return 'risk'
+}
 
-    y += 4
+function getOzonAccrualMetricTone(label: string, value: number | null): PdfMetricTone {
+  if (label === COGS_LABEL && value === null) return 'muted'
+  if (
+    label === CANCELLATIONS_AND_RETURNS_LABEL
+    || label === TAX_LABEL
+    || label === COGS_LABEL
+    || label === MARKETPLACE_EXPENSES_LABEL
+  ) {
+    return 'negative'
   }
+  if (label === AVERAGE_LABEL) return 'muted'
+  return getValueTone(value)
+}
+
+function buildUnitPdfSections(
+  reports: ReportGroup[],
+  selectedMetricSet: Set<MetricKey>,
+): PdfSection[] {
+  const sections: PdfSection[] = []
+
+  for (const report of reports) {
+    const rows: PdfSection['rows'] = report.metrics
+      .filter((metric) => selectedMetricSet.has(metric.key))
+      .map((metric) => {
+        const display = getUnitMetricDisplay(metric, report)
+        return {
+          label: metric.label,
+          value: display.valueText,
+          extra: display.shareText,
+          tone: getValueTone(getUnitMetricClassValue(metric)),
+        }
+      })
+
+    sections.push({
+      title: report.title,
+      subtitle: `Строк товаров: ${report.rowCount}`,
+      rows,
+    })
+
+    if (report.availabilityGroups) {
+      sections.push({
+        title: `${report.title} — Доступность товаров`,
+        rows: [
+          {
+            label: 'Срочно поставить',
+            value: String(report.availabilityGroups.urgent.length),
+            extra: summarizeArticles(report.availabilityGroups.urgent),
+            tone: 'negative',
+          },
+          {
+            label: 'Поддерживайте остаток',
+            value: String(report.availabilityGroups.maintain.length),
+            extra: summarizeArticles(report.availabilityGroups.maintain),
+            tone: 'warning',
+          },
+          {
+            label: 'Пока хватает',
+            value: String(report.availabilityGroups.enough.length),
+            extra: summarizeArticles(report.availabilityGroups.enough),
+            tone: 'positive',
+          },
+        ],
+      })
+    }
+
+    if (report.productMargins && report.productMargins.length > 0) {
+      const marginCounts = {
+        risk: 0,
+        warning: 0,
+        normal: 0,
+        super: 0,
+      }
+      for (const item of report.productMargins) {
+        marginCounts[getProductMarginLevel(item.marginSharePercent)] += 1
+      }
+
+      const byMarginAsc = [...report.productMargins].sort((a, b) => a.marginSharePercent - b.marginSharePercent)
+      const byMarginDesc = [...byMarginAsc].reverse()
+      const riskExamples = byMarginAsc.slice(0, 5).map((item) => `${item.article} (${item.marginSharePercent.toFixed(1)}%)`).join(', ')
+      const topExamples = byMarginDesc.slice(0, 5).map((item) => `${item.article} (${item.marginSharePercent.toFixed(1)}%)`).join(', ')
+
+      sections.push({
+        title: `${report.title} — Потоварная маржинальность`,
+        rows: [
+          { label: 'Артикулов в расчете', value: String(report.productMargins.length) },
+          { label: '0-15% (риск)', value: String(marginCounts.risk), tone: 'negative' },
+          { label: '15-25% (проверить)', value: String(marginCounts.warning), tone: 'warning' },
+          { label: '25-50% (норма)', value: String(marginCounts.normal), tone: 'positive' },
+          { label: '50%+ (прибыльные)', value: String(marginCounts.super), tone: 'positive' },
+          { label: 'Примеры с минимальной маржой', value: riskExamples || '—', labelMuted: true },
+          { label: 'Примеры с максимальной маржой', value: topExamples || '—', labelMuted: true },
+        ],
+      })
+    }
+  }
+
+  return sections
+}
+
+function buildOzonAccrualPdfSections(reports: AccrualGroup[]): PdfSection[] {
+  const sections: PdfSection[] = []
+  const baseReports = reports.filter((report) => !report.title.startsWith(STRUCTURE_PREFIX))
+  const structureReports = reports.filter((report) => report.title.startsWith(STRUCTURE_PREFIX))
+
+  for (const report of baseReports) {
+    const reportTitle = report.title === 'Итоги периода' && report.periodLabel
+      ? `${report.title} ${report.periodLabel}`
+      : report.title
+    const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
+    const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
+
+    const rows: PdfSection['rows'] = primaryMetrics.map((metric) => ({
+      label: metric.label,
+      value: metric.label === COGS_LABEL && metric.value === null
+        ? COGS_MISSING_VALUE_TEXT
+        : formatValue(metric.value, metric.type),
+      extra: metric.shareText ?? null,
+      tone: getOzonAccrualMetricTone(metric.label, metric.value),
+    }))
+
+    if (secondaryMetrics.length > 0) {
+      rows.push(...secondaryMetrics.map((metric) => ({
+        label: `Доп. ${metric.label}`,
+        value: formatValue(metric.value, metric.type),
+        tone: 'muted' as const,
+        labelMuted: true,
+      })))
+    }
+
+    sections.push({
+      title: reportTitle,
+      subtitle: typeof report.rowCount === 'number' ? `Строк начислений: ${report.rowCount}` : undefined,
+      rows,
+    })
+  }
+
+  for (const report of structureReports) {
+    const cleanTitle = report.title.startsWith(STRUCTURE_PREFIX) ? report.title.slice(STRUCTURE_PREFIX.length) : report.title
+    sections.push({
+      title: `Структура: ${cleanTitle}`,
+      rows: report.metrics.map((metric) => ({
+        label: metric.label,
+        value: formatValue(metric.value, metric.type),
+        extra: metric.shareText ?? null,
+        tone: getValueTone(metric.value),
+      })),
+    })
+  }
+
+  return sections
 }
 
 export function useOzonAnalyticsPage() {
@@ -242,7 +352,6 @@ export function useOzonAnalyticsPage() {
       setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
     } finally {
       setIsProcessing(false)
-      event.target.value = ''
     }
   }
 
@@ -286,35 +395,18 @@ export function useOzonAnalyticsPage() {
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
     await configurePdfFont(doc)
+    const sections = isOzonUnitEconomics && unitReports
+      ? buildUnitPdfSections(unitReports, selectedMetricSet)
+      : buildOzonAccrualPdfSections(accrualReports || [])
 
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 12
-    const contentWidth = pageWidth - margin * 2
-    let y = margin
-
-    const ensureSpace = (height: number): void => {
-      if (y + height <= pageHeight - margin) return
-      doc.addPage()
-      doc.setFont('ArialCustom')
-      y = margin
-    }
-
-    doc.setFillColor(10, 30, 60)
-    doc.roundedRect(margin, y, contentWidth, 20, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(15)
-    doc.text(`Marketplace Analytics — Ozon / ${isOzonUnitEconomics ? 'Юнит экономика' : 'Отчет по начислениям'}`, margin + 4, y + 8)
-    doc.setFontSize(9)
-    doc.text(`Источник: ${fileName}`, margin + 4, y + 14)
-    y += 26
-
-    if (isOzonUnitEconomics && unitReports) {
-      renderUnitEconomicsPdf(doc, unitReports, selectedMetricSet, margin, contentWidth, y, ensureSpace)
-    }
-    if (!isOzonUnitEconomics && accrualReports) {
-      renderAccrualPdf(doc, accrualReports, margin, contentWidth, y, ensureSpace)
-    }
+    renderPdfReport({
+      doc,
+      theme: isOzonUnitEconomics ? PDF_THEMES.ozonUnit : PDF_THEMES.ozonAccrual,
+      title: 'Marketplace Analytics',
+      subtitle: `Ozon / ${isOzonUnitEconomics ? 'Юнит экономика' : 'Отчет по поступлениям'}`,
+      source: fileName,
+      sections,
+    })
 
     doc.save(`ozon-analytics-${Date.now()}.pdf`)
   }

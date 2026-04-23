@@ -1,9 +1,13 @@
 .UnitExtraParamsPanel {
-  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .UnitExtraParamsPanel__content {
-  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .UnitExtraParamsPanel__grid {
@@ -29,4 +33,24 @@
 
 .UnitExtraParamsPanel__hint {
   margin: 0;
+}
+
+.UnitExtraParamsPanel__radio-group {
+  padding: 10px 12px;
+  border: 1px solid #d8e3f2;
+  border-radius: 10px;
+  background: #fbfdff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.UnitExtraParamsPanel__radio-title {
+  margin: 0;
+}
+
+.UnitExtraParamsPanel__radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }

@@ -16,13 +16,18 @@ export function WildberriesPage() {
   const navigate = useNavigate()
   const {
     articlePattern,
+    cogsFileName,
+    cogsMatchingMode,
     downloadPdf,
     error,
     fileName,
     hasResults,
     isExtraParamsOpen,
     isProcessing,
+    missingCogsArticles,
+    onCogsFileUpload,
     onFileUpload,
+    setCogsMatchingMode,
     onTaxRateChange,
     onVatRateChange,
     reports,
@@ -63,10 +68,12 @@ export function WildberriesPage() {
         isOpen={isExtraParamsOpen}
         isAccrualMode
         accrualArticlePattern={articlePattern}
+        cogsMatchingMode={cogsMatchingMode}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
         onAccrualArticlePatternChange={setArticlePattern}
+        onCogsMatchingModeChange={setCogsMatchingMode}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}
       />
@@ -75,13 +82,20 @@ export function WildberriesPage() {
         isProcessing={isProcessing}
         hasResults={hasResults}
         fileName={fileName}
+        primaryFileLabel="Еженедельный детализированный отчет"
+        secondaryFileName={cogsFileName}
+        secondaryFileLabel="Себестоимость товаров"
+        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryMissingArticles={missingCogsArticles}
+        secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
         error={error}
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
+        onSecondaryFileUpload={onCogsFileUpload}
         onDownloadPdf={downloadPdf}
       />
 
-      {reports && <AccrualResults reports={reports} />}
+      {reports && <AccrualResults reports={reports} cogsMissingValueText="Нет данных: загрузите CSV с себестоимостью товаров" />}
     </main>
   )
 }

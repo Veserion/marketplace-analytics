@@ -9,6 +9,9 @@
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 12px 30px rgba(16, 40, 74, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .AccrualResults__header {
@@ -18,7 +21,6 @@
   gap: 10px;
   border-bottom: 1px dashed #cfdbec;
   padding-bottom: 10px;
-  margin-bottom: 12px;
 }
 
 .AccrualResults__metric-value {
@@ -39,7 +41,9 @@
 }
 
 .AccrualResults__secondary-details {
-  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .AccrualResults__secondary-summary {
@@ -55,16 +59,15 @@
   display: none;
 }
 
-.AccrualResults__list--secondary {
-  margin-top: 8px;
-}
-
 .AccrualResults__structure-details {
   border: 1px solid #d6e2f0;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 12px 30px rgba(16, 40, 74, 0.1);
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .AccrualResults__structure-summary {
@@ -81,7 +84,6 @@
 }
 
 .AccrualResults__structure-list {
-  margin-top: 10px;
   display: grid;
   gap: 10px;
 }
@@ -91,10 +93,13 @@
   border-radius: 12px;
   padding: 10px;
   background: #fbfdff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .AccrualResults__structure-item-title {
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 @media (max-width: 860px) {

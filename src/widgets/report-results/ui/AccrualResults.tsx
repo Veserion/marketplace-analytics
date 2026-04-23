@@ -18,11 +18,12 @@ const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не в
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
-const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
+const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
 
 type AccrualResultsProps = {
   reports: AccrualGroup[]
+  cogsMissingValueText?: string
 }
 
 function getValueClassName(value: number | null): string {
@@ -54,9 +55,15 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
   return getValueClassName(value)
 }
 
-function toMetricRow(reportTitle: string, metric: AccrualGroup['metrics'][number], valueClassName: string, labelColor?: 'accent' | 'muted'): UiMetricsListRow {
+function toMetricRow(
+  reportTitle: string,
+  metric: AccrualGroup['metrics'][number],
+  valueClassName: string,
+  cogsMissingValueText: string,
+  labelColor?: 'accent' | 'muted',
+): UiMetricsListRow {
   const valueText = metric.label === COGS_LABEL && metric.value === null
-    ? COGS_MISSING_VALUE_TEXT
+    ? cogsMissingValueText
     : formatValue(metric.value, metric.type)
 
   return {
@@ -70,7 +77,10 @@ function toMetricRow(reportTitle: string, metric: AccrualGroup['metrics'][number
   }
 }
 
-export function AccrualResults({ reports }: AccrualResultsProps) {
+export function AccrualResults({
+  reports,
+  cogsMissingValueText = DEFAULT_COGS_MISSING_VALUE_TEXT,
+}: AccrualResultsProps) {
   const structureReports = reports.filter((report) => report.title.startsWith('Структура:'))
   const baseReports = reports.filter((report) => !report.title.startsWith('Структура:'))
 
@@ -95,7 +105,12 @@ export function AccrualResults({ reports }: AccrualResultsProps) {
 
             <UiMetricsList
               rows={primaryMetrics.map((metric) => (
-                toMetricRow(report.title, metric, getPrimaryMetricValueClassName(metric.label, metric.value))
+                toMetricRow(
+                  report.title,
+                  metric,
+                  getPrimaryMetricValueClassName(metric.label, metric.value),
+                  cogsMissingValueText,
+                )
               ))}
             />
 
@@ -113,6 +128,7 @@ export function AccrualResults({ reports }: AccrualResultsProps) {
                       `${report.title}-secondary`,
                       metric,
                       cn(`${BLOCK_NAME}__metric-value`),
+                      cogsMissingValueText,
                       'muted',
                     )
                   ))}
@@ -138,7 +154,7 @@ export function AccrualResults({ reports }: AccrualResultsProps) {
                 </Typography>
                 <UiMetricsList
                   rows={report.metrics.map((metric) => (
-                    toMetricRow(report.title, metric, getValueClassName(metric.value))
+                    toMetricRow(report.title, metric, getValueClassName(metric.value), cogsMissingValueText)
                   ))}
                 />
               </section>
