@@ -16,16 +16,16 @@
 }
 
 .MetricsSelectorPanel__action-button {
-  border: 1px solid #b6c4d8;
+  border: 1px solid var(--color-border-control);
   border-radius: 10px;
-  background: #f9fbff;
-  color: #163358;
+  background: var(--color-bg-surface-soft);
+  color: var(--color-text-secondary);
   padding: 9px 12px;
   cursor: pointer;
 }
 
 .MetricsSelectorPanel__action-button:hover {
-  background: #edf3fd;
+  background: var(--color-bg-surface-hover);
 }
 
 .MetricsSelectorPanel__grid {
@@ -40,10 +40,10 @@
   gap: 10px;
   padding: 9px 10px;
   border-radius: 10px;
-  background: #f6faff;
-  border: 1px solid #dbe5f3;
+  background: var(--color-bg-surface-muted);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .MetricsSelectorPanel__item input {
-  accent-color: #184b85;
+  accent-color: var(--color-text-link-strong);
 }

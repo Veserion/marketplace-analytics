@@ -1,8 +1,8 @@
 .AccrualCostStructure {
-  border: 1px solid var(--color-panel-border, #d7e0ec);
+  border: 1px solid var(--color-panel-border, var(--color-border-base));
   border-radius: 16px;
-  background: var(--color-panel-bg, #ffffff);
-  box-shadow: 0 12px 30px var(--color-panel-shadow, rgba(18, 48, 93, 0.08));
+  background: var(--color-panel-bg, var(--color-bg-surface));
+  box-shadow: 0 12px 30px var(--color-panel-shadow, var(--shadow-panel));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -14,7 +14,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px dashed #cfdbec;
+  border-bottom: 1px dashed var(--color-border-dashed);
   padding-bottom: 10px;
 }
 
@@ -71,8 +71,8 @@
   flex-direction: column;
   gap: 3px;
   border-radius: 8px;
-  background: #1f2d40;
-  box-shadow: 0 8px 22px rgba(15, 30, 55, 0.28);
+  background: var(--color-bg-tooltip);
+  box-shadow: 0 8px 22px var(--shadow-tooltip);
   padding: 8px 10px;
 }
 

@@ -23,11 +23,11 @@
 }
 
 .UnitExtraParamsPanel__field input {
-  border: 1px solid #c5d2e5;
+  border: 1px solid var(--color-border-input);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #f8fbff;
-  color: #173359;
+  background: var(--color-bg-surface-muted);
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -37,9 +37,9 @@
 
 .UnitExtraParamsPanel__radio-group {
   padding: 10px 12px;
-  border: 1px solid #d8e3f2;
+  border: 1px solid var(--color-border-muted);
   border-radius: 10px;
-  background: #fbfdff;
+  background: var(--color-bg-surface-soft);
   display: flex;
   flex-direction: column;
   gap: 8px;

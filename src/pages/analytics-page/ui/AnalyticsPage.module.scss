@@ -8,11 +8,11 @@
 }
 
 .AnalyticsPage__hero {
-  background: linear-gradient(120deg, #10243f 0%, #1a4872 55%, #2f7691 100%);
+  background: linear-gradient(120deg, var(--color-hero-ozon-start) 0%, var(--color-hero-ozon-mid) 55%, var(--color-hero-ozon-end) 100%);
   border-radius: 20px;
   padding: 26px 28px;
-  color: #f5f9ff;
-  box-shadow: 0 20px 60px rgba(12, 35, 62, 0.22);
+  color: var(--color-surface-contrast);
+  box-shadow: 0 20px 60px var(--shadow-hero-ozon);
   display: flex;
   flex-direction: column;
   gap: 10px;

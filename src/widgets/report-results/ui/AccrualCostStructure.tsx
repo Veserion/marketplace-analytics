@@ -68,7 +68,9 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
   const groupedReport = reports.find((report) => report.title === 'Начисления по группам')
   if (!totalsReport || !groupedReport) return null
 
-  const baseValue = Math.max(getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL), 0)
+  const revenueBeforeSppNet = getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL)
+  const returnsValue = Math.abs(getMetricValue(totalsReport, RETURNS_LABEL))
+  const baseValue = Math.max(revenueBeforeSppNet + returnsValue, 0)
   if (baseValue <= 0) return null
 
   const commissionComponents = [
@@ -81,7 +83,6 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
   const groupedValue = (label: string): number => getMetricValue(groupedReport, label)
   const commissionValue = commissionComponents.reduce((acc, label) => acc + Math.abs(groupedValue(label)), 0)
   const promotionValue = Math.abs(groupedValue(PROMOTION_LABEL))
-  const returnsValue = Math.abs(getMetricValue(totalsReport, RETURNS_LABEL))
   const taxValue = Math.abs(getMetricValue(totalsReport, TAX_LABEL))
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
   const netProfitValue = Math.max(baseValue - (commissionValue + promotionValue + returnsValue + taxValue + cogsValue), 0)

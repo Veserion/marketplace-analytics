@@ -10,11 +10,11 @@
 }
 
 .ArticlePatternPanel__input {
-  border: 1px solid #c5d2e5;
+  border: 1px solid var(--color-border-input);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #f8fbff;
-  color: #173359;
+  background: var(--color-bg-surface-muted);
+  color: var(--color-text-secondary);
   font-size: 14px;
   max-width: 420px;
 }

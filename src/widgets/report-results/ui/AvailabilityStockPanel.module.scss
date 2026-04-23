@@ -1,7 +1,7 @@
 .AvailabilityStockPanel {
-  border: 1px solid #d8e3f2;
+  border: 1px solid var(--color-border-muted);
   border-radius: 12px;
-  background: #fbfdff;
+  background: var(--color-bg-surface-soft);
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -25,10 +25,10 @@
 }
 
 .AvailabilityStockPanel__group {
-  border: 1px solid #d6e2f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .AvailabilityStockPanel__summary {
@@ -62,18 +62,18 @@
 }
 
 .AvailabilityStockPanel__group--red .AvailabilityStockPanel__summary {
-  background: #ffe9ec;
-  color: #a31731;
+  background: var(--color-bg-status-danger);
+  color: var(--color-text-negative-strong);
 }
 
 .AvailabilityStockPanel__group--yellow .AvailabilityStockPanel__summary {
-  background: #fff4d8;
-  color: #8a6400;
+  background: var(--color-bg-status-warning);
+  color: var(--color-text-warning);
 }
 
 .AvailabilityStockPanel__group--green .AvailabilityStockPanel__summary {
-  background: #e6f7ec;
-  color: #1f7a48;
+  background: var(--color-bg-status-success);
+  color: var(--color-text-positive);
 }
 
 .AvailabilityStockPanel__list {
@@ -89,48 +89,48 @@
   gap: 10px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid #dfe7f3;
-  background: #fbfdff;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface-soft);
 }
 
 .AvailabilityStockPanel__item code {
   font-size: 13px;
-  color: #173359;
+  color: var(--color-text-secondary);
 }
 
 .AvailabilityStockPanel__copy-article-btn {
   margin-left: auto;
-  border: 1px solid #b8c8df;
+  border: 1px solid var(--color-border-control-strong);
   border-radius: 8px;
   width: 34px;
   height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f7fbff;
-  color: #335b90;
+  background: var(--color-bg-surface-muted);
+  color: var(--color-text-link);
   cursor: pointer;
 }
 
 .AvailabilityStockPanel__copy-article-btn:hover {
-  background: #ebf3ff;
+  background: var(--color-bg-surface-info);
 }
 
 .AvailabilityStockPanel__copy-group-btn {
-  border: 1px solid #b8c8df;
+  border: 1px solid var(--color-border-control-strong);
   border-radius: 8px;
   width: 42px;
   height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f7fbff;
-  color: #335b90;
+  background: var(--color-bg-surface-muted);
+  color: var(--color-text-link);
   cursor: pointer;
 }
 
 .AvailabilityStockPanel__copy-group-btn:hover:not(:disabled) {
-  background: #ebf3ff;
+  background: var(--color-bg-surface-info);
 }
 
 .AvailabilityStockPanel__copy-group-btn:disabled {

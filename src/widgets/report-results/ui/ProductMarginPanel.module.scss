@@ -1,7 +1,7 @@
 .ProductMarginPanel {
-  border: 1px solid #d8e3f2;
+  border: 1px solid var(--color-border-muted);
   border-radius: 12px;
-  background: #fbfdff;
+  background: var(--color-bg-surface-soft);
   padding: 10px;
 }
 
@@ -26,7 +26,7 @@
 }
 
 .ProductMarginPanel__expand-icon {
-  color: #3f5f86;
+  color: var(--color-text-muted);
   transition: transform 0.18s ease;
 }
 
@@ -58,27 +58,27 @@
 }
 
 .ProductMarginPanel__legend-item--risk {
-  background: #fde6e6;
-  color: #8a2222;
+  background: var(--color-bg-status-danger);
+  color: var(--color-text-negative-strong);
 }
 
 .ProductMarginPanel__legend-item--warning {
-  background: #fff4d9;
-  color: #7a5a07;
+  background: var(--color-bg-status-warning);
+  color: var(--color-text-warning-strong);
 }
 
 .ProductMarginPanel__legend-item--normal {
-  background: #e5f5e6;
-  color: #1f6c2f;
+  background: var(--color-bg-status-success);
+  color: var(--color-text-positive);
 }
 
 .ProductMarginPanel__legend-item--super {
-  background: #d6f0da;
-  color: #0f5121;
+  background: var(--color-bg-status-success-soft);
+  color: var(--color-text-positive-strong);
 }
 
 .ProductMarginPanel__article {
-  color: #173359;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -89,7 +89,7 @@
 
 .ProductMarginPanel__article-link:hover .ProductMarginPanel__article,
 .ProductMarginPanel__article-link:focus-visible .ProductMarginPanel__article {
-  color: #2c5c95;
+  color: var(--color-text-link);
   text-decoration: underline;
 }
 
@@ -112,21 +112,21 @@
 }
 
 .ProductMarginPanel__margin-cell--risk {
-  background: #fde6e6;
-  color: #8a2222;
+  background: var(--color-bg-status-danger);
+  color: var(--color-text-negative-strong);
 }
 
 .ProductMarginPanel__margin-cell--warning {
-  background: #fff4d9;
-  color: #7a5a07;
+  background: var(--color-bg-status-warning);
+  color: var(--color-text-warning-strong);
 }
 
 .ProductMarginPanel__margin-cell--normal {
-  background: #e5f5e6;
-  color: #1f6c2f;
+  background: var(--color-bg-status-success);
+  color: var(--color-text-positive);
 }
 
 .ProductMarginPanel__margin-cell--super {
-  background: #d6f0da;
-  color: #0f5121;
+  background: var(--color-bg-status-success-soft);
+  color: var(--color-text-positive-strong);
 }

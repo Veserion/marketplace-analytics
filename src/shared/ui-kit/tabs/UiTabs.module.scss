@@ -5,26 +5,26 @@
 }
 
 .UiTabs__button {
-  border: 1px solid var(--color-tabs-border, #b9c7dc);
+  border: 1px solid var(--color-tabs-border, var(--color-border-control));
   border-radius: 12px;
-  background: var(--color-tabs-bg, #eef4ff);
-  color: var(--color-tabs-text, #12305d);
+  background: var(--color-tabs-bg, var(--color-bg-surface-subtle));
+  color: var(--color-tabs-text, var(--color-text-accent));
   padding: 12px;
   cursor: pointer;
   transition: all 0.18s ease;
 }
 
 .UiTabs__button:not(.UiTabs__button--active):hover {
-  background: var(--color-tabs-hover, #d7e5fc);
+  background: var(--color-tabs-hover, var(--color-bg-surface-info));
 }
 
 .UiTabs__button--active {
-  background: var(--color-tabs-active-bg, #12305d);
-  border-color: var(--color-tabs-active-border, #12305d);
-  color: var(--color-tabs-active-text, #ffffff);
+  background: var(--color-tabs-active-bg, var(--color-text-accent));
+  border-color: var(--color-tabs-active-border, var(--color-text-accent));
+  color: var(--color-tabs-active-text, var(--color-bg-surface));
 }
 
 .UiTabs__button--active:hover {
-  background: var(--color-tabs-active-hover-bg, #194483);
-  border-color: var(--color-tabs-active-hover-border, #102a52);
+  background: var(--color-tabs-active-hover-bg, var(--color-text-accent-strong));
+  border-color: var(--color-tabs-active-hover-border, var(--color-text-accent-strong));
 }

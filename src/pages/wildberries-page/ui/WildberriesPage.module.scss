@@ -8,11 +8,11 @@
 }
 
 .WildberriesPage__hero {
-  background: linear-gradient(120deg, #2f264a 0%, #5b3278 55%, #7a3f8f 100%);
+  background: linear-gradient(120deg, var(--color-hero-wb-start) 0%, var(--color-hero-wb-mid) 55%, var(--color-hero-wb-end) 100%);
   border-radius: 20px;
   padding: 26px 28px;
-  color: #f5f9ff;
-  box-shadow: 0 20px 60px rgba(27, 16, 44, 0.22);
+  color: var(--color-surface-contrast);
+  box-shadow: 0 20px 60px var(--shadow-hero-wb);
   display: flex;
   flex-direction: column;
   gap: 10px;

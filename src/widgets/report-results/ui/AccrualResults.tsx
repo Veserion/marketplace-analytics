@@ -132,7 +132,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
 
-  const salesItems: OverviewItem[] = [revenueWithoutSpp, returns, sppAndPromotions]
+  const salesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions, returns]
     .filter((metric): metric is AccrualGroup['metrics'][number] => Boolean(metric && metric.value !== null))
     .map((metric, index) => ({
       label: metric.label,
@@ -276,7 +276,7 @@ export function AccrualResults({
           </section>
 
           <section className={cn(`${BLOCK_NAME}__overview-column`, `${BLOCK_NAME}__overview-column--narrow`)}>
-            <Typography variant="h2" color="accent">Итог</Typography>
+            <Typography variant="h2" color="accent">Перевод в банк</Typography>
             <Typography
               variant="h2"
               color="primary"

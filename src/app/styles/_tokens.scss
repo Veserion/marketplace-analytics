@@ -1,7 +1,7 @@
-$color-page-text: #11253f;
-$color-primary: #12305d;
-$color-primary-soft: #eef4ff;
-$color-panel-border: #d7e0ec;
-$color-panel-shadow: rgba(18, 48, 93, 0.08);
+$color-page-text: var(--color-text-primary);
+$color-primary: var(--color-text-accent);
+$color-primary-soft: var(--color-bg-surface-subtle);
+$color-panel-border: var(--color-border-base);
+$color-panel-shadow: var(--shadow-panel);
 $radius-lg: 16px;
 $radius-md: 12px;

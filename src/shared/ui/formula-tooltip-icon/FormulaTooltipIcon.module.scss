@@ -4,7 +4,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  color: #335b90;
+  color: var(--color-text-link);
   cursor: default;
 }
 
@@ -20,11 +20,11 @@
   max-width: min(420px, 65vw);
   padding: 8px 10px;
   border-radius: 8px;
-  background: #1f2d40;
-  color: #f5f9ff;
+  background: var(--color-bg-tooltip);
+  color: var(--color-surface-contrast);
   font-size: 12px;
   line-height: 1.35;
-  box-shadow: 0 8px 22px rgba(15, 30, 55, 0.28);
+  box-shadow: 0 8px 22px var(--shadow-tooltip);
   pointer-events: none;
   z-index: 1000;
 }

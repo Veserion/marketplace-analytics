@@ -1,7 +1,7 @@
 .UiMetricsList {
   display: flex;
   flex-direction: column;
-  border: 1px solid #d8e3f2;
+  border: 1px solid var(--color-border-muted);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -12,12 +12,12 @@
   gap: 12px;
   align-items: center;
   padding: 11px 12px;
-  background: #fbfdff;
-  border-bottom: 1px solid #e0e8f5;
+  background: var(--color-bg-surface-soft);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .UiMetricsList__row:nth-child(even) {
-  background: #f4f8ff;
+  background: var(--color-bg-surface-subtle);
 }
 
 .UiMetricsList__row:last-child {

@@ -4,11 +4,11 @@
 }
 
 .UnitEconomicsResults__card {
-  background: #ffffff;
-  border: 1px solid #d6e2f0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 12px 30px rgba(16, 40, 74, 0.1);
+  box-shadow: 0 12px 30px var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -19,21 +19,21 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
-  border-bottom: 1px dashed #cfdbec;
+  border-bottom: 1px dashed var(--color-border-dashed);
   padding-bottom: 10px;
 }
 
 .UnitEconomicsResults__metric-value {
-  color: #122744;
+  color: var(--color-text-secondary);
   line-height: 1.25;
 }
 
 .UnitEconomicsResults__metric-value--positive {
-  color: #1f8b4c;
+  color: var(--color-text-positive);
 }
 
 .UnitEconomicsResults__metric-value--negative {
-  color: #c62828;
+  color: var(--color-text-negative);
 }
 
 @media (max-width: 860px) {
