@@ -3,6 +3,7 @@ import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
 import { Typography, UiMetricsList } from '@/shared/ui-kit'
 import type { UiMetricsListRow } from '@/shared/ui-kit'
+import { AccrualCostStructure } from './AccrualCostStructure'
 import styles from './AccrualResults.module.scss'
 
 const cn = classNames.bind(styles)
@@ -286,6 +287,8 @@ export function AccrualResults({
           </section>
         </article>
       )}
+
+      {showAccrualOverview && <AccrualCostStructure reports={reports} />}
 
       {baseReports.map((report) => {
         const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))

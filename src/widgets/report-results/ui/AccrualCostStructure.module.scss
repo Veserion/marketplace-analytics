@@ -1,0 +1,108 @@
+.AccrualCostStructure {
+  border: 1px solid var(--color-panel-border, #d7e0ec);
+  border-radius: 16px;
+  background: var(--color-panel-bg, #ffffff);
+  box-shadow: 0 12px 30px var(--color-panel-shadow, rgba(18, 48, 93, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.AccrualCostStructure__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px dashed #cfdbec;
+  padding-bottom: 10px;
+}
+
+.AccrualCostStructure__layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.AccrualCostStructure__chart {
+  flex: 0 0 320px;
+  min-width: 260px;
+}
+
+.AccrualCostStructure__legend {
+  list-style: none;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.AccrualCostStructure__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.AccrualCostStructure__item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.AccrualCostStructure__item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.AccrualCostStructure__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 10px;
+}
+
+.AccrualCostStructure__chart-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 8px;
+  background: #1f2d40;
+  box-shadow: 0 8px 22px rgba(15, 30, 55, 0.28);
+  padding: 8px 10px;
+}
+
+.AccrualCostStructure__value-nowrap {
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .AccrualCostStructure__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .AccrualCostStructure__layout {
+    flex-direction: column;
+  }
+
+  .AccrualCostStructure__chart {
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .AccrualCostStructure__item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .AccrualCostStructure__item-right {
+    align-items: flex-start;
+  }
+}
