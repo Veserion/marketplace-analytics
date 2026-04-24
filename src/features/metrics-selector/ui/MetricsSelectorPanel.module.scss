@@ -4,6 +4,14 @@
   gap: 14px;
 }
 
+.MetricsSelectorPanel__trigger {
+  color: var(--color-text-accent);
+}
+
+.MetricsSelectorPanel__chevron {
+  color: var(--color-text-muted);
+}
+
 .MetricsSelectorPanel__content {
   display: flex;
   flex-direction: column;

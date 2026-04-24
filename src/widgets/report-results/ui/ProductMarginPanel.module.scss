@@ -5,7 +5,7 @@
   padding: 10px;
 }
 
-.ProductMarginPanel__details {
+.ProductMarginPanel__disclosure {
   border-radius: 10px;
 }
 
@@ -21,17 +21,8 @@
   cursor: pointer;
 }
 
-.ProductMarginPanel__summary::-webkit-details-marker {
-  display: none;
-}
-
 .ProductMarginPanel__expand-icon {
   color: var(--color-text-muted);
-  transition: transform 0.18s ease;
-}
-
-.ProductMarginPanel__details[open] .ProductMarginPanel__expand-icon {
-  transform: rotate(180deg);
 }
 
 .ProductMarginPanel__content {

@@ -1,4 +1,5 @@
 export { UiMetricsList } from '@/shared/ui-kit/metrics-list'
+export { UiDisclosure } from '@/shared/ui-kit/disclosure'
 export { UiPanel } from '@/shared/ui-kit/panel'
 export { UiSectionToggle } from '@/shared/ui-kit/section-toggle'
 export { UiTable } from '@/shared/ui-kit/table'

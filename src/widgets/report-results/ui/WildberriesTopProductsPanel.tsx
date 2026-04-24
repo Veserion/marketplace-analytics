@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { useMemo } from 'react'
 import type { WildberriesTopProductItem } from '@/entities/wildberries-report'
-import { Typography, UiTable, UiTooltipIcon } from '@/shared/ui-kit'
+import { Typography, UiDisclosure, UiTable, UiTooltipIcon } from '@/shared/ui-kit'
 import type { UiTableColumn } from '@/shared/ui-kit'
 import styles from './WildberriesTopProductsPanel.module.scss'
 
@@ -170,15 +170,13 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
 
   return (
     <section className={cn(BLOCK_NAME)}>
-      <details className={cn(`${BLOCK_NAME}__details`)}>
-        <summary className={cn(`${BLOCK_NAME}__summary`)}>
-          <Typography variant='h5' color='accent'>Все товары по количеству продаж</Typography>
-          <svg className={cn(`${BLOCK_NAME}__expand-icon`)} width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
-            <path d='M15.8327 7L9.99935 12.8333L4.16602 7' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'/>
-          </svg>
-        </summary>
-
-        <div className={cn(`${BLOCK_NAME}__content`)}>
+      <UiDisclosure
+        className={cn(`${BLOCK_NAME}__disclosure`)}
+        triggerClassName={cn(`${BLOCK_NAME}__summary`)}
+        chevronClassName={cn(`${BLOCK_NAME}__expand-icon`)}
+        contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
+        title={<Typography variant='h3' color='accent'>Все товары по количеству продаж</Typography>}
+      >
           <Typography variant='body3' color='muted'>
             Сортировка по умолчанию: от большего количества продаж к меньшему.
           </Typography>
@@ -191,8 +189,7 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
             showHeaderFilters={false}
             emptyText='Нет строк с продажами в выбранном фильтре артикулов.'
           />
-        </div>
-      </details>
+      </UiDisclosure>
     </section>
   )
 }

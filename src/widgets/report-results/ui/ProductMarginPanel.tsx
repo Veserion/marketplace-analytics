@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { useMemo } from 'react'
 import type { ProductMarginItem } from '@/entities/ozon-report/model/types'
-import { Typography, UiTable, UiTooltipIcon } from '@/shared/ui-kit'
+import { Typography, UiDisclosure, UiTable, UiTooltipIcon } from '@/shared/ui-kit'
 import type { UiTableColumn } from '@/shared/ui-kit'
 import styles from './ProductMarginPanel.module.scss'
 
@@ -119,15 +119,13 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
 
   return (
     <section className={cn(BLOCK_NAME)}>
-      <details className={cn(`${BLOCK_NAME}__details`)}>
-        <summary className={cn(`${BLOCK_NAME}__summary`)}>
-          <Typography variant="h5" color="accent">Потоварная маржинальность</Typography>
-          <svg className={cn(`${BLOCK_NAME}__expand-icon`)} width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M15.8327 7L9.99935 12.8333L4.16602 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </summary>
-
-        <div className={cn(`${BLOCK_NAME}__content`)}>
+      <UiDisclosure
+        className={cn(`${BLOCK_NAME}__disclosure`)}
+        triggerClassName={cn(`${BLOCK_NAME}__summary`)}
+        chevronClassName={cn(`${BLOCK_NAME}__expand-icon`)}
+        contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
+        title={<Typography variant="h5" color="accent">Потоварная маржинальность</Typography>}
+      >
           <div className={cn(`${BLOCK_NAME}__legend`)}>
             {MARGIN_LEGEND_ITEMS.map((item) => (
               <span
@@ -146,8 +144,7 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
             showHeaderFilters={false}
             emptyText='Нет данных в колонках "Доля от продаж" / "Прибыль за шт"'
           />
-        </div>
-      </details>
+      </UiDisclosure>
     </section>
   )
 }

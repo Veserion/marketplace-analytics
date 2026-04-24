@@ -156,16 +156,14 @@
 }
 
 .AccrualResults__structure-summary {
-  list-style: none;
-  cursor: pointer;
   border: 1px dashed var(--color-border-dashed);
   border-radius: 10px;
   background: var(--color-bg-surface-muted);
   padding: 10px 12px;
 }
 
-.AccrualResults__structure-summary::-webkit-details-marker {
-  display: none;
+.AccrualResults__structure-chevron {
+  color: var(--color-text-muted);
 }
 
 .AccrualResults__structure-list {

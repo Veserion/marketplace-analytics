@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
-import { Typography, UiMetricsList } from '@/shared/ui-kit'
+import { Typography, UiDisclosure, UiMetricsList } from '@/shared/ui-kit'
 import type { UiMetricsListRow } from '@/shared/ui-kit'
 import { AccrualCostStructure } from './AccrualCostStructure'
 import styles from './AccrualResults.module.scss'
@@ -344,12 +344,16 @@ export function AccrualResults({
       })}
 
       {structureReports.length > 0 && (
-        <details className={cn(`${BLOCK_NAME}__structure-details`)}>
-          <summary className={cn(`${BLOCK_NAME}__structure-summary`)}>
-                  <Typography as="span" variant="h3" color="accent">
+        <UiDisclosure
+          className={cn(`${BLOCK_NAME}__structure-details`)}
+          triggerClassName={cn(`${BLOCK_NAME}__structure-summary`)}
+          chevronClassName={cn(`${BLOCK_NAME}__structure-chevron`)}
+          title={(
+            <Typography as="span" variant="h3" color="accent">
               Сруктура расчета
             </Typography>
-          </summary>
+          )}
+        >
           <div className={cn(`${BLOCK_NAME}__structure-list`)}>
             {structureReports.map((report) => (
               <section key={report.title} className={cn(`${BLOCK_NAME}__structure-item`)}>
@@ -364,7 +368,7 @@ export function AccrualResults({
               </section>
             ))}
           </div>
-        </details>
+        </UiDisclosure>
       )}
     </section>
   )

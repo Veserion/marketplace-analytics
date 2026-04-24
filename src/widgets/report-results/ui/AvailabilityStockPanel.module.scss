@@ -43,22 +43,8 @@
   cursor: pointer;
 }
 
-.AvailabilityStockPanel__summary::-webkit-details-marker {
-  display: none;
-}
-
-.AvailabilityStockPanel__summary-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .AvailabilityStockPanel__expand-icon {
-  transition: transform 0.18s ease;
-}
-
-.AvailabilityStockPanel__group[open] .AvailabilityStockPanel__expand-icon {
-  transform: rotate(180deg);
+  color: currentColor;
 }
 
 .AvailabilityStockPanel__group--red .AvailabilityStockPanel__summary {

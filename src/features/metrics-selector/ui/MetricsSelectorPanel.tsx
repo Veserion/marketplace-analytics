@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { METRICS } from '@/entities/ozon-report'
 import type { MetricKey } from '@/entities/ozon-report'
-import { Typography, UiPanel, UiSectionToggle } from '@/shared/ui-kit'
+import { Typography, UiDisclosure, UiPanel } from '@/shared/ui-kit'
 import styles from './MetricsSelectorPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -26,10 +26,14 @@ export function MetricsSelectorPanel({
 }: MetricsSelectorPanelProps) {
   return (
     <UiPanel className={cn(BLOCK_NAME)}>
-      <UiSectionToggle title="Метрики для расчёта" isOpen={isOpen} onToggle={onToggleOpen} />
-
-      {isOpen && (
-        <div className={cn(`${BLOCK_NAME}__content`)}>
+      <UiDisclosure
+        title={<Typography as="span" variant="h2" color="accent" bold>Метрики для расчёта</Typography>}
+        isOpen={isOpen}
+        onToggle={() => onToggleOpen()}
+        triggerClassName={cn(`${BLOCK_NAME}__trigger`)}
+        chevronClassName={cn(`${BLOCK_NAME}__chevron`)}
+        contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
+      >
           <div className={cn(`${BLOCK_NAME}__actions`)}>
             <button type="button" className={cn(`${BLOCK_NAME}__action-button`)} onClick={onSelectAll}>
               <Typography as="span" variant="body2" color="accent">Выбрать всё</Typography>
@@ -47,8 +51,7 @@ export function MetricsSelectorPanel({
               </label>
             ))}
           </div>
-        </div>
-      )}
+      </UiDisclosure>
     </UiPanel>
   )
 }

@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import { Typography, UiPanel, UiSectionToggle } from '@/shared/ui-kit'
+import { Typography, UiDisclosure, UiPanel } from '@/shared/ui-kit'
 import styles from './UnitExtraParamsPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -44,10 +44,14 @@ export function UnitExtraParamsPanel({
 
   return (
     <UiPanel className={cn(BLOCK_NAME)}>
-      <UiSectionToggle title="Дополнительные параметры" isOpen={isOpen} onToggle={onToggleOpen} />
-
-      {isOpen && (
-        <div className={cn(`${BLOCK_NAME}__content`)}>
+      <UiDisclosure
+        title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
+        isOpen={isOpen}
+        onToggle={() => onToggleOpen()}
+        triggerClassName={cn(`${BLOCK_NAME}__trigger`)}
+        chevronClassName={cn(`${BLOCK_NAME}__chevron`)}
+        contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
+      >
           <div className={cn(`${BLOCK_NAME}__grid`)}>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
@@ -114,8 +118,7 @@ export function UnitExtraParamsPanel({
               </label>
             </div>
           )}
-        </div>
-      )}
+      </UiDisclosure>
     </UiPanel>
   )
 }

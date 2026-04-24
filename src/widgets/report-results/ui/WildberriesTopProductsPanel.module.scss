@@ -5,7 +5,7 @@
   padding: 10px;
 }
 
-.WildberriesTopProductsPanel__details {
+.WildberriesTopProductsPanel__disclosure {
   border-radius: 10px;
 }
 
@@ -21,17 +21,8 @@
   cursor: pointer;
 }
 
-.WildberriesTopProductsPanel__summary::-webkit-details-marker {
-  display: none;
-}
-
 .WildberriesTopProductsPanel__expand-icon {
   color: var(--color-text-muted);
-  transition: transform 0.18s ease;
-}
-
-.WildberriesTopProductsPanel__details[open] .WildberriesTopProductsPanel__expand-icon {
-  transform: rotate(180deg);
 }
 
 .WildberriesTopProductsPanel__content {

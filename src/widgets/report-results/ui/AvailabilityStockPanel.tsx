@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { useState } from 'react'
 import type { AvailabilityGroups } from '@/entities/ozon-report/model/types'
-import { Typography } from '@/shared/ui-kit'
+import { Typography, UiDisclosure } from '@/shared/ui-kit'
 import styles from './AvailabilityStockPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -57,18 +57,14 @@ export function AvailabilityStockPanel({ groups }: AvailabilityStockPanelProps) 
           const items = groups[group.key]
           return (
             <div key={group.key} className={cn(`${BLOCK_NAME}__group-row`)}>
-              <details className={cn(`${BLOCK_NAME}__group`, `${BLOCK_NAME}__group--${group.modifier}`)}>
-                <summary className={cn(`${BLOCK_NAME}__summary`)}>
-                  <Typography as="span" variant="body2" semiBold>{group.title}</Typography>
-                  <span className={cn(`${BLOCK_NAME}__summary-right`)}>
-                    <Typography as="span" variant="body2" semiBold>{items.length}</Typography>
-                    <svg className={cn(`${BLOCK_NAME}__expand-icon`)} width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M15.8327 7L9.99935 12.8333L4.16602 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                </summary>
-
-                <div className={cn(`${BLOCK_NAME}__list`)}>
+              <UiDisclosure
+                className={cn(`${BLOCK_NAME}__group`, `${BLOCK_NAME}__group--${group.modifier}`)}
+                triggerClassName={cn(`${BLOCK_NAME}__summary`)}
+                chevronClassName={cn(`${BLOCK_NAME}__expand-icon`)}
+                contentInnerClassName={cn(`${BLOCK_NAME}__list`)}
+                title={<Typography as="span" variant="body2" semiBold>{group.title}</Typography>}
+                meta={<Typography as="span" variant="body2" semiBold>{items.length}</Typography>}
+              >
                   {items.length === 0 && <Typography variant="body3" color="muted">Нет артикулов</Typography>}
                   {items.map((article) => (
                     <div key={article} className={cn(`${BLOCK_NAME}__item`)}>
@@ -87,8 +83,7 @@ export function AvailabilityStockPanel({ groups }: AvailabilityStockPanelProps) 
                       {copiedArticle === article && <Typography as="span" variant="caption" color="accent" semiBold>Скопировано</Typography>}
                     </div>
                   ))}
-                </div>
-              </details>
+              </UiDisclosure>
 
               <button
                 type="button"
