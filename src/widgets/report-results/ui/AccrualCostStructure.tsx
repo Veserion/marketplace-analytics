@@ -282,7 +282,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
       </header>
       <div className={cn(`${BLOCK_NAME}__layout`)}>
         <div className={cn(`${BLOCK_NAME}__chart`)}>
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={340}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -290,8 +290,8 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
                 nameKey="label"
                 cx="50%"
                 cy="50%"
-                innerRadius={66}
-                outerRadius={112}
+                innerRadius={84}
+                outerRadius={138}
                 paddingAngle={2}
                 isAnimationActive
               >

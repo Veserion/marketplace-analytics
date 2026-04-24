@@ -252,7 +252,7 @@ export function AccrualResults({
           </section>
 
           <section className={cn(`${BLOCK_NAME}__overview-column`, `${BLOCK_NAME}__overview-column--wide`)}>
-            <Typography variant="h2" color="accent">Начисления</Typography>
+            <Typography variant="h2" color="accent">Расходы по Маркетплейсу</Typography>
             <Typography
               variant="h2"
               color="primary"
