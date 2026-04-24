@@ -2,6 +2,9 @@ import { AD_COLS, LOGISTICS_COLS, METRICS, OTHER_EXPENSE_COLS, REVERSE_LOGISTICS
 import type { AccrualGroup, AccrualMetric, AvailabilityGroups, ReportGroup, ValueType } from '@/entities/ozon-report/model/types'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 
+const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
+const SALES_GROUP_LABEL = 'Продажи'
+
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
   if (!normalized) return null
@@ -320,9 +323,6 @@ export function buildAccrualReports(
   const groupTypeBreakdown = new Map<string, Map<string, number>>()
 
   let total = 0
-  let positiveCount = 0
-  let negativeCount = 0
-  let zeroCount = 0
   let salesQuantity = 0
   let cancellationsAndReturnsQuantity = 0
   let revenueWithoutSppSales = 0
@@ -346,13 +346,6 @@ export function buildAccrualReports(
     const scheme = normalize(getCell(row, 'Схема работы'))
 
     total += amount
-    if (amount > 0) {
-      positiveCount += 1
-    } else if (amount < 0) {
-      negativeCount += 1
-    } else {
-      zeroCount += 1
-    }
 
     const groupLower = normalizeLower(group)
     const typeLower = normalizeLower(type)
@@ -456,7 +449,9 @@ export function buildAccrualReports(
   }
   const groupMetrics = sortByAbsDesc(
     Array.from(groupedAccrualByLabel.entries()).map(([label, data]) => [label, data.value] as [string, number]),
-  ).map(([label, value]) => {
+  )
+    .filter(([label]) => label !== SALES_GROUP_LABEL)
+    .map(([label, value]) => {
     const data = groupedAccrualByLabel.get(label)!
     const labelsForFormula = Array.from(data.sourceLabels)
     const formula = labelsForFormula.length === 1
@@ -469,6 +464,13 @@ export function buildAccrualReports(
       formula,
       shareText: data.withSalesShare ? formatSalesShare(value) : null,
     }
+  })
+  groupMetrics.push({
+    label: 'Итог',
+    value: -Math.abs(marketplaceExpenses),
+    type: 'currency',
+    formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи" и исключая возвраты',
+    shareText: salesBase ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format((Math.abs(marketplaceExpenses) / salesBase) * 100)}%` : null,
   })
 
   const groupSummaries: AccrualGroup[] = Array.from(groupTypeBreakdown.entries())
@@ -553,6 +555,7 @@ export function buildAccrualReports(
           formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи" и исключая возвраты',
           shareText: salesBase ? `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format((Math.abs(marketplaceExpenses) / salesBase) * 100)}%` : null,
         },
+        { label: 'Перевод в банк', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.") по всем строкам начислений' },
         {
           label: 'Себестоимость',
           value: accrualCogsFromUnitMap,
@@ -566,26 +569,21 @@ export function buildAccrualReports(
           formula: `(${vatRatePercent}% + ${taxRatePercent}%) * Выручка с учетом СПП`,
         },
         {
-          label: 'Чистая прибыль',
-          value: netProfit,
-          type: 'currency',
-          formula: 'Перевод в банк - Налог - Себестоимость',
-        },
-        {
           label: 'Маржинальность',
           value: marginRate,
           type: 'percent',
           formula: 'Чистая прибыль / Выручка без СПП * 100%',
         },
-        { label: 'Перевод в банк', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.") по всем строкам начислений' },
-        { label: 'Среднее начисление на строку', value: dataRows.length ? total / dataRows.length : null, type: 'currency', formula: 'SUM("Сумма итого, руб.") / COUNT(строк)' },
-        { label: 'Строк с плюсами', value: positiveCount, type: 'number', formula: 'COUNT("Сумма итого, руб." > 0)' },
-        { label: 'Строк с минусами', value: negativeCount, type: 'number', formula: 'COUNT("Сумма итого, руб." < 0)' },
-        { label: 'Строк с нулем', value: zeroCount, type: 'number', formula: 'COUNT("Сумма итого, руб." = 0)' },
+        {
+          label: 'Чистая прибыль',
+          value: netProfit,
+          type: 'currency',
+          formula: 'Перевод в банк - Налог - Себестоимость',
+        },
       ],
     },
     {
-      title: 'Начисления по группам',
+      title: GROUPED_EXPENSES_REPORT_TITLE,
       metrics: groupMetrics,
     },
     {

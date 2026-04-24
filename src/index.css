@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: 'Avenir Next', 'Manrope', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  font-family: 'Montserrat', 'Avenir Next', 'Manrope', 'IBM Plex Sans', 'Segoe UI', sans-serif;
   color: var(--color-text-primary);
   background-color: var(--color-bg-page);
   line-height: 1.45;

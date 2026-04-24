@@ -24,13 +24,6 @@ const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
 const TAX_RATE_STORAGE_KEY = 'unit_economics_tax_rate_percent'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
-const SECONDARY_INFO_LABELS = new Set([
-  'Среднее начисление на строку',
-  'Строк с плюсами',
-  'Строк с минусами',
-  'Строк с нулем',
-])
-const AVERAGE_LABEL = 'Среднее начисление на строку'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -61,10 +54,6 @@ function hasSamePeriod(unitFileName: string, accrualFileName: string): boolean {
   const unitPeriod = getPeriodKeyFromFileName(unitFileName)
   const accrualPeriod = getPeriodKeyFromFileName(accrualFileName)
   return Boolean(unitPeriod && accrualPeriod && unitPeriod === accrualPeriod)
-}
-
-function isSecondaryMetric(label: string): boolean {
-  return SECONDARY_INFO_LABELS.has(label)
 }
 
 function getValueTone(value: number | null): PdfMetricTone {
@@ -98,7 +87,6 @@ function getOzonAccrualMetricTone(label: string, value: number | null): PdfMetri
   ) {
     return 'negative'
   }
-  if (label === AVERAGE_LABEL) return 'muted'
   return getValueTone(value)
 }
 
@@ -196,10 +184,8 @@ function buildOzonAccrualPdfSections(reports: AccrualGroup[]): PdfSection[] {
     const reportTitle = report.title === 'Итоги периода' && report.periodLabel
       ? `${report.title} ${report.periodLabel}`
       : report.title
-    const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
-    const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
 
-    const rows: PdfSection['rows'] = primaryMetrics.map((metric) => ({
+    const rows: PdfSection['rows'] = report.metrics.map((metric) => ({
       label: metric.label,
       value: metric.label === COGS_LABEL && metric.value === null
         ? COGS_MISSING_VALUE_TEXT
@@ -207,15 +193,6 @@ function buildOzonAccrualPdfSections(reports: AccrualGroup[]): PdfSection[] {
       extra: metric.shareText ?? null,
       tone: getOzonAccrualMetricTone(metric.label, metric.value),
     }))
-
-    if (secondaryMetrics.length > 0) {
-      rows.push(...secondaryMetrics.map((metric) => ({
-        label: `Доп. ${metric.label}`,
-        value: formatValue(metric.value, metric.type),
-        tone: 'muted' as const,
-        labelMuted: true,
-      })))
-    }
 
     sections.push({
       title: reportTitle,

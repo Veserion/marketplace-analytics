@@ -8,13 +8,6 @@ import styles from './AccrualResults.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualResults'
-const SECONDARY_INFO_LABELS = new Set([
-  'Среднее начисление на строку',
-  'Строк с плюсами',
-  'Строк с минусами',
-  'Строк с нулем',
-])
-const AVERAGE_LABEL = 'Среднее начисление на строку'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -26,8 +19,16 @@ const REVENUE_WITHOUT_SPP_LABEL = 'Выручка без СПП'
 const RETURNS_LABEL = 'Возвраты'
 const SPP_AND_PROMOTIONS_LABEL = 'СПП и акции'
 const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
+const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
+const GROUPED_TOTAL_LABEL = 'Итог'
 const MAX_OVERVIEW_ITEMS = 8
+const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
+  RETURNS_LABEL,
+  TAX_LABEL,
+  COGS_LABEL,
+  MARKETPLACE_EXPENSES_LABEL,
+])
 const OVERVIEW_COLORS = [
   'var(--color-accent, #12305d)',
   'var(--color-positive, #1f8b4c)',
@@ -52,10 +53,6 @@ function getValueClassName(value: number | null): string {
   return cn(`${BLOCK_NAME}__metric-value`)
 }
 
-function isSecondaryMetric(label: string): boolean {
-  return SECONDARY_INFO_LABELS.has(label)
-}
-
 function getPrimaryMetricValueClassName(label: string, value: number | null): string {
   if (label === COGS_LABEL && value === null) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--muted`)
@@ -68,9 +65,6 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
   ) {
     return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--negative`)
   }
-  if (label === AVERAGE_LABEL) {
-    return cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--muted`)
-  }
   return getValueClassName(value)
 }
 
@@ -81,9 +75,15 @@ function toMetricRow(
   cogsMissingValueText: string,
   labelColor?: 'accent' | 'muted',
 ): UiMetricsListRow {
+  const shouldForceNegativeInTotals = reportTitle === 'Итоги периода'
+    && metric.label !== CANCELLATIONS_AND_RETURNS_LABEL
+    && FORCED_NEGATIVE_DISPLAY_LABELS.has(metric.label)
+  const normalizedValue = shouldForceNegativeInTotals && metric.value !== null
+    ? -Math.abs(metric.value)
+    : metric.value
   const valueText = metric.label === COGS_LABEL && metric.value === null
     ? cogsMissingValueText
-    : formatValue(metric.value, metric.type)
+    : formatValue(normalizedValue, metric.type)
 
   return {
     id: `${reportTitle}-${metric.label}`,
@@ -122,7 +122,7 @@ function getOverviewColor(index: number): string {
 
 function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   const totalsReport = reports.find((report) => report.title === 'Итоги периода')
-  const groupedReport = reports.find((report) => report.title === 'Начисления по группам')
+  const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
   if (!totalsReport || !groupedReport) return null
 
   const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
@@ -142,7 +142,11 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
     }))
 
   const groupedItems = groupedReport.metrics
-    .filter((metric) => metric.label !== SALES_GROUP_LABEL && metric.label !== RETURNS_LABEL && metric.value !== null)
+    .filter((metric) =>
+      metric.label !== SALES_GROUP_LABEL
+      && metric.label !== RETURNS_LABEL
+      && metric.label !== GROUPED_TOTAL_LABEL
+      && metric.value !== null)
     .map((metric, index) => ({
       label: metric.label,
       value: metric.value || 0,
@@ -180,6 +184,13 @@ function formatOverviewCurrency(value: number | null): string {
   return formatValue(Math.round(value), 'currency')
 }
 
+function normalizeTotalsDisplayValue(label: string, value: number | null): number | null {
+  if (value === null) return null
+  if (label === CANCELLATIONS_AND_RETURNS_LABEL) return value
+  if (FORCED_NEGATIVE_DISPLAY_LABELS.has(label)) return -Math.abs(value)
+  return value
+}
+
 export function AccrualResults({
   reports,
   cogsMissingValueText = DEFAULT_COGS_MISSING_VALUE_TEXT,
@@ -206,7 +217,10 @@ export function AccrualResults({
               color="primary"
               className={getPrimaryMetricValueClassName(overviewModel.salesTotal?.label || '', overviewModel.salesTotal?.value ?? null)}
             >
-              {formatOverviewCurrency(overviewModel.salesTotal?.value ?? null)}
+              {formatOverviewCurrency(normalizeTotalsDisplayValue(
+                overviewModel.salesTotal?.label || '',
+                overviewModel.salesTotal?.value ?? null,
+              ))}
             </Typography>
             <div className={cn(`${BLOCK_NAME}__overview-bar`)}>
               {overviewModel.salesItems.map((item) => (
@@ -230,7 +244,7 @@ export function AccrualResults({
                     semiBold
                     className={cn(`${BLOCK_NAME}__value-nowrap`)}
                   >
-                    {formatOverviewCurrency(item.value)}
+                    {formatOverviewCurrency(normalizeTotalsDisplayValue(item.label, item.value))}
                   </Typography>
                 </li>
               ))}
@@ -244,7 +258,10 @@ export function AccrualResults({
               color="primary"
               className={getPrimaryMetricValueClassName(overviewModel.accrualTotal?.label || '', overviewModel.accrualTotal?.value ?? null)}
             >
-              {formatOverviewCurrency(overviewModel.accrualTotal?.value ?? null)}
+              {formatOverviewCurrency(normalizeTotalsDisplayValue(
+                overviewModel.accrualTotal?.label || '',
+                overviewModel.accrualTotal?.value ?? null,
+              ))}
             </Typography>
             <div className={cn(`${BLOCK_NAME}__overview-bar`)}>
               {overviewModel.accrualItems.map((item) => (
@@ -282,7 +299,10 @@ export function AccrualResults({
               color="primary"
               className={getPrimaryMetricValueClassName(overviewModel.transferTotal?.label || '', overviewModel.transferTotal?.value ?? null)}
             >
-              {formatOverviewCurrency(overviewModel.transferTotal?.value ?? null)}
+              {formatOverviewCurrency(normalizeTotalsDisplayValue(
+                overviewModel.transferTotal?.label || '',
+                overviewModel.transferTotal?.value ?? null,
+              ))}
             </Typography>
           </section>
         </article>
@@ -291,11 +311,8 @@ export function AccrualResults({
       {showAccrualOverview && <AccrualCostStructure reports={reports} />}
 
       {baseReports.map((report) => {
-        const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
-        const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
         const isWbSalesSchemeReport = report.title === 'Схема работы'
           && report.metrics.some((metric) => metric.label.startsWith('FBS') || metric.label.startsWith('FBW') || metric.label.startsWith('Не указано'))
-        const showSecondary = report.title === 'Итоги периода' && secondaryMetrics.length > 0
         const reportTitle = report.title === 'Итоги периода' && report.periodLabel
           ? `${report.title} ${report.periodLabel}`
           : report.title
@@ -311,7 +328,7 @@ export function AccrualResults({
 
             <UiMetricsList
               hideThirdColumn={isWbSalesSchemeReport}
-              rows={primaryMetrics.map((metric) => (
+              rows={report.metrics.map((metric) => (
                 toMetricRow(
                   report.title,
                   metric,
@@ -322,28 +339,6 @@ export function AccrualResults({
                 )
               ))}
             />
-
-            {showSecondary && (
-              <details className={cn(`${BLOCK_NAME}__secondary-details`)}>
-                <summary className={cn(`${BLOCK_NAME}__secondary-summary`)}>
-                  <Typography as="span" variant="body2" color="muted" semiBold>
-                    Дополнительная информация
-                  </Typography>
-                </summary>
-                <UiMetricsList
-                  className={cn(`${BLOCK_NAME}__list--secondary`)}
-                  rows={secondaryMetrics.map((metric) => (
-                    toMetricRow(
-                      `${report.title}-secondary`,
-                      metric,
-                      cn(`${BLOCK_NAME}__metric-value`),
-                      cogsMissingValueText,
-                      'muted',
-                    )
-                  ))}
-                />
-              </details>
-            )}
           </article>
         )
       })}

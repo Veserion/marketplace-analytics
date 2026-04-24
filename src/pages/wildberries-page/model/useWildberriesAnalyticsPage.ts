@@ -19,13 +19,6 @@ const TAX_RATE_STORAGE_KEY = 'wildberries_accrual_tax_rate_percent'
 const COGS_MATCHING_MODE_STORAGE_KEY = 'wildberries_cogs_matching_mode'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
-const SECONDARY_INFO_LABELS = new Set([
-  'Среднее начисление на строку',
-  'Строк с плюсами',
-  'Строк с минусами',
-  'Строк с нулем',
-])
-const AVERAGE_LABEL = 'Среднее начисление на строку'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -47,10 +40,6 @@ function readStoredCogsMatchingMode(): CogsMatchingMode {
   return raw === 'digits' ? 'digits' : 'full'
 }
 
-function isSecondaryMetric(label: string): boolean {
-  return SECONDARY_INFO_LABELS.has(label)
-}
-
 function getValueTone(value: number | null): PdfMetricTone {
   if (value === null) return 'muted'
   if (value > 0) return 'positive'
@@ -59,7 +48,6 @@ function getValueTone(value: number | null): PdfMetricTone {
 }
 
 function getWbMetricTone(label: string, value: number | null): PdfMetricTone {
-  if (label === AVERAGE_LABEL) return 'muted'
   if (label === COGS_LABEL && value === null) return 'muted'
   if (
     label === CANCELLATIONS_AND_RETURNS_LABEL
@@ -81,9 +69,7 @@ function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
     const reportTitle = report.title === 'Итоги периода' && report.periodLabel
       ? `${report.title} ${report.periodLabel}`
       : report.title
-    const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
-    const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
-    const rows: PdfSection['rows'] = primaryMetrics.map((metric) => ({
+    const rows: PdfSection['rows'] = report.metrics.map((metric) => ({
       label: metric.label,
       value: metric.label === COGS_LABEL && metric.value === null
         ? COGS_MISSING_VALUE_TEXT
@@ -91,15 +77,6 @@ function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
       extra: metric.shareText ?? null,
       tone: getWbMetricTone(metric.label, metric.value),
     }))
-
-    if (secondaryMetrics.length > 0) {
-      rows.push(...secondaryMetrics.map((metric) => ({
-        label: `Доп. ${metric.label}`,
-        value: formatValue(metric.value, metric.type),
-        tone: 'muted' as const,
-        labelMuted: true,
-      })))
-    }
 
     sections.push({
       title: reportTitle,

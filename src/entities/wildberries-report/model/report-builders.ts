@@ -45,6 +45,8 @@ const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
   FBW: 'FBW — склад ВБ',
   'Не указано': 'Не указано — нет обозначения склада в отчете',
 }
+const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
+const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
@@ -551,12 +553,10 @@ export function buildWildberriesAccrualReports(
   const salesTransferByScheme = createSalesSchemeMap()
 
   let nonSalesNetAmount = 0
-  let positiveCount = 0
-  let negativeCount = 0
-  let zeroCount = 0
 
   let salesQuantity = 0
   let returnsAndCancellationsQuantity = 0
+  let returnsAmount = 0
   let revenueBeforeSpp = 0
   let revenueWithoutSpp = 0
   let cogsFromFile = 0
@@ -578,14 +578,6 @@ export function buildWildberriesAccrualReports(
   for (const row of parsedRows) {
     const reason = row.reason || 'Без обоснования'
     const amount = getRowAmount(row)
-
-    if (amount > 0) {
-      positiveCount += 1
-    } else if (amount < 0) {
-      negativeCount += 1
-    } else {
-      zeroCount += 1
-    }
 
     const reasonLower = normalizeLower(reason)
     if (reasonLower === 'продажа') {
@@ -611,6 +603,9 @@ export function buildWildberriesAccrualReports(
     if (reasonLower !== 'продажа' && reasonLower !== 'возврат') {
       nonSalesNetAmount += amount
     }
+    if (reasonLower === 'возврат') {
+      returnsAmount += amount
+    }
 
     returnsAndCancellationsQuantity += row.returnCount
 
@@ -631,6 +626,7 @@ export function buildWildberriesAccrualReports(
   }
 
   const sppAndPromotions = revenueBeforeSpp - revenueWithoutSpp
+  const returnsExpense = returnsAmount === 0 ? 0 : -Math.abs(returnsAmount)
   const marketplaceExpenses = -nonSalesNetAmount
   const transferToBank = revenueBeforeSpp - marketplaceExpenses
   const totalRate = (vatRatePercent + taxRatePercent) / 100
@@ -663,7 +659,9 @@ export function buildWildberriesAccrualReports(
 
   const groupMetrics: AccrualMetric[] = sortByAbsDesc(
     Array.from(groupedByLabel.entries()).map(([label, data]) => [label, data.value] as [string, number]),
-  ).map(([label, value]) => {
+  )
+    .filter(([label]) => label !== SALES_AND_RETURNS_GROUP_LABEL)
+    .map(([label, value]) => {
     const data = groupedByLabel.get(label)!
     const sourceLabels = Array.from(data.sourceLabels)
     const formula = sourceLabels.length === 1
@@ -677,6 +675,13 @@ export function buildWildberriesAccrualReports(
       formula,
       shareText: data.withSalesShare ? formatSalesShare(value) : null,
     }
+  })
+  groupMetrics.push({
+    label: 'Итог',
+    value: -Math.abs(marketplaceExpenses),
+    type: 'currency',
+    formula: 'Сумма net effect по строкам, кроме "Продажа" и "Возврат" (взята с обратным знаком)',
+    shareText: formatSalesShare(marketplaceExpenses),
   })
 
   const schemeRevenueTotal = getSalesSchemeTotal(salesRevenueByScheme)
@@ -758,11 +763,23 @@ export function buildWildberriesAccrualReports(
           formula: 'Выручка с учетом СПП - Выручка без СПП',
         },
         {
+          label: 'Возвраты',
+          value: returnsExpense,
+          type: 'currency',
+          formula: '-ABS(SUM(net effect), фильтр: "Обоснование для оплаты" = "Возврат")',
+        },
+        {
           label: 'Общие затраты по Маркетплейсу',
           value: marketplaceExpenses,
           type: 'currency',
           formula: 'Сумма net effect по строкам, кроме "Продажа" и "Возврат" (взята с обратным знаком)',
           shareText: formatSalesShare(marketplaceExpenses),
+        },
+        {
+          label: 'Перевод в банк',
+          value: transferToBank,
+          type: 'currency',
+          formula: 'Выручка с учетом СПП - Общие затраты по Маркетплейсу',
         },
         {
           label: 'Себестоимость',
@@ -780,6 +797,12 @@ export function buildWildberriesAccrualReports(
           formula: `(${taxRatePercent}% + ${vatRatePercent}%) * Выручка с учетом СПП`,
         },
         {
+          label: 'Маржинальность',
+          value: marginRate,
+          type: 'percent',
+          formula: 'Чистая прибыль / Выручка с учетом СПП * 100%',
+        },
+        {
           label: 'Чистая прибыль',
           value: netProfit,
           type: 'currency',
@@ -787,46 +810,10 @@ export function buildWildberriesAccrualReports(
             ? 'Перевод в банк - Налог - Себестоимость'
             : 'Перевод в банк - Налог',
         },
-        {
-          label: 'Маржинальность',
-          value: marginRate,
-          type: 'percent',
-          formula: 'Чистая прибыль / Выручка с учетом СПП * 100%',
-        },
-        {
-          label: 'Перевод в банк',
-          value: transferToBank,
-          type: 'currency',
-          formula: 'Выручка с учетом СПП - Общие затраты по Маркетплейсу',
-        },
-        {
-          label: 'Среднее начисление на строку',
-          value: parsedRows.length ? transferToBank / parsedRows.length : null,
-          type: 'currency',
-          formula: 'Перевод в банк / COUNT(строк)',
-        },
-        {
-          label: 'Строк с плюсами',
-          value: positiveCount,
-          type: 'number',
-          formula: 'COUNT(net effect > 0)',
-        },
-        {
-          label: 'Строк с минусами',
-          value: negativeCount,
-          type: 'number',
-          formula: 'COUNT(net effect < 0)',
-        },
-        {
-          label: 'Строк с нулем',
-          value: zeroCount,
-          type: 'number',
-          formula: 'COUNT(net effect = 0)',
-        },
       ],
     },
     {
-      title: 'Начисления по группам',
+      title: GROUPED_EXPENSES_REPORT_TITLE,
       metrics: groupMetrics,
     },
     {
