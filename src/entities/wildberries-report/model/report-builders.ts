@@ -37,6 +37,18 @@ type ClassifiedGroup = {
 
 type CogsByArticleMap = Map<string, number>
 export type CogsMatchingMode = 'full' | 'digits'
+type SalesShareLevel = 'risk' | 'warning' | 'normal' | 'super'
+export type WildberriesTopProductItem = {
+  article: string
+  nomenclatureCode: string | null
+  salesCount: number
+  revenueAmount: number
+  revenueSharePercent: number
+  cogsAmount: number | null
+  salesSharePercent: number
+  cumulativeSalesSharePercent: number
+  salesShareLevel: SalesShareLevel
+}
 type SalesScheme = 'FBS' | 'FBW' | 'Не указано'
 
 const SALES_SCHEME_ORDER: SalesScheme[] = ['FBS', 'FBW', 'Не указано']
@@ -93,6 +105,13 @@ function absValue(value: number): number {
 
 function hasNonZero(value: number): boolean {
   return Math.abs(value) > 0
+}
+
+function resolveSalesShareLevel(cumulativeSharePercent: number): SalesShareLevel {
+  if (cumulativeSharePercent <= 50) return 'super'
+  if (cumulativeSharePercent <= 80) return 'normal'
+  if (cumulativeSharePercent <= 95) return 'warning'
+  return 'risk'
 }
 
 function pickSignedAmount(
@@ -480,6 +499,108 @@ export function getWildberriesMissingCogsArticles(
   }
 
   return Array.from(missingByKey.values()).sort((a, b) => a.localeCompare(b, 'ru'))
+}
+
+export function buildWildberriesTopProducts(
+  rawCsv: string,
+  articlePattern = '*',
+  cogsByArticleMap: CogsByArticleMap | null = null,
+  cogsMatchingMode: CogsMatchingMode = 'full',
+): WildberriesTopProductItem[] {
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const headerIndex = rows.findIndex(
+    (row) => normalize(row[0]) === '№' && normalize(row[1]) === 'Номер поставки',
+  )
+  if (headerIndex === -1) return []
+
+  const headers = rows[headerIndex].map((cell) => normalize(cell))
+  const colIndex = new Map(headers.map((header, idx) => [header, idx]))
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => normalize(cell) !== ''))
+
+  const getCell = (row: string[], colName: string): string => {
+    const idx = colIndex.get(colName)
+    if (idx === undefined) return ''
+    return row[idx] || ''
+  }
+
+  const byArticle = new Map<string, {
+    salesCount: number
+    revenue: number
+    cogsTotal: number
+    hasCogs: boolean
+    nomenclatureCode: string | null
+  }>()
+
+  for (const row of dataRows) {
+    const article = normalize(getCell(row, 'Артикул поставщика'))
+    if (!article || !matchesArticlePattern(article, articlePattern)) continue
+
+    const reasonLower = normalizeLower(getCell(row, 'Обоснование для оплаты'))
+    if (reasonLower !== 'продажа') continue
+
+    const quantity = parseNumber(getCell(row, 'Кол-во')) ?? 0
+    const revenue = parseNumber(getCell(row, 'Цена розничная')) ?? 0
+    const nomenclatureCode = normalize(getCell(row, 'Код номенклатуры')) || null
+
+    const current = byArticle.get(article) || {
+      salesCount: 0,
+      revenue: 0,
+      cogsTotal: 0,
+      hasCogs: false,
+      nomenclatureCode: null,
+    }
+    current.salesCount += quantity
+    current.revenue += revenue
+    if (!current.nomenclatureCode && nomenclatureCode) {
+      current.nomenclatureCode = nomenclatureCode
+    }
+
+    if (cogsByArticleMap && cogsByArticleMap.size > 0) {
+      const cogsLookupKey = resolveCogsLookupKey(article, cogsMatchingMode)
+      const unitCogs = cogsByArticleMap.get(cogsLookupKey)
+      if (unitCogs !== undefined) {
+        current.cogsTotal += unitCogs * quantity
+        current.hasCogs = true
+      }
+    }
+
+    byArticle.set(article, current)
+  }
+
+  const sortedProducts = Array.from(byArticle.entries())
+    .map(([article, stats]) => ({
+      article,
+      nomenclatureCode: stats.nomenclatureCode,
+      salesCount: stats.salesCount,
+      revenueAmount: stats.revenue,
+      cogsAmount: stats.hasCogs ? stats.cogsTotal : null,
+    }))
+    .sort((a, b) => (
+      b.salesCount - a.salesCount
+      || (b.revenueAmount - a.revenueAmount)
+      || a.article.localeCompare(b.article, 'ru')
+    ))
+
+  const totalSalesCount = sortedProducts.reduce((acc, item) => acc + item.salesCount, 0)
+  const totalRevenueAmount = sortedProducts.reduce((acc, item) => acc + item.revenueAmount, 0)
+  let cumulativeSharePercent = 0
+
+  const productsWithShare = sortedProducts.map((item) => {
+    const salesSharePercent = totalSalesCount > 0 ? (item.salesCount / totalSalesCount) * 100 : 0
+    const revenueSharePercent = totalRevenueAmount > 0 ? (item.revenueAmount / totalRevenueAmount) * 100 : 0
+    cumulativeSharePercent += salesSharePercent
+    return {
+      ...item,
+      revenueSharePercent,
+      salesSharePercent,
+      cumulativeSalesSharePercent: cumulativeSharePercent,
+      salesShareLevel: resolveSalesShareLevel(cumulativeSharePercent),
+    }
+  })
+
+  return productsWithShare
 }
 
 export function buildWildberriesAccrualReports(

@@ -24,6 +24,7 @@ export type UiTableColumn<T> = {
 type UiTableProps<T> = {
   columns: UiTableColumn<T>[]
   rows: T[]
+  pinnedRows?: T[]
   rowKey: (row: T, index: number) => string
   emptyText?: string
   initialSort?: { key: string, direction: SortDirection } | null
@@ -49,6 +50,7 @@ function compareSortValues(a: SortAccessorValue, b: SortAccessorValue, direction
 export function UiTable<T>({
   columns,
   rows,
+  pinnedRows = [],
   rowKey,
   emptyText = 'Нет данных',
   initialSort = null,
@@ -138,6 +140,15 @@ export function UiTable<T>({
           )}
           {preparedRows.map((row, rowIndex) => (
             <tr key={rowKey(row, rowIndex)} className={cn(`${BLOCK_NAME}__row`)}>
+              {columns.map((column) => (
+                <td key={column.key} className={cn(`${BLOCK_NAME}__td`)}>
+                  {column.renderCell(row)}
+                </td>
+              ))}
+            </tr>
+          ))}
+          {pinnedRows.map((row, rowIndex) => (
+            <tr key={rowKey(row, preparedRows.length + rowIndex)} className={cn(`${BLOCK_NAME}__row`)}>
               {columns.map((column) => (
                 <td key={column.key} className={cn(`${BLOCK_NAME}__td`)}>
                   {column.renderCell(row)}

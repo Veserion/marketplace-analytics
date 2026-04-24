@@ -5,9 +5,11 @@ import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import {
   buildWildberriesAccrualReports,
   buildWildberriesCogsMap,
+  buildWildberriesTopProducts,
   type CogsMatchingMode,
   extractWildberriesCogsCsv,
   getWildberriesMissingCogsArticles,
+  type WildberriesTopProductItem,
 } from '@/entities/wildberries-report'
 import { formatValue } from '@/shared/lib/csv'
 import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
@@ -122,6 +124,15 @@ export function useWildberriesAnalyticsPage() {
   const missingCogsArticles = useMemo(() => {
     if (!csvSource) return [] as string[]
     return getWildberriesMissingCogsArticles(csvSource, cogsByArticleMap, articlePattern, cogsMatchingMode)
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource])
+
+  const topProducts = useMemo(() => {
+    if (!csvSource) return [] as WildberriesTopProductItem[]
+    try {
+      return buildWildberriesTopProducts(csvSource, articlePattern, cogsByArticleMap, cogsMatchingMode)
+    } catch {
+      return [] as WildberriesTopProductItem[]
+    }
   }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource])
 
   const reportBuild = useMemo(() => {
@@ -295,6 +306,7 @@ export function useWildberriesAnalyticsPage() {
     setArticlePattern,
     setIsExtraParamsOpen,
     taxRatePercent,
+    topProducts,
     vatRatePercent,
   }
 }

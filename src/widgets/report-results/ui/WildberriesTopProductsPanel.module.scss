@@ -1,0 +1,121 @@
+.WildberriesTopProductsPanel {
+  border: 1px solid var(--color-border-muted);
+  border-radius: 12px;
+  background: var(--color-bg-surface-soft);
+  padding: 10px;
+}
+
+.WildberriesTopProductsPanel__details {
+  border-radius: 10px;
+}
+
+.WildberriesTopProductsPanel__summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 42px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.WildberriesTopProductsPanel__summary::-webkit-details-marker {
+  display: none;
+}
+
+.WildberriesTopProductsPanel__expand-icon {
+  color: var(--color-text-muted);
+  transition: transform 0.18s ease;
+}
+
+.WildberriesTopProductsPanel__details[open] .WildberriesTopProductsPanel__expand-icon {
+  transform: rotate(180deg);
+}
+
+.WildberriesTopProductsPanel__content {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.WildberriesTopProductsPanel__article {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.WildberriesTopProductsPanel__total-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.WildberriesTopProductsPanel__article-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.WildberriesTopProductsPanel__article-link:hover .WildberriesTopProductsPanel__article,
+.WildberriesTopProductsPanel__article-link:focus-visible .WildberriesTopProductsPanel__article {
+  color: var(--color-text-link);
+  text-decoration: underline;
+}
+
+.WildberriesTopProductsPanel__sales-count {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.WildberriesTopProductsPanel__sales-cell {
+  display: block;
+  width: calc(100% + 20px);
+  margin: -10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.WildberriesTopProductsPanel__sales-cell--risk {
+  background: var(--color-bg-status-danger);
+}
+
+.WildberriesTopProductsPanel__sales-cell--warning {
+  background: var(--color-bg-status-warning);
+}
+
+.WildberriesTopProductsPanel__sales-cell--normal {
+  background: var(--color-bg-status-success);
+}
+
+.WildberriesTopProductsPanel__sales-cell--super {
+  background: var(--color-bg-status-success-soft);
+}
+
+.WildberriesTopProductsPanel__revenue-amount {
+  font-weight: 600;
+  color: var(--color-text-positive);
+}
+
+.WildberriesTopProductsPanel__revenue-share {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.WildberriesTopProductsPanel__header-with-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.WildberriesTopProductsPanel__cogs-amount {
+  font-weight: 700;
+}
+
+.WildberriesTopProductsPanel__cogs-amount--negative {
+  color: var(--color-text-negative);
+}
+
+.WildberriesTopProductsPanel__cogs-amount--muted {
+  color: var(--color-text-subtle);
+}

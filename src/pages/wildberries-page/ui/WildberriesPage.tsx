@@ -5,7 +5,7 @@ import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
 import { useWildberriesAnalyticsPage } from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
 import { Typography, UiPanel, UiTabs } from '@/shared/ui-kit'
-import { AccrualResults } from '@/widgets/report-results'
+import { AccrualResults, WildberriesTopProductsPanel } from '@/widgets/report-results'
 import styles from './WildberriesPage.module.scss'
 
 const cn = classNames.bind(styles)
@@ -34,6 +34,7 @@ export function WildberriesPage() {
     setArticlePattern,
     setIsExtraParamsOpen,
     taxRatePercent,
+    topProducts,
     vatRatePercent,
   } = useWildberriesAnalyticsPage()
 
@@ -101,6 +102,10 @@ export function WildberriesPage() {
           showAccrualOverview
           cogsMissingValueText="Нет данных: загрузите CSV с себестоимостью товаров"
         />
+      )}
+
+      {topProducts.length > 0 && (
+        <WildberriesTopProductsPanel items={topProducts} />
       )}
     </main>
   )
