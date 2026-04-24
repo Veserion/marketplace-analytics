@@ -16,6 +16,10 @@
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
+.UiMetricsList--two-columns .UiMetricsList__row {
+  grid-template-columns: 1.3fr 0.7fr;
+}
+
 .UiMetricsList__row:nth-child(even) {
   background: var(--color-bg-surface-subtle);
 }

@@ -21,7 +21,7 @@ const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
-const REVENUE_BEFORE_SPP_LABEL = 'Выручка до СПП'
+const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
 const REVENUE_WITHOUT_SPP_LABEL = 'Выручка без СПП'
 const RETURNS_LABEL = 'Возвраты'
 const SPP_AND_PROMOTIONS_LABEL = 'СПП и акции'
@@ -293,6 +293,8 @@ export function AccrualResults({
       {baseReports.map((report) => {
         const primaryMetrics = report.metrics.filter((metric) => !isSecondaryMetric(metric.label))
         const secondaryMetrics = report.metrics.filter((metric) => isSecondaryMetric(metric.label))
+        const isWbSalesSchemeReport = report.title === 'Схема работы'
+          && report.metrics.some((metric) => metric.label.startsWith('FBS') || metric.label.startsWith('FBW') || metric.label.startsWith('Не указано'))
         const showSecondary = report.title === 'Итоги периода' && secondaryMetrics.length > 0
         const reportTitle = report.title === 'Итоги периода' && report.periodLabel
           ? `${report.title} ${report.periodLabel}`
@@ -308,11 +310,14 @@ export function AccrualResults({
             </header>
 
             <UiMetricsList
+              hideThirdColumn={isWbSalesSchemeReport}
               rows={primaryMetrics.map((metric) => (
                 toMetricRow(
                   report.title,
                   metric,
-                  getPrimaryMetricValueClassName(metric.label, metric.value),
+                  isWbSalesSchemeReport
+                    ? cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--positive`)
+                    : getPrimaryMetricValueClassName(metric.label, metric.value),
                   cogsMissingValueText,
                 )
               ))}

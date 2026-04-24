@@ -7,7 +7,7 @@ import styles from './AccrualCostStructure.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualCostStructure'
-const REVENUE_BEFORE_SPP_LABEL = 'Выручка до СПП'
+const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
 const RETURNS_LABEL = 'Возвраты'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -93,35 +93,35 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
       label: COMMISSION_OZON_DISPLAY_LABEL,
       value: commissionValue,
       color: COST_STRUCTURE_COLORS.commission,
-      hint: 'Сумма категорий: Комиссия Ozon + Услуги ФБО + Логистика + Услуги партнеров + Другие услуги и штрафы.',
+      hint: 'ABS(Комиссия Ozon) + ABS(Услуги ФБО) + ABS(Логистика) + ABS(Услуги партнеров) + ABS(Другие услуги и штрафы) из блока "Начисления по группам".',
     },
     {
       key: 'promotion',
       label: PROMOTION_LABEL,
       value: promotionValue,
       color: COST_STRUCTURE_COLORS.promotion,
-      hint: 'Сумма категории "Продвижение" из блока "Начисления по группам".',
+      hint: 'ABS(категории "Продвижение") из блока "Начисления по группам".',
     },
     {
       key: 'returns',
       label: RETURNS_LABEL,
       value: returnsValue,
       color: COST_STRUCTURE_COLORS.returns,
-      hint: 'Сумма категории "Возвраты" из отчета по начислениям (учитывается как расход).',
+      hint: 'ABS(метрики "Возвраты" из блока "Итоги периода"), учитывается как расход.',
     },
     {
       key: 'tax',
       label: TAX_LABEL,
       value: taxValue,
       color: COST_STRUCTURE_COLORS.tax,
-      hint: 'Налог по формуле из "Итоги периода".',
+      hint: 'ABS(метрики "Налог" из блока "Итоги периода").',
     },
     {
       key: 'cogs',
       label: COGS_LABEL,
       value: cogsValue,
       color: COST_STRUCTURE_COLORS.cogs,
-      hint: 'Себестоимость из загруженного источника данных.',
+      hint: 'ABS(метрики "Себестоимость" из блока "Итоги периода").',
     },
   ]
     .sort((a, b) => b.value - a.value)
@@ -131,7 +131,7 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
     label: NET_PROFIT_LABEL,
     value: netProfitValue,
     color: COST_STRUCTURE_COLORS.netProfit,
-    hint: 'Остаток от Выручки до СПП: Выручка до СПП - (Комиссия Ozon + Продвижение + Возвраты + Налог + Себестоимость).',
+    hint: 'MAX(0, База - (Расходы по Ozon + Продвижение + Возвраты + Налог + Себестоимость)), где База = Выручка с учетом СПП + ABS(Возвраты).',
   }
 
   return {

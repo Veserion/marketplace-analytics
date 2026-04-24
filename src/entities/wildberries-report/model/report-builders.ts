@@ -7,6 +7,9 @@ type WbRow = {
   reason: string
   salesDate: string
   salesMethod: string
+  warehouse: string
+  basketId: string
+  srid: string
   logisticsKind: string
   quantity: number
   returnCount: number
@@ -34,6 +37,14 @@ type ClassifiedGroup = {
 
 type CogsByArticleMap = Map<string, number>
 export type CogsMatchingMode = 'full' | 'digits'
+type SalesScheme = 'FBS' | 'FBW' | 'Не указано'
+
+const SALES_SCHEME_ORDER: SalesScheme[] = ['FBS', 'FBW', 'Не указано']
+const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
+  FBS: 'FBS — склад продавца',
+  FBW: 'FBW — склад ВБ',
+  'Не указано': 'Не указано — нет обозначения склада в отчете',
+}
 
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
@@ -97,6 +108,69 @@ function pickSignedAmount(
 
 function includesAny(value: string, needles: string[]): boolean {
   return needles.some((needle) => value.includes(needle))
+}
+
+function createSalesSchemeMap(): Map<SalesScheme, number> {
+  return new Map(SALES_SCHEME_ORDER.map((scheme) => [scheme, 0] as const))
+}
+
+function getSalesSchemeTotal(map: Map<SalesScheme, number>): number {
+  let total = 0
+  for (const value of map.values()) total += value
+  return total
+}
+
+function scaleSalesSchemeMap(
+  sourceMap: Map<SalesScheme, number>,
+  targetTotal: number,
+): Map<SalesScheme, number> {
+  const sourceTotal = getSalesSchemeTotal(sourceMap)
+  if (!hasNonZero(sourceTotal)) {
+    const fallbackMap = createSalesSchemeMap()
+    fallbackMap.set('Не указано', targetTotal)
+    return fallbackMap
+  }
+  if (Math.abs(sourceTotal - targetTotal) < 0.01) {
+    return new Map(sourceMap)
+  }
+
+  const factor = targetTotal / sourceTotal
+  const scaledMap = createSalesSchemeMap()
+  for (const scheme of SALES_SCHEME_ORDER) {
+    scaledMap.set(scheme, (sourceMap.get(scheme) || 0) * factor)
+  }
+  return scaledMap
+}
+
+function detectSalesSchemeByMethod(rawSalesMethod: string): SalesScheme | null {
+  const normalized = normalizeLower(rawSalesMethod)
+  if (!normalized) return null
+  if (normalized.includes('fbs')) return 'FBS'
+  if (normalized.includes('fbw') || normalized.includes('fbo')) return 'FBW'
+  return null
+}
+
+function resolveSalesScheme(
+  row: WbRow,
+  bySrid: Map<string, SalesScheme>,
+  byBasketId: Map<string, SalesScheme>,
+): SalesScheme {
+  const directScheme = detectSalesSchemeByMethod(row.salesMethod)
+  if (directScheme) return directScheme
+
+  if (row.srid && bySrid.has(row.srid)) {
+    return bySrid.get(row.srid)!
+  }
+  if (row.basketId && byBasketId.has(row.basketId)) {
+    return byBasketId.get(row.basketId)!
+  }
+
+  const normalizedWarehouse = normalizeLower(row.warehouse)
+  if (normalizedWarehouse.includes('склад поставщика')) {
+    return 'FBS'
+  }
+
+  return 'Не указано'
 }
 
 function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
@@ -445,6 +519,9 @@ export function buildWildberriesAccrualReports(
     reason: normalize(getCell(row, 'Обоснование для оплаты')),
     salesDate: normalize(getCell(row, 'Дата продажи')),
     salesMethod: normalize(getCell(row, 'Способы продажи и тип товара')),
+    warehouse: normalize(getCell(row, 'Склад')),
+    basketId: normalize(getCell(row, 'Id корзины заказа')),
+    srid: normalize(getCell(row, 'Srid')),
     logisticsKind: normalize(getCell(row, 'Виды логистики, штрафов и корректировок ВВ')),
     quantity: parseNumber(getCell(row, 'Кол-во')) ?? 0,
     returnCount: parseNumber(getCell(row, 'Количество возврата')) ?? 0,
@@ -466,13 +543,13 @@ export function buildWildberriesAccrualReports(
   }))
 
   const sumByGroup = new Map<string, number>()
-  const sumByScheme = new Map<string, number>()
   const sumByDate = new Map<string, number>()
   const sumByDateAndReason = new Map<string, Map<string, number>>()
   const salesDateRangeMap = new Map<string, number>()
   const groupTypeBreakdown = new Map<string, Map<string, number>>()
+  const salesRevenueByScheme = createSalesSchemeMap()
+  const salesTransferByScheme = createSalesSchemeMap()
 
-  let totalTransferFromRows = 0
   let nonSalesNetAmount = 0
   let positiveCount = 0
   let negativeCount = 0
@@ -485,7 +562,16 @@ export function buildWildberriesAccrualReports(
   let cogsFromFile = 0
   let cogsMatchedRows = 0
 
-  const addToMap = (map: Map<string, number>, key: string, value: number): void => {
+  const schemeBySrid = new Map<string, SalesScheme>()
+  const schemeByBasketId = new Map<string, SalesScheme>()
+  for (const row of parsedRows) {
+    const detectedScheme = detectSalesSchemeByMethod(row.salesMethod)
+    if (!detectedScheme) continue
+    if (row.srid) schemeBySrid.set(row.srid, detectedScheme)
+    if (row.basketId) schemeByBasketId.set(row.basketId, detectedScheme)
+  }
+
+  const addToMap = <K extends string>(map: Map<K, number>, key: K, value: number): void => {
     map.set(key, (map.get(key) || 0) + value)
   }
 
@@ -493,7 +579,6 @@ export function buildWildberriesAccrualReports(
     const reason = row.reason || 'Без обоснования'
     const amount = getRowAmount(row)
 
-    totalTransferFromRows += amount
     if (amount > 0) {
       positiveCount += 1
     } else if (amount < 0) {
@@ -505,10 +590,14 @@ export function buildWildberriesAccrualReports(
     const reasonLower = normalizeLower(reason)
     if (reasonLower === 'продажа') {
       salesQuantity += row.quantity
-      revenueBeforeSpp += row.retailPrice !== 0 ? row.retailPrice : row.retailPriceWithDiscount
+      const saleRevenue = row.retailPrice
+      revenueBeforeSpp += saleRevenue
       revenueWithoutSpp += row.sellerRealized
       const saleDate = row.salesDate || 'Без даты'
       addToMap(salesDateRangeMap, saleDate, 0)
+      const salesScheme = resolveSalesScheme(row, schemeBySrid, schemeByBasketId)
+      addToMap(salesRevenueByScheme, salesScheme, saleRevenue)
+      addToMap(salesTransferByScheme, salesScheme, row.payout)
 
       if (cogsByArticleMap && cogsByArticleMap.size > 0) {
         const articleKey = resolveCogsLookupKey(row.article, cogsMatchingMode)
@@ -526,9 +615,6 @@ export function buildWildberriesAccrualReports(
     returnsAndCancellationsQuantity += row.returnCount
 
     addToMap(sumByGroup, reason, amount)
-
-    const scheme = row.salesMethod || '(пусто)'
-    addToMap(sumByScheme, scheme, amount)
 
     const date = row.salesDate || 'Без даты'
     addToMap(sumByDate, date, amount)
@@ -593,6 +679,30 @@ export function buildWildberriesAccrualReports(
     }
   })
 
+  const schemeRevenueTotal = getSalesSchemeTotal(salesRevenueByScheme)
+  const useRevenueAsSchemeBase = hasNonZero(schemeRevenueTotal)
+  const rawSchemeMap = useRevenueAsSchemeBase ? salesRevenueByScheme : salesTransferByScheme
+  const fallbackTransferTarget = hasNonZero(transferToBank)
+    ? transferToBank
+    : getSalesSchemeTotal(salesTransferByScheme)
+  const schemeMetricsMap = useRevenueAsSchemeBase
+    ? rawSchemeMap
+    : scaleSalesSchemeMap(rawSchemeMap, fallbackTransferTarget)
+  const schemeMetrics: AccrualMetric[] = SALES_SCHEME_ORDER
+    .map((scheme) => ({
+      scheme,
+      value: schemeMetricsMap.get(scheme) || 0,
+    }))
+    .filter(({ scheme, value }) => !(scheme === 'Не указано' && value === 0))
+    .map(({ scheme, value }) => ({
+      label: SALES_SCHEME_LABELS[scheme],
+      value,
+      type: 'currency',
+      formula: useRevenueAsSchemeBase
+        ? `SUM("Цена розничная"), фильтр: "Обоснование для оплаты" = "Продажа", модель ${scheme}. Модель определяется по "Способы продажи и тип товара" из связанных строк (Srid/Id корзины заказа).`
+        : `SUM(поступления из строк "Продажа"), модель ${scheme}. Модель определяется по "Способы продажи и тип товара" из связанных строк (Srid/Id корзины заказа). Значения приведены пропорционально к "Перевод в банк".`,
+    }))
+
   const structureSummaries: AccrualGroup[] = Array.from(groupTypeBreakdown.entries())
     .map(([group, types]) => {
       const topTypes = sortByAbsDesc(Array.from(types.entries())).slice(0, 3)
@@ -630,7 +740,7 @@ export function buildWildberriesAccrualReports(
           formula: 'SUM("Количество возврата")',
         },
         {
-          label: 'Выручка до СПП',
+          label: 'Выручка с учетом СПП',
           value: revenueBeforeSpp,
           type: 'currency',
           formula: 'SUM("Цена розничная"), фильтр: "Обоснование для оплаты" = "Продажа"',
@@ -645,7 +755,7 @@ export function buildWildberriesAccrualReports(
           label: 'СПП и акции',
           value: sppAndPromotions,
           type: 'currency',
-          formula: 'Выручка до СПП - Выручка без СПП',
+          formula: 'Выручка с учетом СПП - Выручка без СПП',
         },
         {
           label: 'Общие затраты по Маркетплейсу',
@@ -667,7 +777,7 @@ export function buildWildberriesAccrualReports(
           label: 'Налог',
           value: taxAmount,
           type: 'currency',
-          formula: `(${taxRatePercent}% + ${vatRatePercent}%) * Выручка до СПП`,
+          formula: `(${taxRatePercent}% + ${vatRatePercent}%) * Выручка с учетом СПП`,
         },
         {
           label: 'Чистая прибыль',
@@ -681,13 +791,13 @@ export function buildWildberriesAccrualReports(
           label: 'Маржинальность',
           value: marginRate,
           type: 'percent',
-          formula: 'Чистая прибыль / Выручка до СПП * 100%',
+          formula: 'Чистая прибыль / Выручка с учетом СПП * 100%',
         },
         {
           label: 'Перевод в банк',
           value: transferToBank,
           type: 'currency',
-          formula: 'Выручка до СПП - Общие затраты по Маркетплейсу',
+          formula: 'Выручка с учетом СПП - Общие затраты по Маркетплейсу',
         },
         {
           label: 'Среднее начисление на строку',
@@ -721,10 +831,7 @@ export function buildWildberriesAccrualReports(
     },
     {
       title: 'Схема работы',
-      metrics: toMetrics(
-        sortByAbsDesc(Array.from(sumByScheme.entries())),
-        (label) => `SUM(net effect), фильтр: "Способы продажи и тип товара" = "${label}"`,
-      ),
+      metrics: schemeMetrics,
     },
     {
       title: 'Динамика по датам начисления',
@@ -761,7 +868,7 @@ export function buildWildberriesAccrualReports(
             type: 'currency' as const,
             shareText: accrualTypeLabel,
             formula: value < 0 && topNegativeReason
-              ? `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}" и списание = "${topNegativeReason}"`
+              ? `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}". Справа показано крупнейшее списание по "Обоснование для оплаты": "${topNegativeReason}".`
               : `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}"`,
           }
         }),

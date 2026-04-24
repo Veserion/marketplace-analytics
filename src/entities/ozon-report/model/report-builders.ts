@@ -113,7 +113,7 @@ function buildUnitEconomicsReport(
         ...metric,
         value,
         ok: value !== null,
-        formula: `Налог(${taxRatePercent}%) + НДС(${vatRatePercent}%)`,
+        formula: `(${taxRatePercent}% + ${vatRatePercent}%) * Выручка с учетом СПП`,
       }
     }
     return {
@@ -523,7 +523,7 @@ export function buildAccrualReports(
           formula: 'SUM("Количество"), фильтр: "Тип начисления" = "Обратная логистика"',
         },
         {
-          label: 'Выручка до СПП',
+          label: 'Выручка с учетом СПП',
           value: amountBeforeSpp,
           type: 'currency',
           formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" = "Продажи" + SUM возвратов',
@@ -544,7 +544,7 @@ export function buildAccrualReports(
           label: 'СПП и акции',
           value: sppAndPromotions,
           type: 'currency',
-          formula: 'Выручка до СПП - Выручка без СПП',
+          formula: 'Выручка с учетом СПП - Выручка без СПП',
         },
         {
           label: 'Общие затраты по Маркетплейсу',
@@ -563,7 +563,7 @@ export function buildAccrualReports(
           label: 'Налог',
           value: tax11,
           type: 'currency',
-          formula: `(${vatRatePercent}% + ${taxRatePercent}%) * Выручка до СПП`,
+          formula: `(${vatRatePercent}% + ${taxRatePercent}%) * Выручка с учетом СПП`,
         },
         {
           label: 'Чистая прибыль',
@@ -577,7 +577,7 @@ export function buildAccrualReports(
           type: 'percent',
           formula: 'Чистая прибыль / Выручка без СПП * 100%',
         },
-        { label: 'Перевод в банк', value: total, type: 'currency', formula: 'Выручка без СПП - Затраты по МП' },
+        { label: 'Перевод в банк', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.") по всем строкам начислений' },
         { label: 'Среднее начисление на строку', value: dataRows.length ? total / dataRows.length : null, type: 'currency', formula: 'SUM("Сумма итого, руб.") / COUNT(строк)' },
         { label: 'Строк с плюсами', value: positiveCount, type: 'number', formula: 'COUNT("Сумма итого, руб." > 0)' },
         { label: 'Строк с минусами', value: negativeCount, type: 'number', formula: 'COUNT("Сумма итого, руб." < 0)' },

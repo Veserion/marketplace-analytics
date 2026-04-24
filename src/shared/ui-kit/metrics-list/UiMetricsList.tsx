@@ -20,11 +20,12 @@ export type UiMetricsListRow = {
 type UiMetricsListProps = {
   rows: UiMetricsListRow[]
   className?: string
+  hideThirdColumn?: boolean
 }
 
-export function UiMetricsList({ rows, className }: UiMetricsListProps) {
+export function UiMetricsList({ rows, className, hideThirdColumn = false }: UiMetricsListProps) {
   return (
-    <div className={cn(BLOCK_NAME, className)}>
+    <div className={cn(BLOCK_NAME, className, { [`${BLOCK_NAME}--two-columns`]: hideThirdColumn })}>
       {rows.map((row) => (
         <div key={row.id} className={cn(`${BLOCK_NAME}__row`)}>
           <div className={cn(`${BLOCK_NAME}__metric-title`)}>
@@ -34,9 +35,11 @@ export function UiMetricsList({ rows, className }: UiMetricsListProps) {
           <Typography as="span" variant="body1" semiBold className={row.valueClassName}>
             {row.valueText}
           </Typography>
-          <Typography as="span" variant="body2" color="muted" semiBold className={cn(`${BLOCK_NAME}__metric-percent`)}>
-            {row.percentText || ''}
-          </Typography>
+          {!hideThirdColumn && (
+            <Typography as="span" variant="body2" color="muted" semiBold className={cn(`${BLOCK_NAME}__metric-percent`)}>
+              {row.percentText || ''}
+            </Typography>
+          )}
         </div>
       ))}
     </div>

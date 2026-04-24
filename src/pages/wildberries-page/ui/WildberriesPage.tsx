@@ -95,7 +95,13 @@ export function WildberriesPage() {
         onDownloadPdf={downloadPdf}
       />
 
-      {reports && <AccrualResults reports={reports} cogsMissingValueText="Нет данных: загрузите CSV с себестоимостью товаров" />}
+      {reports && (
+        <AccrualResults
+          reports={reports}
+          showAccrualOverview
+          cogsMissingValueText="Нет данных: загрузите CSV с себестоимостью товаров"
+        />
+      )}
     </main>
   )
 }
