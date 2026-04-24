@@ -330,7 +330,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
                 >
                   {formatOverviewCurrency(segment.value)}
                 </Typography>
-                <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__value-nowrap`)}>
+                <Typography variant="body2" color="muted" semiBold className={cn(`${BLOCK_NAME}__value-nowrap`)}>
                   {formatShare(segment.value, costStructureModel.baseValue)}
                 </Typography>
               </div>
