@@ -1,7 +1,6 @@
 type CsvStorageMode =
   | 'unitEconomics'
   | 'accrualReport'
-  | 'ozonCogs'
   | 'wildberriesAccrualReport'
   | 'wildberriesCogs'
 

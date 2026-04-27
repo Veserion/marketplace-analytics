@@ -1,6 +1,6 @@
 import classNames from 'classnames/bind'
 import type { OzonCalculationType } from '@/entities/ozon-report'
-import { UiTabs } from '@/shared/ui-kit/tabs'
+import { UiTabs } from '@/shared/ui-kit'
 import styles from './OzonCalculationTabs.module.scss'
 
 const cn = classNames.bind(styles)

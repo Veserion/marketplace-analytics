@@ -1,5 +1,4 @@
 import classNames from 'classnames/bind'
-import { createElement, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { MetricsSelectorPanel } from '@/features/metrics-selector'
@@ -7,14 +6,12 @@ import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
 import { useOzonAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsPage'
-import { UiPanel } from '@/shared/ui-kit/panel'
-import { Typography } from '@/shared/ui-kit/typography'
+import { Typography, UiPanel } from '@/shared/ui-kit'
+import { AccrualResults, UnitEconomicsResults } from '@/widgets/report-results'
 import styles from './AnalyticsPage.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AnalyticsPage'
-const lazyUnitEconomicsResults = lazy(async () => import('@/widgets/report-results/ui/UnitEconomicsResults').then((module) => ({ default: module.UnitEconomicsResults })))
-const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({ default: module.AccrualResults })))
 
 export function AnalyticsPage() {
   const navigate = useNavigate()
@@ -22,8 +19,6 @@ export function AnalyticsPage() {
     accrualReports,
     accrualArticlePattern,
     articlePattern,
-    cogsFallbackNote,
-    cogsFileName,
     clearMetrics,
     downloadPdf,
     error,
@@ -36,7 +31,6 @@ export function AnalyticsPage() {
     isProcessing,
     isUnitArticlePatternExclude,
     onFileUpload,
-    onCogsFileUpload,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,
@@ -110,34 +104,25 @@ export function AnalyticsPage() {
         isProcessing={isProcessing}
         hasResults={hasResults}
         fileName={fileName}
-        secondaryFileName={cogsFileName}
-        secondaryFileLabel="Себестоимость товаров"
-        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
-        secondaryUsageNote={cogsFallbackNote}
         error={error}
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
-        onSecondaryFileUpload={onCogsFileUpload}
         onDownloadPdf={downloadPdf}
       />
 
       {unitReports && isOzonUnitEconomics && (
-        <Suspense fallback={null}>
-          {createElement(lazyUnitEconomicsResults, {
-            reports: unitReports,
-            selectedMetricSet,
-          })}
-        </Suspense>
+        <UnitEconomicsResults
+          reports={unitReports}
+          selectedMetricSet={selectedMetricSet}
+        />
       )}
 
       {accrualReports && !isOzonUnitEconomics && (
-        <Suspense fallback={null}>
-          {createElement(lazyAccrualResults, {
-            reports: accrualReports,
-            showAccrualOverview: true,
-            cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
-          })}
-        </Suspense>
+        <AccrualResults
+          reports={accrualReports}
+          showAccrualOverview
+          cogsMissingValueText='Нет данных: загрузите "Юнит экономика" за тот же период'
+        />
       )}
     </main>
   )

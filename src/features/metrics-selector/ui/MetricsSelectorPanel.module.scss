@@ -1,3 +1,17 @@
+.MetricsSelectorPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.MetricsSelectorPanel__trigger {
+  color: var(--color-text-accent);
+}
+
+.MetricsSelectorPanel__chevron {
+  color: var(--color-text-muted);
+}
+
 .MetricsSelectorPanel__content {
   display: flex;
   flex-direction: column;
@@ -10,15 +24,15 @@
 }
 
 .MetricsSelectorPanel__action-button {
-  border-color: var(--color-border-control) !important;
-  border-radius: 10px !important;
-  background: var(--color-bg-surface-soft) !important;
-  color: var(--color-text-secondary) !important;
-  font-weight: 600;
+  border: 1px solid var(--color-border-control);
+  border-radius: 10px;
+  background: var(--color-bg-surface-soft);
+  color: var(--color-text-secondary);
+  padding: 9px 12px;
+  cursor: pointer;
 }
 
-.MetricsSelectorPanel__action-button:hover,
-.MetricsSelectorPanel__action-button:focus-visible {
+.MetricsSelectorPanel__action-button:hover {
   background: var(--color-bg-surface-hover);
 }
 
@@ -29,8 +43,7 @@
 }
 
 .MetricsSelectorPanel__item {
-  display: inline-flex;
-  width: 100%;
+  display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 10px;
@@ -39,20 +52,6 @@
   border: 1px solid var(--color-border-subtle);
 }
 
-.MetricsSelectorPanel__item :global(.ant-checkbox) {
-  align-self: center;
-}
-
-.MetricsSelectorPanel__item :global(.ant-checkbox + span) {
-  color: inherit;
-}
-
-.MetricsSelectorPanel__item :global(.ant-checkbox-inner) {
-  border-color: var(--color-border-control);
-  background: var(--color-bg-surface);
-}
-
-.MetricsSelectorPanel__item :global(.ant-checkbox-checked .ant-checkbox-inner) {
-  background: var(--color-text-link-strong);
-  border-color: var(--color-text-link-strong);
+.MetricsSelectorPanel__item input {
+  accent-color: var(--color-text-link-strong);
 }

@@ -3,38 +3,31 @@
   flex-direction: column;
 }
 
-.UiDisclosure :global(.ant-collapse-item) {
-  border: 0 !important;
-}
-
 .UiDisclosure__trigger {
-  padding: 10px 12px !important;
-  min-height: 42px !important;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  box-sizing: border-box;
-  border: 1px solid var(--ui-disclosure-trigger-border, var(--color-border-dashed));
-  border-radius: 10px;
-  background: var(--ui-disclosure-trigger-bg, var(--color-bg-surface-muted));
-  color: var(--ui-disclosure-trigger-color, var(--color-text-accent));
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
 }
 
-.UiDisclosure__trigger:hover {
-  background: var(--ui-disclosure-trigger-hover-bg, var(--color-bg-surface-soft));
-}
-
-.UiDisclosure__trigger :global(.ant-collapse-header-text) {
+.UiDisclosure__title {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.UiDisclosure__title {
+.UiDisclosure__right {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  min-width: 0;
+  gap: 4px;
 }
 
 .UiDisclosure__meta {
@@ -47,19 +40,32 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.25s ease-out;
-  color: var(--ui-disclosure-chevron-color, var(--color-text-muted));
 }
 
-.UiDisclosure__chevron--open {
+.UiDisclosure--open .UiDisclosure__chevron {
   transform: rotate(180deg);
 }
 
 .UiDisclosure__content {
-  padding: 0 !important;
-  border-top: 0 !important;
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.3s ease-out, visibility 0s linear 0.3s;
+}
+
+.UiDisclosure__content--visible {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 0.3s ease-out;
 }
 
 .UiDisclosure__content-inner {
-  overflow: visible;
-  padding-top: 12px;
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease-out 0.1s;
+}
+
+.UiDisclosure__content--visible .UiDisclosure__content-inner {
+  opacity: 1;
 }

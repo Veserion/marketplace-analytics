@@ -12,3 +12,19 @@
   width: 20px;
   height: 20px;
 }
+
+.FormulaTooltipIcon__portal {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  min-width: 220px;
+  max-width: min(420px, 65vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg-tooltip);
+  color: var(--color-surface-contrast);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 8px 22px var(--shadow-tooltip);
+  pointer-events: none;
+  z-index: 1000;
+}

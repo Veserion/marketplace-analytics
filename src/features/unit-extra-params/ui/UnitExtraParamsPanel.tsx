@@ -1,11 +1,5 @@
 import classNames from 'classnames/bind'
-import Checkbox from 'antd/es/checkbox'
-import Input from 'antd/es/input'
-import InputNumber from 'antd/es/input-number'
-import Radio from 'antd/es/radio'
-import { UiDisclosure } from '@/shared/ui-kit/disclosure'
-import { UiPanel } from '@/shared/ui-kit/panel'
-import { Typography } from '@/shared/ui-kit/typography'
+import { Typography, UiDisclosure, UiPanel } from '@/shared/ui-kit'
 import styles from './UnitExtraParamsPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -61,45 +55,45 @@ export function UnitExtraParamsPanel({
     : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
 
   return (
-    <UiPanel>
+    <UiPanel className={cn(BLOCK_NAME)}>
       <UiDisclosure
         title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
         isOpen={isOpen}
         onToggle={() => onToggleOpen()}
+        triggerClassName={cn(`${BLOCK_NAME}__trigger`)}
+        chevronClassName={cn(`${BLOCK_NAME}__chevron`)}
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
       >
           <div className={cn(`${BLOCK_NAME}__grid`)}>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
-              <InputNumber<number>
-                className={cn(`${BLOCK_NAME}__number-input`)}
+              <input
                 id="vatRateInput"
-                min={0}
-                step={0.1}
-                controls={false}
+                type="number"
+                min="0"
+                step="0.1"
                 value={vatRatePercent}
-                onChange={(value) => onVatRateChange(typeof value === 'number' ? value : 0)}
+                onChange={(event) => onVatRateChange(Number(event.target.value))}
               />
             </label>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="taxRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>Налог, %</Typography>
-              <InputNumber<number>
-                className={cn(`${BLOCK_NAME}__number-input`)}
+              <input
                 id="taxRateInput"
-                min={0}
-                step={0.1}
-                controls={false}
+                type="number"
+                min="0"
+                step="0.1"
                 value={taxRatePercent}
-                onChange={(value) => onTaxRateChange(typeof value === 'number' ? value : 0)}
+                onChange={(event) => onTaxRateChange(Number(event.target.value))}
               />
             </label>
           </div>
           {onPatternChange && (
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="articlePatternInput">
               <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
-              <Input
-                className={cn(`${BLOCK_NAME}__text-input`)}
+              <input
                 id="articlePatternInput"
+                type="text"
                 value={activePattern}
                 onChange={(event) => onPatternChange(event.target.value)}
                 placeholder="Например: st*"
@@ -108,15 +102,16 @@ export function UnitExtraParamsPanel({
                 {patternHint}
               </Typography>
               {onPatternExcludeChange && (
-                <Checkbox
-                  className={cn(`${BLOCK_NAME}__checkbox`)}
-                  checked={activePatternExclude}
-                  onChange={(event) => onPatternExcludeChange(event.target.checked)}
-                >
+                <label className={cn(`${BLOCK_NAME}__checkbox`)}>
+                  <input
+                    type="checkbox"
+                    checked={activePatternExclude}
+                    onChange={(event) => onPatternExcludeChange(event.target.checked)}
+                  />
                   <Typography as="span" variant="body3" color="accent" semiBold>
                     Исключать совпадения по паттерну
                   </Typography>
-                </Checkbox>
+                </label>
               )}
             </label>
           )}
@@ -125,19 +120,26 @@ export function UnitExtraParamsPanel({
               <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__radio-title`)}>
                 Сопоставление себестоимости
               </Typography>
-              <Radio.Group
-                className={cn(`${BLOCK_NAME}__radio-options`)}
-                name="cogsMatchingMode"
-                value={cogsMatchingMode}
-                onChange={(event) => onCogsMatchingModeChange(event.target.value as 'full' | 'digits')}
-              >
-                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="full">
-                  <Typography as="span" variant="body2" color="accent">Точное</Typography>
-                </Radio>
-                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="digits">
-                  <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
-                </Radio>
-              </Radio.Group>
+              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
+                <input
+                  type="radio"
+                  name="cogsMatchingMode"
+                  value="full"
+                  checked={cogsMatchingMode === 'full'}
+                  onChange={() => onCogsMatchingModeChange('full')}
+                />
+                <Typography as="span" variant="body2" color="accent">Точное</Typography>
+              </label>
+              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
+                <input
+                  type="radio"
+                  name="cogsMatchingMode"
+                  value="digits"
+                  checked={cogsMatchingMode === 'digits'}
+                  onChange={() => onCogsMatchingModeChange('digits')}
+                />
+                <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
+              </label>
             </div>
           )}
       </UiDisclosure>

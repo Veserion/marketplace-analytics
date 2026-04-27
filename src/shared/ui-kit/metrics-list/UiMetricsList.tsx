@@ -1,5 +1,4 @@
 import classNames from 'classnames/bind'
-import List from 'antd/es/list'
 import type { TypographyColor } from '@/shared/ui-kit/typography'
 import { Typography } from '@/shared/ui-kit/typography'
 import { FormulaTooltipIcon } from '@/shared/ui/formula-tooltip-icon'
@@ -26,12 +25,9 @@ type UiMetricsListProps = {
 
 export function UiMetricsList({ rows, className, hideThirdColumn = false }: UiMetricsListProps) {
   return (
-    <List
-      className={cn(BLOCK_NAME, className, { [`${BLOCK_NAME}--two-columns`]: hideThirdColumn })}
-      split={false}
-      dataSource={rows}
-      renderItem={(row) => (
-        <List.Item key={row.id} className={cn(`${BLOCK_NAME}__row`)}>
+    <div className={cn(BLOCK_NAME, className, { [`${BLOCK_NAME}--two-columns`]: hideThirdColumn })}>
+      {rows.map((row) => (
+        <div key={row.id} className={cn(`${BLOCK_NAME}__row`)}>
           <div className={cn(`${BLOCK_NAME}__metric-title`)}>
             <Typography as="span" variant="body2" color={row.labelColor ?? 'accent'} semiBold>{row.label}</Typography>
             {row.formula && <FormulaTooltipIcon formula={row.formula} />}
@@ -44,8 +40,8 @@ export function UiMetricsList({ rows, className, hideThirdColumn = false }: UiMe
               {row.percentText || ''}
             </Typography>
           )}
-        </List.Item>
-      )}
-    />
+        </div>
+      ))}
+    </div>
   )
 }

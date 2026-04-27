@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
 import classNames from 'classnames/bind'
-import { UiCard } from '@/shared/ui-kit/card'
-import { UiFlex } from '@/shared/ui-kit/flex'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './UiPanel.module.scss'
 
@@ -19,9 +17,9 @@ export function UiPanel({ children, className, title, headActions }: UiPanelProp
   const hasHead = Boolean(title) || Boolean(headActions)
 
   return (
-    <UiCard className={cn(BLOCK_NAME, className)} elevated>
+    <section className={cn(BLOCK_NAME, className)}>
       {hasHead && (
-        <UiFlex className={cn(`${BLOCK_NAME}__head`)} justify="between" align="center" gap={12} wrap="wrap">
+        <div className={cn(`${BLOCK_NAME}__head`)}>
           {title ? (
             <Typography variant="h2" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
               {title}
@@ -29,12 +27,10 @@ export function UiPanel({ children, className, title, headActions }: UiPanelProp
           ) : (
             <div />
           )}
-          {headActions && <div className={cn(`${BLOCK_NAME}__extra`)}>{headActions}</div>}
-        </UiFlex>
+          {headActions}
+        </div>
       )}
-      <UiFlex direction="column" gap={14} className={cn(`${BLOCK_NAME}__body`)}>
-        {children}
-      </UiFlex>
-    </UiCard>
+      {children}
+    </section>
   )
 }

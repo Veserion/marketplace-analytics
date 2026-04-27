@@ -1,6 +1,5 @@
 import React from 'react'
 import classNames from 'classnames/bind'
-import AntTypography from 'antd/es/typography'
 import styles from './Typography.module.scss'
 
 const cn = classNames.bind(styles)
@@ -41,32 +40,21 @@ export function Typography({
   semiBold = false,
   bold = false,
 }: TypographyProps) {
-  const classNameValue = cn(
-    BLOCK_NAME,
-    `${BLOCK_NAME}--${variant}`,
-    `${BLOCK_NAME}--align-${align}`,
-    `${BLOCK_NAME}--color-${color}`,
-    {
-      [`${BLOCK_NAME}--semi-bold`]: semiBold,
-      [`${BLOCK_NAME}--bold`]: bold,
-    },
-    className,
-  )
+  const elementType: React.ElementType = as
+    ?? (variant.startsWith('h') ? (variant.slice(0, 2) as 'h1' | 'h2' | 'h3' | 'h4' | 'h5') : 'p')
 
-  if (as) {
-    return React.createElement(as, {
-      className: classNameValue,
-      children,
-    })
-  }
-
-  if (variant.startsWith('h')) {
-    return (
-      <AntTypography.Title level={Number(variant.slice(1)) as 1 | 2 | 3 | 4 | 5} className={classNameValue}>
-        {children}
-      </AntTypography.Title>
-    )
-  }
-
-  return <AntTypography.Paragraph className={classNameValue}>{children}</AntTypography.Paragraph>
+  return React.createElement(elementType, {
+    className: cn(
+      BLOCK_NAME,
+      `${BLOCK_NAME}--${variant}`,
+      `${BLOCK_NAME}--align-${align}`,
+      `${BLOCK_NAME}--color-${color}`,
+      {
+        [`${BLOCK_NAME}--semi-bold`]: semiBold,
+        [`${BLOCK_NAME}--bold`]: bold,
+      },
+      className,
+    ),
+    children,
+  })
 }
