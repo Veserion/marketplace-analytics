@@ -78,6 +78,11 @@ function matchesArticlePattern(article: string, pattern: string): boolean {
   return regex.test(article)
 }
 
+function isArticleIncludedByPattern(article: string, pattern: string, excludePattern: boolean): boolean {
+  const isMatched = matchesArticlePattern(article, pattern)
+  return excludePattern ? !isMatched : isMatched
+}
+
 function normalizeLower(value: string): string {
   return normalize(value).toLowerCase().replace(/ё/g, 'е')
 }
@@ -467,6 +472,7 @@ export function getWildberriesMissingCogsArticles(
   cogsByArticleMap: CogsByArticleMap | null,
   articlePattern = '*',
   cogsMatchingMode: CogsMatchingMode = 'full',
+  excludePattern = false,
 ): string[] {
   if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
 
@@ -489,7 +495,7 @@ export function getWildberriesMissingCogsArticles(
   for (const row of dataRows) {
     const article = normalize(row[articleIdx] || '')
     if (!article) continue
-    if (!matchesArticlePattern(article, articlePattern)) continue
+    if (!isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
 
     const articleKey = resolveCogsLookupKey(article, cogsMatchingMode)
     if (cogsByArticleMap.has(articleKey)) continue
@@ -506,6 +512,7 @@ export function buildWildberriesTopProducts(
   articlePattern = '*',
   cogsByArticleMap: CogsByArticleMap | null = null,
   cogsMatchingMode: CogsMatchingMode = 'full',
+  excludePattern = false,
 ): WildberriesTopProductItem[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex(
@@ -535,7 +542,7 @@ export function buildWildberriesTopProducts(
 
   for (const row of dataRows) {
     const article = normalize(getCell(row, 'Артикул поставщика'))
-    if (!article || !matchesArticlePattern(article, articlePattern)) continue
+    if (!article || !isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
 
     const reasonLower = normalizeLower(getCell(row, 'Обоснование для оплаты'))
     if (reasonLower !== 'продажа') continue
@@ -610,6 +617,7 @@ export function buildWildberriesAccrualReports(
   articlePattern = '*',
   cogsByArticleMap: CogsByArticleMap | null = null,
   cogsMatchingMode: CogsMatchingMode = 'full',
+  excludePattern = false,
 ): AccrualGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex(
@@ -633,7 +641,7 @@ export function buildWildberriesAccrualReports(
 
   const filteredRows = dataRows.filter((row) => {
     const article = normalize(getCell(row, 'Артикул поставщика'))
-    return matchesArticlePattern(article, articlePattern)
+    return isArticleIncludedByPattern(article, articlePattern, excludePattern)
   })
 
   const parsedRows: WbRow[] = filteredRows.map((row) => ({

@@ -112,6 +112,7 @@ export function useWildberriesAnalyticsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('*')
+  const [isArticlePatternExclude, setIsArticlePatternExclude] = useState(false)
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
@@ -123,17 +124,29 @@ export function useWildberriesAnalyticsPage() {
 
   const missingCogsArticles = useMemo(() => {
     if (!csvSource) return [] as string[]
-    return getWildberriesMissingCogsArticles(csvSource, cogsByArticleMap, articlePattern, cogsMatchingMode)
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource])
+    return getWildberriesMissingCogsArticles(
+      csvSource,
+      cogsByArticleMap,
+      articlePattern,
+      cogsMatchingMode,
+      isArticlePatternExclude,
+    )
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude])
 
   const topProducts = useMemo(() => {
     if (!csvSource) return [] as WildberriesTopProductItem[]
     try {
-      return buildWildberriesTopProducts(csvSource, articlePattern, cogsByArticleMap, cogsMatchingMode)
+      return buildWildberriesTopProducts(
+        csvSource,
+        articlePattern,
+        cogsByArticleMap,
+        cogsMatchingMode,
+        isArticlePatternExclude,
+      )
     } catch {
       return [] as WildberriesTopProductItem[]
     }
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource])
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude])
 
   const reportBuild = useMemo(() => {
     if (!csvSource) return { reports: null as AccrualGroup[] | null, error: '' }
@@ -146,6 +159,7 @@ export function useWildberriesAnalyticsPage() {
           articlePattern,
           cogsByArticleMap,
           cogsMatchingMode,
+          isArticlePatternExclude,
         ),
         error: '',
       }
@@ -155,7 +169,7 @@ export function useWildberriesAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт Wildberries.',
       }
     }
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent])
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent, isArticlePatternExclude])
 
   const reports = reportBuild.reports
   const error = uploadError || reportBuild.error
@@ -294,11 +308,13 @@ export function useWildberriesAnalyticsPage() {
     error,
     fileName,
     hasResults,
+    isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
     onFileUpload,
+    setIsArticlePatternExclude,
     setCogsMatchingMode,
     onTaxRateChange,
     onVatRateChange,

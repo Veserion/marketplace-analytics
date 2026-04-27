@@ -22,11 +22,13 @@ export function WildberriesPage() {
     error,
     fileName,
     hasResults,
+    isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
     onFileUpload,
+    setIsArticlePatternExclude,
     setCogsMatchingMode,
     onTaxRateChange,
     onVatRateChange,
@@ -69,11 +71,13 @@ export function WildberriesPage() {
         isOpen={isExtraParamsOpen}
         isAccrualMode
         accrualArticlePattern={articlePattern}
+        accrualArticlePatternExclude={isArticlePatternExclude}
         cogsMatchingMode={cogsMatchingMode}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
         onAccrualArticlePatternChange={setArticlePattern}
+        onAccrualArticlePatternExcludeChange={setIsArticlePatternExclude}
         onCogsMatchingModeChange={setCogsMatchingMode}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}

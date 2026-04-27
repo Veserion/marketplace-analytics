@@ -23,6 +23,11 @@ function matchesArticlePattern(article: string, pattern: string): boolean {
   return regex.test(article)
 }
 
+function isArticleIncludedByPattern(article: string, pattern: string, excludePattern: boolean): boolean {
+  const isMatched = matchesArticlePattern(article, pattern)
+  return excludePattern ? !isMatched : isMatched
+}
+
 function buildUnitEconomicsReport(
   rowsSubset: string[][],
   headers: string[],
@@ -197,6 +202,7 @@ export function buildUnitEconomicsReports(
   articlePattern: string,
   vatRatePercent: number,
   taxRatePercent: number,
+  excludePattern = false,
 ): ReportGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex((row) => normalize(row[0]) === 'SKU')
@@ -215,8 +221,13 @@ export function buildUnitEconomicsReports(
     return row[idx] || ''
   }
 
-  const matchedRows = dataRows.filter((row) => matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
+  const matchedRows = dataRows.filter((row) => isArticleIncludedByPattern(
+    normalize(getCell(row, 'Артикул')),
+    articlePattern,
+    excludePattern,
+  ))
   const printablePattern = articlePattern.trim() || '*'
+  const titlePrefix = excludePattern ? 'Артикул НЕ соответствует паттерну' : 'Артикул соответствует паттерну'
 
   return [
     buildUnitEconomicsReport(
@@ -225,7 +236,7 @@ export function buildUnitEconomicsReports(
       getCell,
       vatRatePercent,
       taxRatePercent,
-      `Артикул соответствует паттерну "${printablePattern}"`,
+      `${titlePrefix} "${printablePattern}"`,
     ),
   ]
 }
@@ -273,6 +284,7 @@ export function buildAccrualReports(
   taxRatePercent = 6,
   unitArticleCogsMap: Map<string, number> | null = null,
   articlePattern = '*',
+  excludePattern = false,
 ): AccrualGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
   const headerIndex = rows.findIndex(
@@ -295,7 +307,11 @@ export function buildAccrualReports(
     return row[idx] || ''
   }
 
-  const dataRows = allDataRows.filter((row) => matchesArticlePattern(normalize(getCell(row, 'Артикул')), articlePattern))
+  const dataRows = allDataRows.filter((row) => isArticleIncludedByPattern(
+    normalize(getCell(row, 'Артикул')),
+    articlePattern,
+    excludePattern,
+  ))
 
   const accrualCogsFromUnitMap = (() => {
     if (!unitArticleCogsMap || unitArticleCogsMap.size === 0) return null

@@ -10,12 +10,16 @@ type UnitExtraParamsPanelProps = {
   isAccrualMode?: boolean
   unitArticlePattern?: string
   accrualArticlePattern?: string
+  unitArticlePatternExclude?: boolean
+  accrualArticlePatternExclude?: boolean
   cogsMatchingMode?: 'full' | 'digits'
   vatRatePercent: number
   taxRatePercent: number
   onToggleOpen: () => void
   onUnitArticlePatternChange?: (pattern: string) => void
   onAccrualArticlePatternChange?: (pattern: string) => void
+  onUnitArticlePatternExcludeChange?: (exclude: boolean) => void
+  onAccrualArticlePatternExcludeChange?: (exclude: boolean) => void
   onCogsMatchingModeChange?: (mode: 'full' | 'digits') => void
   onVatRateChange: (value: number) => void
   onTaxRateChange: (value: number) => void
@@ -26,18 +30,26 @@ export function UnitExtraParamsPanel({
   isAccrualMode = false,
   unitArticlePattern = '*',
   accrualArticlePattern = '*',
+  unitArticlePatternExclude = false,
+  accrualArticlePatternExclude = false,
   cogsMatchingMode = 'full',
   vatRatePercent,
   taxRatePercent,
   onToggleOpen,
   onUnitArticlePatternChange,
   onAccrualArticlePatternChange,
+  onUnitArticlePatternExcludeChange,
+  onAccrualArticlePatternExcludeChange,
   onCogsMatchingModeChange,
   onVatRateChange,
   onTaxRateChange,
 }: UnitExtraParamsPanelProps) {
   const activePattern = isAccrualMode ? accrualArticlePattern : unitArticlePattern
   const onPatternChange = isAccrualMode ? onAccrualArticlePatternChange : onUnitArticlePatternChange
+  const activePatternExclude = isAccrualMode ? accrualArticlePatternExclude : unitArticlePatternExclude
+  const onPatternExcludeChange = isAccrualMode
+    ? onAccrualArticlePatternExcludeChange
+    : onUnitArticlePatternExcludeChange
   const patternHint = isAccrualMode
     ? 'Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.'
     : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
@@ -89,6 +101,18 @@ export function UnitExtraParamsPanel({
               <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
                 {patternHint}
               </Typography>
+              {onPatternExcludeChange && (
+                <label className={cn(`${BLOCK_NAME}__checkbox`)}>
+                  <input
+                    type="checkbox"
+                    checked={activePatternExclude}
+                    onChange={(event) => onPatternExcludeChange(event.target.checked)}
+                  />
+                  <Typography as="span" variant="body3" color="accent" semiBold>
+                    Исключать совпадения по паттерну
+                  </Typography>
+                </label>
+              )}
             </label>
           )}
           {onCogsMatchingModeChange && (

@@ -24,10 +24,12 @@ export function AnalyticsPage() {
     error,
     fileName,
     hasResults,
+    isAccrualArticlePatternExclude,
     isExtraParamsOpen,
     isMetricsOpen,
     isOzonUnitEconomics,
     isProcessing,
+    isUnitArticlePatternExclude,
     onFileUpload,
     onSwitchOzonCalculation,
     onTaxRateChange,
@@ -39,6 +41,8 @@ export function AnalyticsPage() {
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
+    setIsAccrualArticlePatternExclude,
+    setIsUnitArticlePatternExclude,
     taxRatePercent,
     toggleMetric,
     unitReports,
@@ -72,11 +76,15 @@ export function AnalyticsPage() {
         isAccrualMode={!isOzonUnitEconomics}
         unitArticlePattern={articlePattern}
         accrualArticlePattern={accrualArticlePattern}
+        unitArticlePatternExclude={isUnitArticlePatternExclude}
+        accrualArticlePatternExclude={isAccrualArticlePatternExclude}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
         onUnitArticlePatternChange={setArticlePattern}
         onAccrualArticlePatternChange={setAccrualArticlePattern}
+        onUnitArticlePatternExcludeChange={setIsUnitArticlePatternExclude}
+        onAccrualArticlePatternExcludeChange={setIsAccrualArticlePatternExclude}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}
       />

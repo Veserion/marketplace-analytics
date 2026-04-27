@@ -229,6 +229,8 @@ export function useOzonAnalyticsPage() {
   const [isMetricsOpen, setIsMetricsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('')
   const [accrualArticlePattern, setAccrualArticlePattern] = useState('*')
+  const [isUnitArticlePatternExclude, setIsUnitArticlePatternExclude] = useState(false)
+  const [isAccrualArticlePatternExclude, setIsAccrualArticlePatternExclude] = useState(false)
   const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
   const [unitFileName, setUnitFileName] = useState('')
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
@@ -240,7 +242,13 @@ export function useOzonAnalyticsPage() {
     if (!isOzonUnitEconomics || !unitCsvSource) return { reports: null as ReportGroup[] | null, error: '' }
     try {
       return {
-        reports: buildUnitEconomicsReports(unitCsvSource, articlePattern, vatRatePercent, taxRatePercent),
+        reports: buildUnitEconomicsReports(
+          unitCsvSource,
+          articlePattern,
+          vatRatePercent,
+          taxRatePercent,
+          isUnitArticlePatternExclude,
+        ),
         error: '',
       }
     } catch (err) {
@@ -249,7 +257,7 @@ export function useOzonAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось применить фильтр по артикулу.',
       }
     }
-  }, [articlePattern, isOzonUnitEconomics, taxRatePercent, unitCsvSource, vatRatePercent])
+  }, [articlePattern, isOzonUnitEconomics, isUnitArticlePatternExclude, taxRatePercent, unitCsvSource, vatRatePercent])
   const unitReports = unitReportBuild.reports
   const accrualReportBuild = useMemo(() => {
     if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
@@ -257,7 +265,14 @@ export function useOzonAnalyticsPage() {
       const samePeriod = hasSamePeriod(unitFileName, accrualFileName)
       const unitArticleCogsMap = samePeriod && unitCsvSource ? buildUnitArticleCogsMap(unitCsvSource) : null
       return {
-        reports: buildAccrualReports(accrualCsvSource, vatRatePercent, taxRatePercent, unitArticleCogsMap, accrualArticlePattern),
+        reports: buildAccrualReports(
+          accrualCsvSource,
+          vatRatePercent,
+          taxRatePercent,
+          unitArticleCogsMap,
+          accrualArticlePattern,
+          isAccrualArticlePatternExclude,
+        ),
         error: '',
       }
     } catch (err) {
@@ -266,7 +281,16 @@ export function useOzonAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт по начислениям.',
       }
     }
-  }, [accrualArticlePattern, accrualCsvSource, accrualFileName, taxRatePercent, unitCsvSource, unitFileName, vatRatePercent])
+  }, [
+    accrualArticlePattern,
+    accrualCsvSource,
+    accrualFileName,
+    isAccrualArticlePatternExclude,
+    taxRatePercent,
+    unitCsvSource,
+    unitFileName,
+    vatRatePercent,
+  ])
   const accrualReports = accrualReportBuild.reports
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
@@ -397,10 +421,12 @@ export function useOzonAnalyticsPage() {
     error,
     fileName,
     hasResults,
+    isAccrualArticlePatternExclude,
     isExtraParamsOpen,
     isMetricsOpen,
     isOzonUnitEconomics,
     isProcessing,
+    isUnitArticlePatternExclude,
     onFileUpload,
     onSwitchOzonCalculation,
     onTaxRateChange,
@@ -412,6 +438,8 @@ export function useOzonAnalyticsPage() {
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsMetricsOpen,
+    setIsAccrualArticlePatternExclude,
+    setIsUnitArticlePatternExclude,
     taxRatePercent,
     toggleMetric,
     unitReports,
