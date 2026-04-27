@@ -29,37 +29,28 @@
   border-radius: 12px;
   overflow: hidden;
   background: var(--color-bg-surface);
+  --ui-disclosure-chevron-color: currentColor;
 }
 
-.AvailabilityStockPanel__summary {
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  min-height: 42px;
-  box-sizing: border-box;
-  cursor: pointer;
+.AvailabilityStockPanel__group--red {
+  --ui-disclosure-trigger-bg: var(--color-bg-status-danger);
+  --ui-disclosure-trigger-hover-bg: var(--color-bg-status-danger);
+  --ui-disclosure-trigger-color: var(--color-text-negative-strong);
+  --ui-disclosure-trigger-border: transparent;
 }
 
-.AvailabilityStockPanel__expand-icon {
-  color: currentColor;
+.AvailabilityStockPanel__group--yellow {
+  --ui-disclosure-trigger-bg: var(--color-bg-status-warning);
+  --ui-disclosure-trigger-hover-bg: var(--color-bg-status-warning);
+  --ui-disclosure-trigger-color: var(--color-text-warning);
+  --ui-disclosure-trigger-border: transparent;
 }
 
-.AvailabilityStockPanel__group--red .AvailabilityStockPanel__summary {
-  background: var(--color-bg-status-danger);
-  color: var(--color-text-negative-strong);
-}
-
-.AvailabilityStockPanel__group--yellow .AvailabilityStockPanel__summary {
-  background: var(--color-bg-status-warning);
-  color: var(--color-text-warning);
-}
-
-.AvailabilityStockPanel__group--green .AvailabilityStockPanel__summary {
-  background: var(--color-bg-status-success);
-  color: var(--color-text-positive);
+.AvailabilityStockPanel__group--green {
+  --ui-disclosure-trigger-bg: var(--color-bg-status-success);
+  --ui-disclosure-trigger-hover-bg: var(--color-bg-status-success);
+  --ui-disclosure-trigger-color: var(--color-text-positive);
+  --ui-disclosure-trigger-border: transparent;
 }
 
 .AvailabilityStockPanel__list {
@@ -86,40 +77,30 @@
 
 .AvailabilityStockPanel__copy-article-btn {
   margin-left: auto;
-  border: 1px solid var(--color-border-control-strong);
-  border-radius: 8px;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-surface-muted);
-  color: var(--color-text-link);
-  cursor: pointer;
+  border-color: var(--color-border-control-strong) !important;
+  border-radius: 8px !important;
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  background: var(--color-bg-surface-muted) !important;
+  color: var(--color-text-link) !important;
 }
 
-.AvailabilityStockPanel__copy-article-btn:hover {
+.AvailabilityStockPanel__copy-article-btn:hover,
+.AvailabilityStockPanel__copy-article-btn:focus-visible {
   background: var(--color-bg-surface-info);
 }
 
 .AvailabilityStockPanel__copy-group-btn {
-  border: 1px solid var(--color-border-control-strong);
-  border-radius: 8px;
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-surface-muted);
-  color: var(--color-text-link);
-  cursor: pointer;
+  border-color: var(--color-border-control-strong) !important;
+  border-radius: 8px !important;
+  width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  background: var(--color-bg-surface-muted) !important;
+  color: var(--color-text-link) !important;
 }
 
 .AvailabilityStockPanel__copy-group-btn:hover:not(:disabled) {
   background: var(--color-bg-surface-info);
-}
-
-.AvailabilityStockPanel__copy-group-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }

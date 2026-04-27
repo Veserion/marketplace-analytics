@@ -1,8 +1,11 @@
 import classNames from 'classnames/bind'
 import { useMemo } from 'react'
 import type { ProductMarginItem } from '@/entities/ozon-report/model/types'
-import { Typography, UiDisclosure, UiTable, UiTooltipIcon } from '@/shared/ui-kit'
-import type { UiTableColumn } from '@/shared/ui-kit'
+import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { UiTable } from '@/shared/ui-kit/table'
+import type { UiTableColumn } from '@/shared/ui-kit/table'
+import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './ProductMarginPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -120,9 +123,6 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
   return (
     <section className={cn(BLOCK_NAME)}>
       <UiDisclosure
-        className={cn(`${BLOCK_NAME}__disclosure`)}
-        triggerClassName={cn(`${BLOCK_NAME}__summary`)}
-        chevronClassName={cn(`${BLOCK_NAME}__expand-icon`)}
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
         title={<Typography variant="h5" color="accent">Потоварная маржинальность</Typography>}
       >

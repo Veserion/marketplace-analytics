@@ -1,6 +1,6 @@
 import classNames from 'classnames/bind'
 import type { Marketplace } from '@/entities/ozon-report'
-import { UiTabs } from '@/shared/ui-kit'
+import { UiTabs } from '@/shared/ui-kit/tabs'
 import styles from './MarketplaceTabs.module.scss'
 
 const cn = classNames.bind(styles)

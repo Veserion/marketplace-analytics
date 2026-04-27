@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { jsPDF } from 'jspdf'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import {
   buildWildberriesAccrualReports,
@@ -13,7 +12,6 @@ import {
 } from '@/entities/wildberries-report'
 import { formatValue } from '@/shared/lib/csv'
 import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
-import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'wildberries_accrual_vat_rate_percent'
@@ -28,6 +26,7 @@ const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркет�
 const STRUCTURE_PREFIX = 'Структура: '
 const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
 const COGS_FILE_ALIAS = 'Себестоимость'
+const WB_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей Ozon'
 
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
@@ -108,6 +107,7 @@ export function useWildberriesAnalyticsPage() {
   const [fileName, setFileName] = useState('')
   const [cogsCsvSource, setCogsCsvSource] = useState<string | null>(null)
   const [cogsFileName, setCogsFileName] = useState('')
+  const [cogsFallbackNote, setCogsFallbackNote] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
@@ -234,6 +234,7 @@ export function useWildberriesAnalyticsPage() {
 
       setCogsCsvSource(compactCsv)
       setCogsFileName(COGS_FILE_ALIAS)
+      setCogsFallbackNote('')
       try {
         await saveCsvRecord({
           mode: 'wildberriesCogs',
@@ -253,13 +254,24 @@ export function useWildberriesAnalyticsPage() {
 
   useEffect(() => {
     let isCancelled = false
-    Promise.all([getCsvRecord('wildberriesAccrualReport'), getCsvRecord('wildberriesCogs')])
-      .then(([mainRecord, cogsRecord]) => {
+    Promise.all([getCsvRecord('wildberriesAccrualReport'), getCsvRecord('wildberriesCogs'), getCsvRecord('ozonCogs')])
+      .then(([mainRecord, wbCogsRecord, ozonCogsRecord]) => {
         if (isCancelled) return
         setCsvSource(mainRecord?.csvText ?? null)
         setFileName(mainRecord?.fileName ?? '')
-        setCogsCsvSource(cogsRecord?.csvText ?? null)
-        setCogsFileName(cogsRecord?.csvText ? COGS_FILE_ALIAS : '')
+        if (wbCogsRecord?.csvText) {
+          setCogsCsvSource(wbCogsRecord.csvText)
+          setCogsFileName(COGS_FILE_ALIAS)
+          setCogsFallbackNote('')
+        } else if (ozonCogsRecord?.csvText) {
+          setCogsCsvSource(ozonCogsRecord.csvText)
+          setCogsFileName(COGS_FILE_ALIAS)
+          setCogsFallbackNote(WB_COGS_FALLBACK_NOTE)
+        } else {
+          setCogsCsvSource(null)
+          setCogsFileName('')
+          setCogsFallbackNote('')
+        }
       })
       .catch(() => {
         // Ignore persistence errors to keep CSV processing functional without IndexedDB.
@@ -287,11 +299,15 @@ export function useWildberriesAnalyticsPage() {
   const downloadPdf = async (): Promise<void> => {
     if (!reports) return
 
+    const [{ jsPDF }, pdfLib] = await Promise.all([
+      import('jspdf'),
+      import('@/shared/lib/pdf'),
+    ])
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
-    await configurePdfFont(doc)
-    renderPdfReport({
+    await pdfLib.configurePdfFont(doc)
+    pdfLib.renderPdfReport({
       doc,
-      theme: PDF_THEMES.wildberries,
+      theme: pdfLib.PDF_THEMES.wildberries,
       title: 'Marketplace Analytics',
       subtitle: 'Wildberries / Отчет по поступлениям',
       source: fileName,
@@ -302,6 +318,7 @@ export function useWildberriesAnalyticsPage() {
 
   return {
     articlePattern,
+    cogsFallbackNote,
     cogsFileName,
     cogsMatchingMode,
     downloadPdf,

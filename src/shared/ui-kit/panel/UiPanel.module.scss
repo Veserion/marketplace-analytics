@@ -1,19 +1,19 @@
 .UiPanel {
-  background: var(--color-panel-bg, var(--color-bg-surface));
-  border: 1px solid var(--color-panel-border, var(--color-border-base));
   border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 12px 28px var(--color-panel-shadow, var(--shadow-panel));
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+}
+
+.UiPanel__body {
+  min-width: 0;
+}
+
+.UiPanel__extra {
+  margin-left: auto;
 }
 
 .UiPanel__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  min-height: 28px;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
 .UiPanel__title {

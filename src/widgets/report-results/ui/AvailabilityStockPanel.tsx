@@ -1,7 +1,10 @@
 import classNames from 'classnames/bind'
+import { CopyOutlined } from '@ant-design/icons'
+import Button from 'antd/es/button'
 import { useState } from 'react'
 import type { AvailabilityGroups } from '@/entities/ozon-report/model/types'
-import { Typography, UiDisclosure } from '@/shared/ui-kit'
+import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './AvailabilityStockPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -59,8 +62,6 @@ export function AvailabilityStockPanel({ groups }: AvailabilityStockPanelProps) 
             <div key={group.key} className={cn(`${BLOCK_NAME}__group-row`)}>
               <UiDisclosure
                 className={cn(`${BLOCK_NAME}__group`, `${BLOCK_NAME}__group--${group.modifier}`)}
-                triggerClassName={cn(`${BLOCK_NAME}__summary`)}
-                chevronClassName={cn(`${BLOCK_NAME}__expand-icon`)}
                 contentInnerClassName={cn(`${BLOCK_NAME}__list`)}
                 title={<Typography as="span" variant="body2" semiBold>{group.title}</Typography>}
                 meta={<Typography as="span" variant="body2" semiBold>{items.length}</Typography>}
@@ -69,34 +70,26 @@ export function AvailabilityStockPanel({ groups }: AvailabilityStockPanelProps) 
                   {items.map((article) => (
                     <div key={article} className={cn(`${BLOCK_NAME}__item`)}>
                       <code>{article}</code>
-                      <button
-                        type="button"
+                      <Button
                         className={cn(`${BLOCK_NAME}__copy-article-btn`)}
+                        icon={<CopyOutlined />}
                         onClick={() => void copyArticle(article)}
                         aria-label={`Копировать артикул ${article}`}
                         title="Копировать артикул"
-                      >
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                          <path d="M12.5 12.5H16.6667C17.1269 12.5 17.5 12.1269 17.5 11.6667V3.33333C17.5 2.8731 17.1269 2.5 16.6667 2.5H8.33333C7.8731 2.5 7.5 2.8731 7.5 3.33333V7.5M11.6667 17.5L3.33333 17.5C2.8731 17.5 2.5 17.1269 2.5 16.6667L2.5 8.33333C2.5 7.8731 2.8731 7.5 3.33333 7.5H11.6667C12.1269 7.5 12.5 7.8731 12.5 8.33333L12.5 16.6667C12.5 17.1269 12.1269 17.5 11.6667 17.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
+                      />
                       {copiedArticle === article && <Typography as="span" variant="caption" color="accent" semiBold>Скопировано</Typography>}
                     </div>
                   ))}
               </UiDisclosure>
 
-              <button
-                type="button"
+              <Button
                 className={cn(`${BLOCK_NAME}__copy-group-btn`)}
+                icon={<CopyOutlined />}
                 onClick={() => void copyGroupArticles(group.key, items)}
                 aria-label={`Скопировать артикулы группы ${group.title}`}
                 title="Скопировать артикулы"
                 disabled={items.length === 0}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M12.5 12.5H16.6667C17.1269 12.5 17.5 12.1269 17.5 11.6667V3.33333C17.5 2.8731 17.1269 2.5 16.6667 2.5H8.33333C7.8731 2.5 7.5 2.8731 7.5 3.33333V7.5M11.6667 17.5L3.33333 17.5C2.8731 17.5 2.5 17.1269 2.5 16.6667L2.5 8.33333C2.5 7.8731 2.8731 7.5 3.33333 7.5H11.6667C12.1269 7.5 12.5 7.8731 12.5 8.33333L12.5 16.6667C12.5 17.1269 12.1269 17.5 11.6667 17.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              />
               {copiedGroup === group.key && <Typography as="span" variant="caption" color="accent" semiBold>Скопировано</Typography>}
             </div>
           )

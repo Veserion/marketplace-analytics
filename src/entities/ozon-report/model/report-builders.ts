@@ -246,29 +246,82 @@ function normalizeArticleKey(article: string): string {
   return normalize(article).toLowerCase()
 }
 
-export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | null {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
-  const headerIndex = rows.findIndex((row) => normalize(row[0]) === OZON_CSV_LAYOUT.unitHeaderFirstCell)
+function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
+  const normalized = rawCsv.replace(/^\uFEFF/, '')
+  const semicolonRows = parseCsv(normalized, OZON_CSV_LAYOUT.delimiter)
+  if (semicolonRows.some((row) => row.length > 1)) return semicolonRows
+  return parseCsv(normalized, ',')
+}
+
+function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
+  const normalizedHeaders = headers.map((header) => normalize(header).toLowerCase().replace(/ё/g, 'е'))
+  const articleIdx = normalizedHeaders.findIndex(
+    (header) => header === normalize(OZON_UNIT_COLUMNS.article).toLowerCase().replace(/ё/g, 'е'),
+  )
+  if (articleIdx === -1) return null
+
+  const cogsIdx = normalizedHeaders.findIndex(
+    (header) => header === normalize(OZON_UNIT_COLUMNS.cogs).toLowerCase().replace(/ё/g, 'е'),
+  )
+  if (cogsIdx === -1) return null
+
+  return { articleIdx, cogsIdx }
+}
+
+type CogsRow = {
+  article: string
+  cogs: number
+}
+
+function parseOzonCogsRows(rawCsv: string): CogsRow[] | null {
+  const rows = parseCsvWithDelimiterFallback(rawCsv)
+  const headerIndex = rows.findIndex((row) => findCogsHeader(row) !== null)
   if (headerIndex === -1) return null
 
-  const headers = rows[headerIndex].map((cell) => normalize(cell))
-  const colIndex = new Map(headers.map((header, idx) => [header, idx]))
-  const articleIdx = colIndex.get(OZON_UNIT_COLUMNS.article)
-  const unitCostIdx = colIndex.get(OZON_UNIT_COLUMNS.cogs)
-  if (articleIdx === undefined || unitCostIdx === undefined) {
-    return null
-  }
+  const header = findCogsHeader(rows[headerIndex])
+  if (!header) return null
 
-  const dataRows = rows.slice(headerIndex + 1).filter((row) => normalize(row[0]) !== '')
-  const byArticle = new Map<string, { sum: number, count: number }>()
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => normalize(cell) !== ''))
+
+  const result: CogsRow[] = []
   for (const row of dataRows) {
-    const article = normalizeArticleKey(row[articleIdx] || '')
-    const unitCost = parseNumber(row[unitCostIdx] || '')
-    if (!article || unitCost === null) continue
-    const current = byArticle.get(article) || { sum: 0, count: 0 }
-    current.sum += unitCost
+    const article = normalize(row[header.articleIdx] || '')
+    const cogs = parseNumber(row[header.cogsIdx] || '')
+    if (!article || cogs === null) continue
+    result.push({ article, cogs })
+  }
+  return result
+}
+
+function escapeCsvCell(value: string): string {
+  if (!/[;"\r\n]/.test(value)) return value
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+export function extractOzonCogsCsv(rawCsv: string): string | null {
+  const parsedRows = parseOzonCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const lines = [`${OZON_UNIT_COLUMNS.article};${OZON_UNIT_COLUMNS.cogs}`]
+  for (const row of parsedRows) {
+    lines.push(`${escapeCsvCell(row.article)};${String(row.cogs)}`)
+  }
+  return lines.join('\n')
+}
+
+export function buildOzonCogsMap(rawCsv: string): Map<string, number> | null {
+  const parsedRows = parseOzonCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const byArticle = new Map<string, { sum: number, count: number }>()
+  for (const row of parsedRows) {
+    const articleKey = normalizeArticleKey(row.article)
+    const current = byArticle.get(articleKey) || { sum: 0, count: 0 }
+    current.sum += row.cogs
     current.count += 1
-    byArticle.set(article, current)
+    byArticle.set(articleKey, current)
   }
 
   const result = new Map<string, number>()
@@ -283,7 +336,7 @@ export function buildAccrualReports(
   rawCsv: string,
   vatRatePercent = 5,
   taxRatePercent = 6,
-  unitArticleCogsMap: Map<string, number> | null = null,
+  cogsByArticleMap: Map<string, number> | null = null,
   articlePattern = '*',
   excludePattern = false,
 ): AccrualGroup[] {
@@ -315,8 +368,8 @@ export function buildAccrualReports(
     excludePattern,
   ))
 
-  const accrualCogsFromUnitMap = (() => {
-    if (!unitArticleCogsMap || unitArticleCogsMap.size === 0) return null
+  const accrualCogsFromMap = (() => {
+    if (!cogsByArticleMap || cogsByArticleMap.size === 0) return null
     if (
       !colIndex.has(OZON_ACCRUAL_COLUMNS.article)
       || !colIndex.has(OZON_ACCRUAL_COLUMNS.qty)
@@ -333,7 +386,7 @@ export function buildAccrualReports(
       const articleKey = normalizeArticleKey(getCell(row, OZON_ACCRUAL_COLUMNS.article))
       const quantity = parseNumber(getCell(row, OZON_ACCRUAL_COLUMNS.qty))
       if (!articleKey || quantity === null) continue
-      const unitCost = unitArticleCogsMap.get(articleKey)
+      const unitCost = cogsByArticleMap.get(articleKey)
       if (unitCost === undefined) continue
       total += quantity * unitCost
       matchedRows += 1
@@ -420,7 +473,7 @@ export function buildAccrualReports(
   const sppAndPromotions = amountBeforeSpp - revenueByStore
   const totalTaxRate = (vatRatePercent + taxRatePercent) / 100
   const tax11 = amountBeforeSpp * totalTaxRate
-  const cogsForNetProfit = accrualCogsFromUnitMap ?? 0
+  const cogsForNetProfit = accrualCogsFromMap ?? 0
   const netProfit = total - tax11 - cogsForNetProfit
   const marginRate = revenueByStore !== 0 ? (netProfit / revenueByStore) * 100 : null
   const formatSalesShare = (value: number): string | null => {
@@ -582,9 +635,9 @@ export function buildAccrualReports(
         { label: 'Перевод в банк', value: total, type: 'currency', formula: 'SUM("Сумма итого, руб.") по всем строкам начислений' },
         {
           label: 'Себестоимость',
-          value: accrualCogsFromUnitMap,
+          value: accrualCogsFromMap,
           type: 'currency',
-          formula: 'Σ("Количество" * "Себестоимость артикула"), где "Тип начисления" = "Выручка", а себестоимость артикула берется из отчета "Юнит экономика" за тот же период',
+          formula: 'Σ("Количество" * "Себестоимость артикула"), где "Тип начисления" = "Выручка", а себестоимость артикула берется из загруженного CSV себестоимости',
         },
         {
           label: 'Налог',

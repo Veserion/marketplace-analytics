@@ -9,6 +9,13 @@ const base = repoName ? `/${repoName}/` : '/'
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

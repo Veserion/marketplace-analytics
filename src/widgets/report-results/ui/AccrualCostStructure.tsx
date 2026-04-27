@@ -2,7 +2,8 @@ import classNames from 'classnames/bind'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
-import { Typography, UiTooltipIcon } from '@/shared/ui-kit'
+import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './AccrualCostStructure.module.scss'
 
 const cn = classNames.bind(styles)
@@ -249,28 +250,23 @@ function formatShare(value: number, total: number): string {
   return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format((value / total) * 100)}%`
 }
 
-function CostStructureTooltip({
-  active,
-  payload,
-  baseValue,
-}: RechartsTooltipProps & { baseValue: number }) {
-  if (!active || !payload || payload.length === 0) return null
-  const data = payload[0].payload
-
-  return (
-    <div className={cn(`${BLOCK_NAME}__chart-tooltip`)}>
-      <Typography variant="body3" color="light" bold>{data.label}</Typography>
-      <Typography variant="body3" color="light">{formatOverviewCurrency(data.value)}</Typography>
-      <Typography variant="body3" color="light">{formatShare(data.value, baseValue)}</Typography>
-    </div>
-  )
-}
-
 export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
   const costStructureModel = buildCostStructureModel(reports)
   if (!costStructureModel) return null
 
   const chartData = costStructureModel.segments.filter((segment) => segment.value > 0)
+  const renderTooltipContent = (tooltipProps?: RechartsTooltipProps): React.ReactNode => {
+    if (!tooltipProps?.active || !tooltipProps.payload || tooltipProps.payload.length === 0) return null
+    const data = tooltipProps.payload[0].payload
+
+    return (
+      <div className={cn(`${BLOCK_NAME}__chart-tooltip`)}>
+        <Typography variant="body3" color="light" bold>{data.label}</Typography>
+        <Typography variant="body3" color="light">{formatOverviewCurrency(data.value)}</Typography>
+        <Typography variant="body3" color="light">{formatShare(data.value, costStructureModel.baseValue)}</Typography>
+      </div>
+    )
+  }
 
   return (
     <article className={cn(BLOCK_NAME)}>
@@ -300,7 +296,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
                 ))}
               </Pie>
               <RechartsTooltip
-                content={<CostStructureTooltip baseValue={costStructureModel.baseValue} />}
+                content={(tooltipProps) => renderTooltipContent(tooltipProps as unknown as RechartsTooltipProps)}
                 cursor={false}
               />
             </PieChart>

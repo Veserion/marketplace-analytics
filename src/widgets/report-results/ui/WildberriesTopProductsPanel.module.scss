@@ -5,26 +5,6 @@
   padding: 10px;
 }
 
-.WildberriesTopProductsPanel__disclosure {
-  border-radius: 10px;
-}
-
-.WildberriesTopProductsPanel__summary {
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  min-height: 42px;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-
-.WildberriesTopProductsPanel__expand-icon {
-  color: var(--color-text-muted);
-}
-
 .WildberriesTopProductsPanel__content {
   padding-top: 8px;
   display: flex;

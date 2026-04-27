@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import { UiTooltipIcon } from '@/shared/ui-kit'
+import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
 import styles from './FormulaTooltipIcon.module.scss'
 
 const cn = classNames.bind(styles)

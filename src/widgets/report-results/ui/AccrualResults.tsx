@@ -1,8 +1,10 @@
 import classNames from 'classnames/bind'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
-import { Typography, UiDisclosure, UiMetricsList } from '@/shared/ui-kit'
-import type { UiMetricsListRow } from '@/shared/ui-kit'
+import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { UiMetricsList } from '@/shared/ui-kit/metrics-list'
+import type { UiMetricsListRow } from '@/shared/ui-kit/metrics-list'
+import { Typography } from '@/shared/ui-kit/typography'
 import { AccrualCostStructure } from './AccrualCostStructure'
 import styles from './AccrualResults.module.scss'
 
@@ -12,7 +14,7 @@ const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не в
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
-const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
+const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
 const STRUCTURE_PREFIX = 'Структура: '
 const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
 const REVENUE_WITHOUT_SPP_LABEL = 'Выручка без СПП'
@@ -346,8 +348,6 @@ export function AccrualResults({
       {structureReports.length > 0 && (
         <UiDisclosure
           className={cn(`${BLOCK_NAME}__structure-details`)}
-          triggerClassName={cn(`${BLOCK_NAME}__structure-summary`)}
-          chevronClassName={cn(`${BLOCK_NAME}__structure-chevron`)}
           title={(
             <Typography as="span" variant="h3" color="accent">
               Сруктура расчета

@@ -1,21 +1,26 @@
 import classNames from 'classnames/bind'
+import { createElement, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
 import { useWildberriesAnalyticsPage } from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
-import { Typography, UiPanel, UiTabs } from '@/shared/ui-kit'
-import { AccrualResults, WildberriesTopProductsPanel } from '@/widgets/report-results'
+import { UiPanel } from '@/shared/ui-kit/panel'
+import { UiTabs } from '@/shared/ui-kit/tabs'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './WildberriesPage.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'WildberriesPage'
 const WB_CALCULATION_ITEMS = [{ key: 'accrualReport', label: 'Отчет по поступлениям' }] as const
+const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({ default: module.AccrualResults })))
+const lazyWildberriesTopProductsPanel = lazy(async () => import('@/widgets/report-results/ui/WildberriesTopProductsPanel').then((module) => ({ default: module.WildberriesTopProductsPanel })))
 
 export function WildberriesPage() {
   const navigate = useNavigate()
   const {
     articlePattern,
+    cogsFallbackNote,
     cogsFileName,
     cogsMatchingMode,
     downloadPdf,
@@ -91,6 +96,7 @@ export function WildberriesPage() {
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
         secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryUsageNote={cogsFallbackNote}
         secondaryMissingArticles={missingCogsArticles}
         secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
         error={error}
@@ -101,15 +107,19 @@ export function WildberriesPage() {
       />
 
       {reports && (
-        <AccrualResults
-          reports={reports}
-          showAccrualOverview
-          cogsMissingValueText="Нет данных: загрузите CSV с себестоимостью товаров"
-        />
+        <Suspense fallback={null}>
+          {createElement(lazyAccrualResults, {
+            reports,
+            showAccrualOverview: true,
+            cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
+          })}
+        </Suspense>
       )}
 
       {topProducts.length > 0 && (
-        <WildberriesTopProductsPanel items={topProducts} />
+        <Suspense fallback={null}>
+          {createElement(lazyWildberriesTopProductsPanel, { items: topProducts })}
+        </Suspense>
       )}
     </main>
   )

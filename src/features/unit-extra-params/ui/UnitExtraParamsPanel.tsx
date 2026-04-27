@@ -1,5 +1,11 @@
 import classNames from 'classnames/bind'
-import { Typography, UiDisclosure, UiPanel } from '@/shared/ui-kit'
+import Checkbox from 'antd/es/checkbox'
+import Input from 'antd/es/input'
+import InputNumber from 'antd/es/input-number'
+import Radio from 'antd/es/radio'
+import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { UiPanel } from '@/shared/ui-kit/panel'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './UnitExtraParamsPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -55,45 +61,45 @@ export function UnitExtraParamsPanel({
     : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
 
   return (
-    <UiPanel className={cn(BLOCK_NAME)}>
+    <UiPanel>
       <UiDisclosure
         title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
         isOpen={isOpen}
         onToggle={() => onToggleOpen()}
-        triggerClassName={cn(`${BLOCK_NAME}__trigger`)}
-        chevronClassName={cn(`${BLOCK_NAME}__chevron`)}
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
       >
           <div className={cn(`${BLOCK_NAME}__grid`)}>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
-              <input
+              <InputNumber<number>
+                className={cn(`${BLOCK_NAME}__number-input`)}
                 id="vatRateInput"
-                type="number"
-                min="0"
-                step="0.1"
+                min={0}
+                step={0.1}
+                controls={false}
                 value={vatRatePercent}
-                onChange={(event) => onVatRateChange(Number(event.target.value))}
+                onChange={(value) => onVatRateChange(typeof value === 'number' ? value : 0)}
               />
             </label>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="taxRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>Налог, %</Typography>
-              <input
+              <InputNumber<number>
+                className={cn(`${BLOCK_NAME}__number-input`)}
                 id="taxRateInput"
-                type="number"
-                min="0"
-                step="0.1"
+                min={0}
+                step={0.1}
+                controls={false}
                 value={taxRatePercent}
-                onChange={(event) => onTaxRateChange(Number(event.target.value))}
+                onChange={(value) => onTaxRateChange(typeof value === 'number' ? value : 0)}
               />
             </label>
           </div>
           {onPatternChange && (
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="articlePatternInput">
               <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
-              <input
+              <Input
+                className={cn(`${BLOCK_NAME}__text-input`)}
                 id="articlePatternInput"
-                type="text"
                 value={activePattern}
                 onChange={(event) => onPatternChange(event.target.value)}
                 placeholder="Например: st*"
@@ -102,16 +108,15 @@ export function UnitExtraParamsPanel({
                 {patternHint}
               </Typography>
               {onPatternExcludeChange && (
-                <label className={cn(`${BLOCK_NAME}__checkbox`)}>
-                  <input
-                    type="checkbox"
-                    checked={activePatternExclude}
-                    onChange={(event) => onPatternExcludeChange(event.target.checked)}
-                  />
+                <Checkbox
+                  className={cn(`${BLOCK_NAME}__checkbox`)}
+                  checked={activePatternExclude}
+                  onChange={(event) => onPatternExcludeChange(event.target.checked)}
+                >
                   <Typography as="span" variant="body3" color="accent" semiBold>
                     Исключать совпадения по паттерну
                   </Typography>
-                </label>
+                </Checkbox>
               )}
             </label>
           )}
@@ -120,26 +125,19 @@ export function UnitExtraParamsPanel({
               <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__radio-title`)}>
                 Сопоставление себестоимости
               </Typography>
-              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
-                <input
-                  type="radio"
-                  name="cogsMatchingMode"
-                  value="full"
-                  checked={cogsMatchingMode === 'full'}
-                  onChange={() => onCogsMatchingModeChange('full')}
-                />
-                <Typography as="span" variant="body2" color="accent">Точное</Typography>
-              </label>
-              <label className={cn(`${BLOCK_NAME}__radio-option`)}>
-                <input
-                  type="radio"
-                  name="cogsMatchingMode"
-                  value="digits"
-                  checked={cogsMatchingMode === 'digits'}
-                  onChange={() => onCogsMatchingModeChange('digits')}
-                />
-                <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
-              </label>
+              <Radio.Group
+                className={cn(`${BLOCK_NAME}__radio-options`)}
+                name="cogsMatchingMode"
+                value={cogsMatchingMode}
+                onChange={(event) => onCogsMatchingModeChange(event.target.value as 'full' | 'digits')}
+              >
+                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="full">
+                  <Typography as="span" variant="body2" color="accent">Точное</Typography>
+                </Radio>
+                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="digits">
+                  <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
+                </Radio>
+              </Radio.Group>
             </div>
           )}
       </UiDisclosure>

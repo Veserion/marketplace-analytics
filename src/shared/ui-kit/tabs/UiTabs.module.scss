@@ -1,30 +1,35 @@
 .UiTabs {
-  display: grid;
-  grid-template-columns: repeat(var(--ui-tabs-count, 2), minmax(0, 1fr));
+  width: 100%;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.UiTabs :global(.ant-segmented-group) {
+  width: 100%;
   gap: 10px;
 }
 
-.UiTabs__button {
+.UiTabs :global(.ant-segmented-item) {
   border: 1px solid var(--color-tabs-border, var(--color-border-control));
   border-radius: 12px;
   background: var(--color-tabs-bg, var(--color-bg-surface-subtle));
-  color: var(--color-tabs-text, var(--color-text-accent));
-  padding: 12px;
-  cursor: pointer;
   transition: all 0.18s ease;
 }
 
-.UiTabs__button:not(.UiTabs__button--active):hover {
+.UiTabs :global(.ant-segmented-item:hover) {
   background: var(--color-tabs-hover, var(--color-bg-surface-info));
 }
 
-.UiTabs__button--active {
+.UiTabs :global(.ant-segmented-item-selected) {
   background: var(--color-tabs-active-bg, var(--color-text-accent));
   border-color: var(--color-tabs-active-border, var(--color-text-accent));
-  color: var(--color-tabs-active-text, var(--color-bg-surface));
 }
 
-.UiTabs__button--active:hover {
+.UiTabs :global(.ant-segmented-item-selected:hover) {
   background: var(--color-tabs-active-hover-bg, var(--color-text-accent-strong));
   border-color: var(--color-tabs-active-hover-border, var(--color-text-accent-strong));
+}
+
+.UiTabs :global(.ant-segmented-item-label) {
+  padding: 12px;
 }

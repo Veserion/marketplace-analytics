@@ -19,6 +19,12 @@
   max-width: 420px;
 }
 
+.ArticlePatternPanel__input:hover,
+.ArticlePatternPanel__input:focus {
+  border-color: var(--color-border-control-strong);
+  background: var(--color-bg-surface);
+}
+
 .ArticlePatternPanel__hint {
   margin: 0;
 }

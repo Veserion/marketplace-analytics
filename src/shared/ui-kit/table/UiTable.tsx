@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import classNames from 'classnames/bind'
+import Button from 'antd/es/button'
+import Input from 'antd/es/input'
+import Table from 'antd/es/table'
+import type { ColumnsType as TableColumnsType } from 'antd/es/table'
 import styles from './UiTable.module.scss'
 
 const cn = classNames.bind(styles)
@@ -29,6 +33,11 @@ type UiTableProps<T> = {
   emptyText?: string
   initialSort?: { key: string, direction: SortDirection } | null
   showHeaderFilters?: boolean
+}
+
+type TableRecord<T> = {
+  __key: string
+  __row: T
 }
 
 function compareSortValues(a: SortAccessorValue, b: SortAccessorValue, direction: SortDirection): number {
@@ -81,83 +90,85 @@ export function UiTable<T>({
     return copy
   }, [columns, filters, rows, sortState])
 
-  const toggleSort = (columnKey: string): void => {
+  const toggleSort = useCallback((columnKey: string): void => {
     const targetColumn = columns.find((column) => column.key === columnKey)
     if (!targetColumn?.sortable) return
     setSortState((prev) => {
       if (!prev || prev.key !== columnKey) return { key: columnKey, direction: 'asc' }
       return { key: columnKey, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
     })
-  }
+  }, [columns])
+
+  const dataSource = useMemo<TableRecord<T>[]>(() => {
+    const regularRows = preparedRows.map((row, rowIndex) => ({
+      __key: rowKey(row, rowIndex),
+      __row: row,
+    }))
+    const pinnedRowsData = pinnedRows.map((row, rowIndex) => ({
+      __key: rowKey(row, preparedRows.length + rowIndex),
+      __row: row,
+    }))
+    return [...regularRows, ...pinnedRowsData]
+  }, [pinnedRows, preparedRows, rowKey])
+
+  const tableColumns = useMemo<TableColumnsType<TableRecord<T>>>(() => (
+    columns.map((column) => {
+      const isSorted = sortState?.key === column.key
+      const sortDirection = isSorted ? sortState.direction : null
+
+      return {
+        key: column.key,
+        width: column.width,
+        className: cn(`${BLOCK_NAME}__td`),
+        onHeaderCell: () => ({ className: cn(`${BLOCK_NAME}__th`) }),
+        title: (
+          <div className={cn(`${BLOCK_NAME}__header`)}>
+            <div className={cn(`${BLOCK_NAME}__head-cell`)}>
+              <span className={cn(`${BLOCK_NAME}__title`)}>{column.title}</span>
+              {column.sortable && (
+                <Button
+                  className={cn(`${BLOCK_NAME}__sort-button`)}
+                  type="text"
+                  aria-label="Сортировать по колонке"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    toggleSort(column.key)
+                  }}
+                >
+                  {sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕'}
+                </Button>
+              )}
+            </div>
+            {showHeaderFilters && column.filterable && (
+              <Input
+                className={cn(`${BLOCK_NAME}__filter`)}
+                value={filters[column.key] ?? ''}
+                placeholder={column.filterPlaceholder ?? 'Фильтр'}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setFilters((prev) => ({ ...prev, [column.key]: value }))
+                }}
+                onClick={(event) => event.stopPropagation()}
+              />
+            )}
+          </div>
+        ),
+        render: (_, record) => column.renderCell(record.__row),
+      }
+    })
+  ), [columns, filters, showHeaderFilters, sortState, toggleSort])
 
   return (
-    <div className={cn(BLOCK_NAME)}>
-      <table className={cn(`${BLOCK_NAME}__table`)}>
-        <thead>
-          <tr className={cn(`${BLOCK_NAME}__head-row`)}>
-            {columns.map((column) => {
-              const isSorted = sortState?.key === column.key
-              const sortDirection = isSorted ? sortState?.direction : null
-              return (
-                <th key={column.key} className={cn(`${BLOCK_NAME}__th`)} style={column.width ? { width: column.width } : undefined}>
-                  <div className={cn(`${BLOCK_NAME}__head-cell`)}>
-                    <span className={cn(`${BLOCK_NAME}__title`)}>{column.title}</span>
-                    {column.sortable && (
-                      <button
-                        className={cn(`${BLOCK_NAME}__sort-button`)}
-                        type="button"
-                        onClick={() => toggleSort(column.key)}
-                        aria-label={`Сортировать по колонке`}
-                      >
-                        {sortDirection === 'asc' ? '↑' : sortDirection === 'desc' ? '↓' : '↕'}
-                      </button>
-                    )}
-                  </div>
-                  {showHeaderFilters && column.filterable && (
-                    <input
-                      className={cn(`${BLOCK_NAME}__filter`)}
-                      type="text"
-                      value={filters[column.key] ?? ''}
-                      placeholder={column.filterPlaceholder ?? 'Фильтр'}
-                      onChange={(event) => {
-                        const value = event.target.value
-                        setFilters((prev) => ({ ...prev, [column.key]: value }))
-                      }}
-                    />
-                  )}
-                </th>
-              )
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {preparedRows.length === 0 && (
-            <tr>
-              <td className={cn(`${BLOCK_NAME}__empty`)} colSpan={columns.length}>
-                {emptyText}
-              </td>
-            </tr>
-          )}
-          {preparedRows.map((row, rowIndex) => (
-            <tr key={rowKey(row, rowIndex)} className={cn(`${BLOCK_NAME}__row`)}>
-              {columns.map((column) => (
-                <td key={column.key} className={cn(`${BLOCK_NAME}__td`)}>
-                  {column.renderCell(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          {pinnedRows.map((row, rowIndex) => (
-            <tr key={rowKey(row, preparedRows.length + rowIndex)} className={cn(`${BLOCK_NAME}__row`)}>
-              {columns.map((column) => (
-                <td key={column.key} className={cn(`${BLOCK_NAME}__td`)}>
-                  {column.renderCell(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table<TableRecord<T>>
+      className={cn(BLOCK_NAME)}
+      columns={tableColumns}
+      dataSource={dataSource}
+      rowKey="__key"
+      pagination={false}
+      tableLayout="fixed"
+      locale={{ emptyText: <span className={cn(`${BLOCK_NAME}__empty`)}>{emptyText}</span> }}
+      rowClassName={(_, index) => cn(`${BLOCK_NAME}__row`, { [`${BLOCK_NAME}__row--even`]: index % 2 === 1 })}
+    />
   )
 }

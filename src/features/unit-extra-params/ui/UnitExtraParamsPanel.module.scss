@@ -1,17 +1,3 @@
-.UnitExtraParamsPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.UnitExtraParamsPanel__trigger {
-  color: var(--color-text-accent);
-}
-
-.UnitExtraParamsPanel__chevron {
-  color: var(--color-text-muted);
-}
-
 .UnitExtraParamsPanel__content {
   display: flex;
   flex-direction: column;
@@ -30,7 +16,16 @@
   gap: 6px;
 }
 
-.UnitExtraParamsPanel__field input {
+.UnitExtraParamsPanel__number-input,
+.UnitExtraParamsPanel__text-input {
+  width: 100%;
+  border-color: var(--color-border-input) !important;
+  border-radius: 10px !important;
+  background: var(--color-bg-surface-muted) !important;
+}
+
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-input),
+.UnitExtraParamsPanel__text-input {
   border: 1px solid var(--color-border-input);
   border-radius: 10px;
   padding: 10px 12px;
@@ -39,14 +34,32 @@
   font-size: 14px;
 }
 
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-input) {
+  padding: 0;
+}
+
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-input-wrap) {
+  padding: 10px 12px;
+}
+
+.UnitExtraParamsPanel__number-input:hover,
+.UnitExtraParamsPanel__number-input:focus-within,
+.UnitExtraParamsPanel__text-input:hover,
+.UnitExtraParamsPanel__text-input:focus {
+  border-color: var(--color-border-control-strong) !important;
+  background: var(--color-bg-surface) !important;
+}
+
 .UnitExtraParamsPanel__hint {
   margin: 0;
 }
 
 .UnitExtraParamsPanel__checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  width: fit-content;
+}
+
+.UnitExtraParamsPanel__checkbox :global(.ant-checkbox + span) {
+  padding-inline-start: 8px;
 }
 
 .UnitExtraParamsPanel__radio-group {
@@ -63,8 +76,12 @@
   margin: 0;
 }
 
-.UnitExtraParamsPanel__radio-option {
-  display: inline-flex;
-  align-items: center;
+.UnitExtraParamsPanel__radio-options {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.UnitExtraParamsPanel__radio-option {
+  margin-inline-end: 0;
 }

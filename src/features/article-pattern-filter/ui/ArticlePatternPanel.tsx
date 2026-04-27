@@ -1,5 +1,7 @@
 import classNames from 'classnames/bind'
-import { Typography, UiPanel } from '@/shared/ui-kit'
+import Input from 'antd/es/input'
+import { UiPanel } from '@/shared/ui-kit/panel'
+import { Typography } from '@/shared/ui-kit/typography'
 import styles from './ArticlePatternPanel.module.scss'
 
 const cn = classNames.bind(styles)
@@ -17,10 +19,9 @@ export function ArticlePatternPanel({ pattern, onPatternChange }: ArticlePattern
         <label htmlFor="articlePatternInput" className={cn(`${BLOCK_NAME}__label`)}>
           <Typography as="span" variant="body2" color="accent" semiBold>Паттерн</Typography>
         </label>
-        <input
+        <Input
           id="articlePatternInput"
           className={cn(`${BLOCK_NAME}__input`)}
-          type="text"
           value={pattern}
           onChange={(event) => onPatternChange(event.target.value)}
           placeholder="Например: st*"

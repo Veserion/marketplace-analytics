@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import type { CSSProperties } from 'react'
+import Segmented from 'antd/es/segmented'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './UiTabs.module.scss'
 
@@ -24,24 +24,21 @@ export function UiTabs<T extends string>({
   onChange,
   ariaLabel,
 }: UiTabsProps<T>) {
-  const style = { '--ui-tabs-count': items.length } as CSSProperties
-
   return (
-    <section className={cn(BLOCK_NAME)} aria-label={ariaLabel} style={style}>
-      {items.map((item) => (
-        <button
-          key={item.key}
-          className={cn(`${BLOCK_NAME}__button`, {
-            [`${BLOCK_NAME}__button--active`]: value === item.key,
-          })}
-          onClick={() => onChange(item.key)}
-          type="button"
-        >
+    <Segmented<T>
+      block
+      className={cn(BLOCK_NAME)}
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(nextValue) => onChange(nextValue)}
+      options={items.map((item) => ({
+        label: (
           <Typography as="span" variant="body1" semiBold color={value === item.key ? 'light' : 'accent'}>
             {item.label}
           </Typography>
-        </button>
-      ))}
-    </section>
+        ),
+        value: item.key,
+      }))}
+    />
   )
 }

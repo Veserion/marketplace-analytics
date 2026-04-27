@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { DownOutlined } from '@ant-design/icons'
+import Collapse from 'antd/es/collapse'
 import classNames from 'classnames'
 import styles from './UiDisclosure.module.scss'
 
 const BLOCK_NAME = 'UiDisclosure'
+const PANEL_KEY = 'content'
 
 type UiDisclosureProps = {
   title: ReactNode
@@ -40,9 +43,9 @@ export function UiDisclosure({
   const isControlled = typeof isOpen === 'boolean'
   const open = isControlled ? Boolean(isOpen) : internalOpen
 
-  const toggle = (): void => {
+  const handleToggle = (keys: string[]): void => {
     if (disabled) return
-    const nextOpen = !open
+    const nextOpen = keys.includes(PANEL_KEY)
     if (!isControlled) {
       setInternalOpen(nextOpen)
     }
@@ -50,43 +53,39 @@ export function UiDisclosure({
   }
 
   return (
-    <div className={classNames(styles[BLOCK_NAME], className, { [styles[`${BLOCK_NAME}--open`]]: open })}>
-      <button
-        type="button"
-        className={classNames(styles[`${BLOCK_NAME}__trigger`], triggerClassName)}
-        onClick={toggle}
-        aria-expanded={open}
-        disabled={disabled}
-      >
-        <span className={classNames(styles[`${BLOCK_NAME}__title`], titleClassName)}>{title}</span>
-        <span className={styles[`${BLOCK_NAME}__right`]}>
-          {meta && <span className={styles[`${BLOCK_NAME}__meta`]}>{meta}</span>}
-          <svg
-            className={classNames(styles[`${BLOCK_NAME}__chevron`], chevronClassName)}
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              d="M15.8327 7L9.99935 12.8333L4.16602 7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </button>
-
-      <div
-        className={classNames(styles[`${BLOCK_NAME}__content`], { [styles[`${BLOCK_NAME}__content--visible`]]: open }, contentClassName)}
-        aria-hidden={!open}
-      >
-        <div className={classNames(styles[`${BLOCK_NAME}__content-inner`], contentInnerClassName)}>{children}</div>
-      </div>
-    </div>
+    <Collapse
+      ghost
+      bordered={false}
+      collapsible={disabled ? 'disabled' : undefined}
+      activeKey={open ? [PANEL_KEY] : []}
+      onChange={handleToggle}
+      className={classNames(styles[BLOCK_NAME], className, { [styles[`${BLOCK_NAME}--open`]]: open })}
+      expandIcon={({ isActive }) => (
+        <DownOutlined
+          className={classNames(
+            styles[`${BLOCK_NAME}__chevron`],
+            { [styles[`${BLOCK_NAME}__chevron--open`]]: Boolean(isActive) },
+            chevronClassName,
+          )}
+        />
+      )}
+      expandIconPlacement="end"
+      items={[
+        {
+          key: PANEL_KEY,
+          label: <span className={classNames(styles[`${BLOCK_NAME}__title`], titleClassName)}>{title}</span>,
+          extra: meta ? <span className={styles[`${BLOCK_NAME}__meta`]}>{meta}</span> : undefined,
+          children: (
+            <div className={classNames(styles[`${BLOCK_NAME}__content-inner`], contentInnerClassName)}>
+              {children}
+            </div>
+          ),
+          classNames: {
+            body: classNames(styles[`${BLOCK_NAME}__content`], contentClassName),
+            header: classNames(styles[`${BLOCK_NAME}__trigger`], triggerClassName),
+          },
+        },
+      ]}
+    />
   )
 }
