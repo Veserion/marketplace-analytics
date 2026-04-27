@@ -1,4 +1,5 @@
 import type { MetricView } from '@/entities/ozon-report/model/types'
+import { OZON_UNIT_COLUMN_GROUPS } from '@/entities/ozon-report/model/columns'
 
 export const METRICS: MetricView[] = [
   { key: 'sales', label: 'Продажи', formula: 'SUM("Заказано товаров, шт")', type: 'number' },
@@ -37,15 +38,10 @@ export const METRICS: MetricView[] = [
   { key: 'marginRate', label: 'Маржинальность, %', formula: 'Чистая выручка / Выручка * 100%', type: 'percent' },
 ]
 
-export const AD_COLS = ['Оплата за клик', 'Оплата за заказ', 'Звёздные товары', 'Платный бренд', 'Отзывы', 'Доля от продаж']
+export const AD_COLS = [...OZON_UNIT_COLUMN_GROUPS.ad]
 
-export const OTHER_EXPENSE_COLS = [
-  'Стоимость размещения',
-  'Утилизация',
-  'Дополнительная обработка ОВХ',
-  'Операционные ошибки',
-]
+export const OTHER_EXPENSE_COLS = [...OZON_UNIT_COLUMN_GROUPS.otherExpenses]
 
-export const LOGISTICS_COLS = ['Обработка отправления', 'Логистика', 'Доставка до места выдачи']
+export const LOGISTICS_COLS = [...OZON_UNIT_COLUMN_GROUPS.logistics]
 
-export const REVERSE_LOGISTICS_COLS = ['Обработка возврата', 'Обратная логистика']
+export const REVERSE_LOGISTICS_COLS = [...OZON_UNIT_COLUMN_GROUPS.reverseLogistics]

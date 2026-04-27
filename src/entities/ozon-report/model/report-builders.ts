@@ -1,4 +1,5 @@
 import { AD_COLS, LOGISTICS_COLS, METRICS, OTHER_EXPENSE_COLS, REVERSE_LOGISTICS_COLS } from '@/entities/ozon-report/config/metrics'
+import { OZON_ACCRUAL_COLUMNS, OZON_CSV_LAYOUT, OZON_UNIT_COLUMNS } from '@/entities/ozon-report/model/columns'
 import type { AccrualGroup, AccrualMetric, AvailabilityGroups, ReportGroup, ValueType } from '@/entities/ozon-report/model/types'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 
@@ -48,13 +49,13 @@ function buildUnitEconomicsReport(
     return sum
   }
 
-  const sales = sumCol('Заказано товаров, шт')
-  const delivered = sumCol('Доставлено товаров, шт')
-  const returns = sumCol('Возвращено товаров, шт')
-  const revenue = sumCol('Выручка')
-  const accruedPoints = sumCol('Баллы за скидки') ?? sumCol('Баллы за скидки, руб.')
-  const partnerCompensation = sumCol('Программы партнёров') ?? sumCol('Программы партнеров')
-  const commission = sumCol('Вознаграждение Ozon') ?? sumCol('Комиссия Ozon')
+  const sales = sumCol(OZON_UNIT_COLUMNS.orderedQty)
+  const delivered = sumCol(OZON_UNIT_COLUMNS.deliveredQty)
+  const returns = sumCol(OZON_UNIT_COLUMNS.returnedQty)
+  const revenue = sumCol(OZON_UNIT_COLUMNS.revenue)
+  const accruedPoints = sumCol(OZON_UNIT_COLUMNS.pointsPrimary) ?? sumCol(OZON_UNIT_COLUMNS.pointsAlt)
+  const partnerCompensation = sumCol(OZON_UNIT_COLUMNS.partnerProgramsPrimary) ?? sumCol(OZON_UNIT_COLUMNS.partnerProgramsAlt)
+  const commission = sumCol(OZON_UNIT_COLUMNS.commissionPrimary) ?? sumCol(OZON_UNIT_COLUMNS.commissionAlt)
   const sumDefinedCols = (names: string[]): number | null => {
     const values = names.map((name) => sumCol(name)).filter((v): v is number => v !== null)
     if (values.length === 0) return null
@@ -63,8 +64,8 @@ function buildUnitEconomicsReport(
 
   const logistics = sumDefinedCols(LOGISTICS_COLS)
   const reverseLogistics = sumDefinedCols(REVERSE_LOGISTICS_COLS)
-  const acquiring = sumCol('Эквайринг')
-  const periodProfit = sumCol('Прибыль за период')
+  const acquiring = sumCol(OZON_UNIT_COLUMNS.acquiring)
+  const periodProfit = sumCol(OZON_UNIT_COLUMNS.periodProfit)
 
   const hasAdsCols = AD_COLS.every((col) => headerSet.has(col))
   const adsCost = hasAdsCols ? AD_COLS.reduce((acc, col) => acc + (sumCol(col) || 0), 0) : null
@@ -72,9 +73,9 @@ function buildUnitEconomicsReport(
   const otherExpenses = sumDefinedCols(OTHER_EXPENSE_COLS)
 
   const cogs = rowsSubset.reduce((acc, row) => {
-    const unitCost = parseNumber(getCell(row, 'Себестоимость'))
-    const d = parseNumber(getCell(row, 'Доставлено товаров, шт'))
-    const r = parseNumber(getCell(row, 'Возвращено товаров, шт'))
+    const unitCost = parseNumber(getCell(row, OZON_UNIT_COLUMNS.cogs))
+    const d = parseNumber(getCell(row, OZON_UNIT_COLUMNS.deliveredQty))
+    const r = parseNumber(getCell(row, OZON_UNIT_COLUMNS.returnedQty))
     if (unitCost === null || d === null || r === null) return acc
     return acc + unitCost * (d - r)
   }, 0)
@@ -137,14 +138,14 @@ function buildUnitEconomicsReport(
     enough: [],
   }
 
-  if (headerSet.has('Артикул') && headerSet.has('Доступность товаров')) {
+  if (headerSet.has(OZON_UNIT_COLUMNS.article) && headerSet.has(OZON_UNIT_COLUMNS.availability)) {
     const urgent = new Set<string>()
     const maintain = new Set<string>()
     const enough = new Set<string>()
 
     for (const row of rowsSubset) {
-      const article = normalize(getCell(row, 'Артикул'))
-      const availability = normalize(getCell(row, 'Доступность товаров')).toLowerCase()
+      const article = normalize(getCell(row, OZON_UNIT_COLUMNS.article))
+      const availability = normalize(getCell(row, OZON_UNIT_COLUMNS.availability)).toLowerCase()
       if (!article || !availability) continue
 
       if (availability === 'срочно поставить') {
@@ -167,12 +168,12 @@ function buildUnitEconomicsReport(
   }
 
   const productMargins: { article: string, marginSharePercent: number, profitPerUnit: number | null }[] = []
-  if (headerSet.has('Артикул') && headerSet.has('Доля от продаж')) {
+  if (headerSet.has(OZON_UNIT_COLUMNS.article) && headerSet.has(OZON_UNIT_COLUMNS.salesShare)) {
     const marginByArticle = new Map<string, { marginSum: number, marginCount: number, profitSum: number, profitCount: number }>()
     for (const row of rowsSubset) {
-      const article = normalize(getCell(row, 'Артикул'))
-      const margin = parseNumber(getCell(row, 'Доля от продаж'))
-      const profitPerUnit = parseNumber(getCell(row, 'Прибыль за шт'))
+      const article = normalize(getCell(row, OZON_UNIT_COLUMNS.article))
+      const margin = parseNumber(getCell(row, OZON_UNIT_COLUMNS.salesShare))
+      const profitPerUnit = parseNumber(getCell(row, OZON_UNIT_COLUMNS.unitProfit))
       if (!article || margin === null) continue
 
       const current = marginByArticle.get(article) || { marginSum: 0, marginCount: 0, profitSum: 0, profitCount: 0 }
@@ -204,10 +205,10 @@ export function buildUnitEconomicsReports(
   taxRatePercent: number,
   excludePattern = false,
 ): ReportGroup[] {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
-  const headerIndex = rows.findIndex((row) => normalize(row[0]) === 'SKU')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
+  const headerIndex = rows.findIndex((row) => normalize(row[0]) === OZON_CSV_LAYOUT.unitHeaderFirstCell)
   if (headerIndex === -1) {
-    throw new Error('Не найдена строка заголовков с колонкой SKU.')
+    throw new Error(`Не найдена строка заголовков с колонкой ${OZON_CSV_LAYOUT.unitHeaderFirstCell}.`)
   }
 
   const headers = rows[headerIndex].map((cell) => normalize(cell))
@@ -222,7 +223,7 @@ export function buildUnitEconomicsReports(
   }
 
   const matchedRows = dataRows.filter((row) => isArticleIncludedByPattern(
-    normalize(getCell(row, 'Артикул')),
+    normalize(getCell(row, OZON_UNIT_COLUMNS.article)),
     articlePattern,
     excludePattern,
   ))
@@ -246,14 +247,14 @@ function normalizeArticleKey(article: string): string {
 }
 
 export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | null {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
-  const headerIndex = rows.findIndex((row) => normalize(row[0]) === 'SKU')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
+  const headerIndex = rows.findIndex((row) => normalize(row[0]) === OZON_CSV_LAYOUT.unitHeaderFirstCell)
   if (headerIndex === -1) return null
 
   const headers = rows[headerIndex].map((cell) => normalize(cell))
   const colIndex = new Map(headers.map((header, idx) => [header, idx]))
-  const articleIdx = colIndex.get('Артикул')
-  const unitCostIdx = colIndex.get('Себестоимость')
+  const articleIdx = colIndex.get(OZON_UNIT_COLUMNS.article)
+  const unitCostIdx = colIndex.get(OZON_UNIT_COLUMNS.cogs)
   if (articleIdx === undefined || unitCostIdx === undefined) {
     return null
   }
@@ -286,9 +287,10 @@ export function buildAccrualReports(
   articlePattern = '*',
   excludePattern = false,
 ): AccrualGroup[] {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
   const headerIndex = rows.findIndex(
-    (row) => normalize(row[0]) === 'ID начисления' && normalize(row[1]) === 'Дата начисления',
+    (row) => normalize(row[0]) === OZON_CSV_LAYOUT.accrualHeaderFirstCell
+      && normalize(row[1]) === OZON_CSV_LAYOUT.accrualHeaderSecondCell,
   )
   if (headerIndex === -1) {
     throw new Error('Не найдена строка заголовков отчета по начислениям.')
@@ -308,22 +310,28 @@ export function buildAccrualReports(
   }
 
   const dataRows = allDataRows.filter((row) => isArticleIncludedByPattern(
-    normalize(getCell(row, 'Артикул')),
+    normalize(getCell(row, OZON_ACCRUAL_COLUMNS.article)),
     articlePattern,
     excludePattern,
   ))
 
   const accrualCogsFromUnitMap = (() => {
     if (!unitArticleCogsMap || unitArticleCogsMap.size === 0) return null
-    if (!colIndex.has('Артикул') || !colIndex.has('Количество') || !colIndex.has('Тип начисления')) return null
+    if (
+      !colIndex.has(OZON_ACCRUAL_COLUMNS.article)
+      || !colIndex.has(OZON_ACCRUAL_COLUMNS.qty)
+      || !colIndex.has(OZON_ACCRUAL_COLUMNS.accrualType)
+    ) {
+      return null
+    }
 
     let total = 0
     let matchedRows = 0
     for (const row of dataRows) {
-      const accrualType = normalize(getCell(row, 'Тип начисления')).toLowerCase().replace(/ё/g, 'е')
+      const accrualType = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.accrualType)).toLowerCase().replace(/ё/g, 'е')
       if (accrualType !== 'выручка') continue
-      const articleKey = normalizeArticleKey(getCell(row, 'Артикул'))
-      const quantity = parseNumber(getCell(row, 'Количество'))
+      const articleKey = normalizeArticleKey(getCell(row, OZON_ACCRUAL_COLUMNS.article))
+      const quantity = parseNumber(getCell(row, OZON_ACCRUAL_COLUMNS.qty))
       if (!articleKey || quantity === null) continue
       const unitCost = unitArticleCogsMap.get(articleKey)
       if (unitCost === undefined) continue
@@ -353,20 +361,20 @@ export function buildAccrualReports(
   const normalizeLower = (value: string): string => normalize(value).toLowerCase().replace(/ё/g, 'е')
 
   for (const row of dataRows) {
-    const amount = parseNumber(getCell(row, 'Сумма итого, руб.'))
+    const amount = parseNumber(getCell(row, OZON_ACCRUAL_COLUMNS.amount))
     if (amount === null) continue
 
-    const group = normalize(getCell(row, 'Группа услуг')) || 'Без группы'
-    const type = normalize(getCell(row, 'Тип начисления')) || 'Без типа'
-    const date = normalize(getCell(row, 'Дата начисления')) || 'Без даты'
-    const scheme = normalize(getCell(row, 'Схема работы'))
+    const group = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.serviceGroup)) || 'Без группы'
+    const type = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.accrualType)) || 'Без типа'
+    const date = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.accrualDate)) || 'Без даты'
+    const scheme = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.scheme))
 
     total += amount
 
     const groupLower = normalizeLower(group)
     const typeLower = normalizeLower(type)
     const isReturnRow = groupLower.includes('возврат')
-    const quantity = parseNumber(getCell(row, 'Количество'))
+    const quantity = parseNumber(getCell(row, OZON_ACCRUAL_COLUMNS.qty))
     if (typeLower === 'выручка' && quantity !== null) {
       salesQuantity += quantity
     }

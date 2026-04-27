@@ -1,4 +1,13 @@
 import type { AccrualGroup, AccrualMetric, ValueType } from '@/entities/ozon-report/model/types'
+import {
+  WB_BASE_COLUMNS,
+  WB_COGS_COLUMNS,
+  WB_CSV_LAYOUT,
+  WB_EXPENSE_COLUMNS,
+  WB_LOYALTY_COLUMNS,
+  WB_QUANTITY_COLUMNS,
+  WB_REVENUE_COLUMNS,
+} from '@/entities/wildberries-report/model/columns'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 
 type WbRow = {
@@ -63,29 +72,19 @@ const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 const WB_COMMISSION_LABEL = 'Комиссия ВБ'
-const WB_COMMISSION_COLUMN = 'Вознаграждение Вайлдберриз (ВВ), без НДС'
 const PAYMENT_SERVICES_LABEL = 'Комиссия платежных сервисов'
-const PAYMENT_SERVICES_COLUMN = 'Компенсация платёжных услуг/Комиссия за интеграцию платёжных сервисов'
 const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
-const ACCEPTANCE_OPERATIONS_COLUMN = 'Операции на приемке'
-const LOGISTICS_COLUMN = 'Услуги по доставке товара покупателю'
-const STORAGE_COLUMN = 'Хранение'
-const WITHHOLDINGS_COLUMN = 'Удержания'
-const FINES_COLUMN = 'Общая сумма штрафов'
-const VV_CORRECTION_COLUMN = 'Корректировка Вознаграждения Вайлдберриз (ВВ)'
-const PVZ_COMPENSATION_COLUMN = 'Возмещение за выдачу и возврат товаров на ПВЗ'
-const TRANSPORT_REIMBURSEMENT_COLUMN = 'Возмещение издержек по перевозке/по складским операциям с товаром'
 const MARKETPLACE_EXPENSES_FORMULA = [
-  `ABS(SUM("${WB_COMMISSION_COLUMN}"))`,
-  `ABS(SUM("${LOGISTICS_COLUMN}"))`,
-  `ABS(SUM("${PAYMENT_SERVICES_COLUMN}"))`,
-  `ABS(SUM("${STORAGE_COLUMN}"))`,
-  `ABS(SUM("${WITHHOLDINGS_COLUMN}"))`,
-  `ABS(SUM("${ACCEPTANCE_OPERATIONS_COLUMN}"))`,
-  `ABS(SUM("${FINES_COLUMN}"))`,
-  `-SUM("${VV_CORRECTION_COLUMN}")`,
-  `ABS(SUM("${PVZ_COMPENSATION_COLUMN}"))`,
-  `ABS(SUM("${TRANSPORT_REIMBURSEMENT_COLUMN}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.wbCommission}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.storage}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.fines}"))`,
+  `-SUM("${WB_EXPENSE_COLUMNS.vvCorrection}")`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.pvzCompensation}"))`,
+  `ABS(SUM("${WB_EXPENSE_COLUMNS.transportReimbursement}"))`,
 ].join(' + ')
 
 function patternToRegex(pattern: string): RegExp | null {
@@ -229,17 +228,21 @@ function resolveSalesScheme(
 
 function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
   const normalized = rawCsv.replace(/^\uFEFF/, '')
-  const semicolonRows = parseCsv(normalized, ';')
+  const semicolonRows = parseCsv(normalized, WB_CSV_LAYOUT.delimiter)
   if (semicolonRows.some((row) => row.length > 1)) return semicolonRows
-  return parseCsv(normalized, ',')
+  return parseCsv(normalized, WB_CSV_LAYOUT.cogsFallbackDelimiter)
 }
 
 function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
   const normalizedHeaders = headers.map((header) => normalizeLower(header))
-  const articleIdx = normalizedHeaders.findIndex((header) => header === 'артикул')
+  const articleIdx = normalizedHeaders.findIndex(
+    (header) => header === normalizeLower(WB_COGS_COLUMNS.article),
+  )
   if (articleIdx === -1) return null
 
-  const cogsIdx = normalizedHeaders.findIndex((header) => header === 'себестоимость')
+  const cogsIdx = normalizedHeaders.findIndex(
+    (header) => header === normalizeLower(WB_COGS_COLUMNS.cogs),
+  )
   if (cogsIdx === -1) return null
 
   return { articleIdx, cogsIdx }
@@ -281,7 +284,7 @@ export function extractWildberriesCogsCsv(rawCsv: string): string | null {
   const parsedRows = parseWildberriesCogsRows(rawCsv)
   if (!parsedRows) return null
 
-  const lines = ['Артикул;Себестоимость']
+  const lines = [`${WB_COGS_COLUMNS.article};${WB_COGS_COLUMNS.cogs}`]
   for (const row of parsedRows) {
     lines.push(`${escapeCsvCell(row.article)};${String(row.cogs)}`)
   }
@@ -506,15 +509,16 @@ export function getWildberriesMissingCogsArticles(
 ): string[] {
   if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
 
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), WB_CSV_LAYOUT.delimiter)
   const headerIndex = rows.findIndex(
-    (row) => normalize(row[0]) === '№' && normalize(row[1]) === 'Номер поставки',
+    (row) => normalize(row[0]) === WB_CSV_LAYOUT.headerFirstCell
+      && normalize(row[1]) === WB_CSV_LAYOUT.headerSecondCell,
   )
   if (headerIndex === -1) return []
 
   const headers = rows[headerIndex].map((cell) => normalize(cell))
   const colIndex = new Map(headers.map((header, idx) => [header, idx]))
-  const articleIdx = colIndex.get('Артикул поставщика')
+  const articleIdx = colIndex.get(WB_BASE_COLUMNS.article)
   if (articleIdx === undefined) return []
 
   const dataRows = rows
@@ -544,9 +548,10 @@ export function buildWildberriesTopProducts(
   cogsMatchingMode: CogsMatchingMode = 'full',
   excludePattern = false,
 ): WildberriesTopProductItem[] {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), WB_CSV_LAYOUT.delimiter)
   const headerIndex = rows.findIndex(
-    (row) => normalize(row[0]) === '№' && normalize(row[1]) === 'Номер поставки',
+    (row) => normalize(row[0]) === WB_CSV_LAYOUT.headerFirstCell
+      && normalize(row[1]) === WB_CSV_LAYOUT.headerSecondCell,
   )
   if (headerIndex === -1) return []
 
@@ -571,15 +576,15 @@ export function buildWildberriesTopProducts(
   }>()
 
   for (const row of dataRows) {
-    const article = normalize(getCell(row, 'Артикул поставщика'))
+    const article = normalize(getCell(row, WB_BASE_COLUMNS.article))
     if (!article || !isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
 
-    const reasonLower = normalizeLower(getCell(row, 'Обоснование для оплаты'))
+    const reasonLower = normalizeLower(getCell(row, WB_BASE_COLUMNS.reason))
     if (reasonLower !== 'продажа') continue
 
-    const quantity = parseNumber(getCell(row, 'Кол-во')) ?? 0
-    const revenue = parseNumber(getCell(row, 'Цена розничная')) ?? 0
-    const nomenclatureCode = normalize(getCell(row, 'Код номенклатуры')) || null
+    const quantity = parseNumber(getCell(row, WB_QUANTITY_COLUMNS.qty)) ?? 0
+    const revenue = parseNumber(getCell(row, WB_REVENUE_COLUMNS.retailPrice)) ?? 0
+    const nomenclatureCode = normalize(getCell(row, WB_BASE_COLUMNS.nomenclatureCode)) || null
 
     const current = byArticle.get(article) || {
       salesCount: 0,
@@ -649,9 +654,10 @@ export function buildWildberriesAccrualReports(
   cogsMatchingMode: CogsMatchingMode = 'full',
   excludePattern = false,
 ): AccrualGroup[] {
-  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), ';')
+  const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), WB_CSV_LAYOUT.delimiter)
   const headerIndex = rows.findIndex(
-    (row) => normalize(row[0]) === '№' && normalize(row[1]) === 'Номер поставки',
+    (row) => normalize(row[0]) === WB_CSV_LAYOUT.headerFirstCell
+      && normalize(row[1]) === WB_CSV_LAYOUT.headerSecondCell,
   )
   if (headerIndex === -1) {
     throw new Error('Не найдена строка заголовков еженедельного отчета Wildberries.')
@@ -670,40 +676,40 @@ export function buildWildberriesAccrualReports(
   }
 
   const filteredRows = dataRows.filter((row) => {
-    const article = normalize(getCell(row, 'Артикул поставщика'))
+    const article = normalize(getCell(row, WB_BASE_COLUMNS.article))
     return isArticleIncludedByPattern(article, articlePattern, excludePattern)
   })
 
   const parsedRows: WbRow[] = filteredRows.map((row) => ({
-    article: normalize(getCell(row, 'Артикул поставщика')),
-    documentType: normalize(getCell(row, 'Тип документа')),
-    reason: normalize(getCell(row, 'Обоснование для оплаты')),
-    salesDate: normalize(getCell(row, 'Дата продажи')),
-    salesMethod: normalize(getCell(row, 'Способы продажи и тип товара')),
-    warehouse: normalize(getCell(row, 'Склад')),
-    basketId: normalize(getCell(row, 'Id корзины заказа')),
-    srid: normalize(getCell(row, 'Srid')),
-    logisticsKind: normalize(getCell(row, 'Виды логистики, штрафов и корректировок ВВ')),
-    quantity: parseNumber(getCell(row, 'Кол-во')) ?? 0,
-    returnCount: parseNumber(getCell(row, 'Количество возврата')) ?? 0,
-    deliveryCount: parseNumber(getCell(row, 'Количество доставок')) ?? 0,
-    retailPrice: parseNumber(getCell(row, 'Цена розничная')) ?? 0,
-    retailPriceWithDiscount: parseNumber(getCell(row, 'Цена розничная с учетом согласованной скидки')) ?? 0,
-    sellerRealized: parseNumber(getCell(row, 'Вайлдберриз реализовал Товар (Пр)')) ?? 0,
-    payout: parseNumber(getCell(row, 'К перечислению Продавцу за реализованный Товар')) ?? 0,
-    logisticsCost: parseNumber(getCell(row, LOGISTICS_COLUMN)) ?? 0,
-    wbCommission: parseNumber(getCell(row, WB_COMMISSION_COLUMN)) ?? 0,
-    paymentServicesCommission: parseNumber(getCell(row, PAYMENT_SERVICES_COLUMN)) ?? 0,
-    pvzCompensation: parseNumber(getCell(row, PVZ_COMPENSATION_COLUMN)) ?? 0,
-    transportReimbursement: parseNumber(getCell(row, TRANSPORT_REIMBURSEMENT_COLUMN)) ?? 0,
-    storageCost: parseNumber(getCell(row, STORAGE_COLUMN)) ?? 0,
-    withholdings: parseNumber(getCell(row, WITHHOLDINGS_COLUMN)) ?? 0,
-    acceptanceOperations: parseNumber(getCell(row, ACCEPTANCE_OPERATIONS_COLUMN)) ?? 0,
-    fines: parseNumber(getCell(row, FINES_COLUMN)) ?? 0,
-    vvCorrection: parseNumber(getCell(row, VV_CORRECTION_COLUMN)) ?? 0,
-    loyaltyCompensation: parseNumber(getCell(row, 'Компенсация скидки по программе лояльности')) ?? 0,
-    loyaltyProgramCost: parseNumber(getCell(row, 'Стоимость участия в программе лояльности')) ?? 0,
-    loyaltyPointsWithheld: parseNumber(getCell(row, 'Сумма удержанная за начисленные баллы программы лояльности')) ?? 0,
+    article: normalize(getCell(row, WB_BASE_COLUMNS.article)),
+    documentType: normalize(getCell(row, WB_BASE_COLUMNS.documentType)),
+    reason: normalize(getCell(row, WB_BASE_COLUMNS.reason)),
+    salesDate: normalize(getCell(row, WB_BASE_COLUMNS.salesDate)),
+    salesMethod: normalize(getCell(row, WB_BASE_COLUMNS.salesMethod)),
+    warehouse: normalize(getCell(row, WB_BASE_COLUMNS.warehouse)),
+    basketId: normalize(getCell(row, WB_BASE_COLUMNS.basketId)),
+    srid: normalize(getCell(row, WB_BASE_COLUMNS.srid)),
+    logisticsKind: normalize(getCell(row, WB_BASE_COLUMNS.logisticsKind)),
+    quantity: parseNumber(getCell(row, WB_QUANTITY_COLUMNS.qty)) ?? 0,
+    returnCount: parseNumber(getCell(row, WB_QUANTITY_COLUMNS.returnQty)) ?? 0,
+    deliveryCount: parseNumber(getCell(row, WB_QUANTITY_COLUMNS.deliveryQty)) ?? 0,
+    retailPrice: parseNumber(getCell(row, WB_REVENUE_COLUMNS.retailPrice)) ?? 0,
+    retailPriceWithDiscount: parseNumber(getCell(row, WB_REVENUE_COLUMNS.retailPriceWithDiscount)) ?? 0,
+    sellerRealized: parseNumber(getCell(row, WB_REVENUE_COLUMNS.sellerRealized)) ?? 0,
+    payout: parseNumber(getCell(row, WB_REVENUE_COLUMNS.payout)) ?? 0,
+    logisticsCost: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.logisticsToBuyer)) ?? 0,
+    wbCommission: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.wbCommission)) ?? 0,
+    paymentServicesCommission: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.paymentServices)) ?? 0,
+    pvzCompensation: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.pvzCompensation)) ?? 0,
+    transportReimbursement: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.transportReimbursement)) ?? 0,
+    storageCost: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.storage)) ?? 0,
+    withholdings: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.withholdings)) ?? 0,
+    acceptanceOperations: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.acceptanceOperations)) ?? 0,
+    fines: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.fines)) ?? 0,
+    vvCorrection: parseNumber(getCell(row, WB_EXPENSE_COLUMNS.vvCorrection)) ?? 0,
+    loyaltyCompensation: parseNumber(getCell(row, WB_LOYALTY_COLUMNS.loyaltyCompensation)) ?? 0,
+    loyaltyProgramCost: parseNumber(getCell(row, WB_LOYALTY_COLUMNS.loyaltyProgramCost)) ?? 0,
+    loyaltyPointsWithheld: parseNumber(getCell(row, WB_LOYALTY_COLUMNS.loyaltyPointsWithheld)) ?? 0,
   }))
 
   const sumByGroup = new Map<string, number>()
@@ -878,7 +884,7 @@ export function buildWildberriesAccrualReports(
         label,
         value,
         type: 'currency',
-        formula: `-ABS(SUM("${WB_COMMISSION_COLUMN}"))`,
+        formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.wbCommission}"))`,
         shareText: formatSalesShare(value),
       }
     }
@@ -887,7 +893,7 @@ export function buildWildberriesAccrualReports(
         label,
         value,
         type: 'currency',
-        formula: `-ABS(SUM("${PAYMENT_SERVICES_COLUMN}"))`,
+        formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
         shareText: formatSalesShare(value),
       }
     }
@@ -896,7 +902,7 @@ export function buildWildberriesAccrualReports(
         label,
         value,
         type: 'currency',
-        formula: `-ABS(SUM("${ACCEPTANCE_OPERATIONS_COLUMN}"))`,
+        formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}"))`,
         shareText: formatSalesShare(value),
       }
     }
