@@ -1,3 +1,37 @@
 .App {
   min-height: 100vh;
 }
+
+.App__header {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  padding: 20px 20px 0;
+}
+
+.App__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.App__navItem {
+  text-decoration: none;
+  color: var(--color-text-accent);
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background: var(--color-bg-surface-subtle);
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.App__navItem:hover {
+  background: var(--color-bg-surface-hover);
+}
+
+.App__navItem_active {
+  color: var(--color-bg-surface);
+  border-color: var(--color-text-accent);
+  background: var(--color-text-accent);
+}
