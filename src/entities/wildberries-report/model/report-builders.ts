@@ -72,7 +72,7 @@ const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 const WB_COMMISSION_LABEL = 'Комиссия ВБ'
-const PAYMENT_SERVICES_LABEL = 'Комиссия платежных сервисов'
+const PAYMENT_SERVICES_LABEL = 'Эквайринг'
 const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
 const MARKETPLACE_EXPENSES_FORMULA = [
   `ABS(SUM("${WB_EXPENSE_COLUMNS.wbCommission}"))`,
