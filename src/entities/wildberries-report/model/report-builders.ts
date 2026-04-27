@@ -19,10 +19,13 @@ type WbRow = {
   sellerRealized: number
   payout: number
   logisticsCost: number
+  wbCommission: number
+  paymentServicesCommission: number
   pvzCompensation: number
   transportReimbursement: number
   storageCost: number
   withholdings: number
+  acceptanceOperations: number
   fines: number
   vvCorrection: number
   loyaltyCompensation: number
@@ -59,6 +62,31 @@ const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
 }
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
+const WB_COMMISSION_LABEL = 'Комиссия ВБ'
+const WB_COMMISSION_COLUMN = 'Вознаграждение Вайлдберриз (ВВ), без НДС'
+const PAYMENT_SERVICES_LABEL = 'Комиссия платежных сервисов'
+const PAYMENT_SERVICES_COLUMN = 'Компенсация платёжных услуг/Комиссия за интеграцию платёжных сервисов'
+const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
+const ACCEPTANCE_OPERATIONS_COLUMN = 'Операции на приемке'
+const LOGISTICS_COLUMN = 'Услуги по доставке товара покупателю'
+const STORAGE_COLUMN = 'Хранение'
+const WITHHOLDINGS_COLUMN = 'Удержания'
+const FINES_COLUMN = 'Общая сумма штрафов'
+const VV_CORRECTION_COLUMN = 'Корректировка Вознаграждения Вайлдберриз (ВВ)'
+const PVZ_COMPENSATION_COLUMN = 'Возмещение за выдачу и возврат товаров на ПВЗ'
+const TRANSPORT_REIMBURSEMENT_COLUMN = 'Возмещение издержек по перевозке/по складским операциям с товаром'
+const MARKETPLACE_EXPENSES_FORMULA = [
+  `ABS(SUM("${WB_COMMISSION_COLUMN}"))`,
+  `ABS(SUM("${LOGISTICS_COLUMN}"))`,
+  `ABS(SUM("${PAYMENT_SERVICES_COLUMN}"))`,
+  `ABS(SUM("${STORAGE_COLUMN}"))`,
+  `ABS(SUM("${WITHHOLDINGS_COLUMN}"))`,
+  `ABS(SUM("${ACCEPTANCE_OPERATIONS_COLUMN}"))`,
+  `ABS(SUM("${FINES_COLUMN}"))`,
+  `-SUM("${VV_CORRECTION_COLUMN}")`,
+  `ABS(SUM("${PVZ_COMPENSATION_COLUMN}"))`,
+  `ABS(SUM("${TRANSPORT_REIMBURSEMENT_COLUMN}"))`,
+].join(' + ')
 
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
@@ -338,7 +366,7 @@ function getRowAmount(row: WbRow): number {
   }
 
   if (reason === 'обработка товара') {
-    return pickSignedAmount(payout, absValue(row.withholdings), 'negative')
+    return pickSignedAmount(payout, absValue(row.withholdings) + absValue(row.acceptanceOperations), 'negative')
   }
 
   if (includesAny(reason, ['удержан', 'услуга платной доставки', 'бронирование товара через самовывоз', 'разовое изменение срока перечисления'])) {
@@ -373,10 +401,12 @@ function getRowAmount(row: WbRow): number {
     - absValue(row.loyaltyProgramCost)
     - absValue(row.loyaltyPointsWithheld)
     - absValue(row.logisticsCost)
+    - absValue(row.paymentServicesCommission)
     - absValue(row.pvzCompensation)
     - absValue(row.transportReimbursement)
     - absValue(row.storageCost)
     - absValue(row.withholdings)
+    - absValue(row.acceptanceOperations)
     - absValue(row.fines)
   const fallback = fallbackKnownAmount
   return fallback !== 0 ? fallback : 0
@@ -661,13 +691,16 @@ export function buildWildberriesAccrualReports(
     retailPriceWithDiscount: parseNumber(getCell(row, 'Цена розничная с учетом согласованной скидки')) ?? 0,
     sellerRealized: parseNumber(getCell(row, 'Вайлдберриз реализовал Товар (Пр)')) ?? 0,
     payout: parseNumber(getCell(row, 'К перечислению Продавцу за реализованный Товар')) ?? 0,
-    logisticsCost: parseNumber(getCell(row, 'Услуги по доставке товара покупателю')) ?? 0,
-    pvzCompensation: parseNumber(getCell(row, 'Возмещение за выдачу и возврат товаров на ПВЗ')) ?? 0,
-    transportReimbursement: parseNumber(getCell(row, 'Возмещение издержек по перевозке/по складским операциям с товаром')) ?? 0,
-    storageCost: parseNumber(getCell(row, 'Хранение')) ?? 0,
-    withholdings: parseNumber(getCell(row, 'Удержания')) ?? 0,
-    fines: parseNumber(getCell(row, 'Общая сумма штрафов')) ?? 0,
-    vvCorrection: parseNumber(getCell(row, 'Корректировка Вознаграждения Вайлдберриз (ВВ)')) ?? 0,
+    logisticsCost: parseNumber(getCell(row, LOGISTICS_COLUMN)) ?? 0,
+    wbCommission: parseNumber(getCell(row, WB_COMMISSION_COLUMN)) ?? 0,
+    paymentServicesCommission: parseNumber(getCell(row, PAYMENT_SERVICES_COLUMN)) ?? 0,
+    pvzCompensation: parseNumber(getCell(row, PVZ_COMPENSATION_COLUMN)) ?? 0,
+    transportReimbursement: parseNumber(getCell(row, TRANSPORT_REIMBURSEMENT_COLUMN)) ?? 0,
+    storageCost: parseNumber(getCell(row, STORAGE_COLUMN)) ?? 0,
+    withholdings: parseNumber(getCell(row, WITHHOLDINGS_COLUMN)) ?? 0,
+    acceptanceOperations: parseNumber(getCell(row, ACCEPTANCE_OPERATIONS_COLUMN)) ?? 0,
+    fines: parseNumber(getCell(row, FINES_COLUMN)) ?? 0,
+    vvCorrection: parseNumber(getCell(row, VV_CORRECTION_COLUMN)) ?? 0,
     loyaltyCompensation: parseNumber(getCell(row, 'Компенсация скидки по программе лояльности')) ?? 0,
     loyaltyProgramCost: parseNumber(getCell(row, 'Стоимость участия в программе лояльности')) ?? 0,
     loyaltyPointsWithheld: parseNumber(getCell(row, 'Сумма удержанная за начисленные баллы программы лояльности')) ?? 0,
@@ -681,7 +714,16 @@ export function buildWildberriesAccrualReports(
   const salesRevenueByScheme = createSalesSchemeMap()
   const salesTransferByScheme = createSalesSchemeMap()
 
-  let nonSalesNetAmount = 0
+  let wbCommissionAmount = 0
+  let logisticsAmount = 0
+  let paymentServicesAmount = 0
+  let storageAmount = 0
+  let withholdingsAmount = 0
+  let acceptanceOperationsAmount = 0
+  let finesAmount = 0
+  let vvCorrectionAmount = 0
+  let pvzCompensationAmount = 0
+  let transportReimbursementAmount = 0
 
   let salesQuantity = 0
   let returnsAndCancellationsQuantity = 0
@@ -729,9 +771,17 @@ export function buildWildberriesAccrualReports(
         }
       }
     }
-    if (reasonLower !== 'продажа' && reasonLower !== 'возврат') {
-      nonSalesNetAmount += amount
-    }
+    wbCommissionAmount += absValue(row.wbCommission)
+    logisticsAmount += absValue(row.logisticsCost)
+    paymentServicesAmount += absValue(row.paymentServicesCommission)
+    storageAmount += absValue(row.storageCost)
+    withholdingsAmount += absValue(row.withholdings)
+    acceptanceOperationsAmount += absValue(row.acceptanceOperations)
+    finesAmount += absValue(row.fines)
+    vvCorrectionAmount += -row.vvCorrection
+    pvzCompensationAmount += absValue(row.pvzCompensation)
+    transportReimbursementAmount += absValue(row.transportReimbursement)
+
     if (reasonLower === 'возврат') {
       returnsAmount += amount
     }
@@ -756,7 +806,17 @@ export function buildWildberriesAccrualReports(
 
   const sppAndPromotions = revenueBeforeSpp - revenueWithoutSpp
   const returnsExpense = returnsAmount === 0 ? 0 : -Math.abs(returnsAmount)
-  const marketplaceExpenses = -nonSalesNetAmount
+  const marketplaceExpenses =
+    wbCommissionAmount
+    + logisticsAmount
+    + paymentServicesAmount
+    + storageAmount
+    + withholdingsAmount
+    + acceptanceOperationsAmount
+    + finesAmount
+    + vvCorrectionAmount
+    + pvzCompensationAmount
+    + transportReimbursementAmount
   const transferToBank = revenueBeforeSpp - marketplaceExpenses
   const totalRate = (vatRatePercent + taxRatePercent) / 100
   const taxAmount = revenueBeforeSpp !== 0 ? revenueBeforeSpp * totalRate : 0
@@ -785,6 +845,27 @@ export function buildWildberriesAccrualReports(
     current.sourceLabels.add(rawLabel)
     groupedByLabel.set(group.label, current)
   }
+  if (hasNonZero(wbCommissionAmount)) {
+    groupedByLabel.set(WB_COMMISSION_LABEL, {
+      value: -wbCommissionAmount,
+      withSalesShare: true,
+      sourceLabels: new Set<string>(),
+    })
+  }
+  if (hasNonZero(paymentServicesAmount)) {
+    groupedByLabel.set(PAYMENT_SERVICES_LABEL, {
+      value: -paymentServicesAmount,
+      withSalesShare: true,
+      sourceLabels: new Set<string>(),
+    })
+  }
+  if (hasNonZero(acceptanceOperationsAmount)) {
+    groupedByLabel.set(ACCEPTANCE_OPERATIONS_LABEL, {
+      value: -acceptanceOperationsAmount,
+      withSalesShare: true,
+      sourceLabels: new Set<string>(),
+    })
+  }
 
   const groupMetrics: AccrualMetric[] = sortByAbsDesc(
     Array.from(groupedByLabel.entries()).map(([label, data]) => [label, data.value] as [string, number]),
@@ -792,6 +873,33 @@ export function buildWildberriesAccrualReports(
     .filter(([label]) => label !== SALES_AND_RETURNS_GROUP_LABEL)
     .map(([label, value]) => {
     const data = groupedByLabel.get(label)!
+    if (label === WB_COMMISSION_LABEL) {
+      return {
+        label,
+        value,
+        type: 'currency',
+        formula: `-ABS(SUM("${WB_COMMISSION_COLUMN}"))`,
+        shareText: formatSalesShare(value),
+      }
+    }
+    if (label === PAYMENT_SERVICES_LABEL) {
+      return {
+        label,
+        value,
+        type: 'currency',
+        formula: `-ABS(SUM("${PAYMENT_SERVICES_COLUMN}"))`,
+        shareText: formatSalesShare(value),
+      }
+    }
+    if (label === ACCEPTANCE_OPERATIONS_LABEL) {
+      return {
+        label,
+        value,
+        type: 'currency',
+        formula: `-ABS(SUM("${ACCEPTANCE_OPERATIONS_COLUMN}"))`,
+        shareText: formatSalesShare(value),
+      }
+    }
     const sourceLabels = Array.from(data.sourceLabels)
     const formula = sourceLabels.length === 1
       ? `SUM(net effect), фильтр: "Обоснование для оплаты" = "${sourceLabels[0]}"`
@@ -809,7 +917,7 @@ export function buildWildberriesAccrualReports(
     label: 'Итог',
     value: -Math.abs(marketplaceExpenses),
     type: 'currency',
-    formula: 'Сумма net effect по строкам, кроме "Продажа" и "Возврат" (взята с обратным знаком)',
+    formula: MARKETPLACE_EXPENSES_FORMULA,
     shareText: formatSalesShare(marketplaceExpenses),
   })
 
@@ -901,7 +1009,7 @@ export function buildWildberriesAccrualReports(
           label: 'Общие затраты по Маркетплейсу',
           value: marketplaceExpenses,
           type: 'currency',
-          formula: 'Сумма net effect по строкам, кроме "Продажа" и "Возврат" (взята с обратным знаком)',
+          formula: MARKETPLACE_EXPENSES_FORMULA,
           shareText: formatSalesShare(marketplaceExpenses),
         },
         {
