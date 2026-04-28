@@ -47,6 +47,28 @@
   opacity: 0.9;
 }
 
+.ReportUploadPanel__additional-tooltip-trigger {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--color-text-accent);
+  background: #fff;
+  color: var(--color-text-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+}
+
+.ReportUploadPanel__additional-tooltip-trigger:hover,
+.ReportUploadPanel__additional-tooltip-trigger:focus-visible {
+  background: var(--color-bg-surface-soft);
+}
+
 .ReportUploadPanel__hidden-file-input {
   position: absolute;
   width: 1px;

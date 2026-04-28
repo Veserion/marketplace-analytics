@@ -3,6 +3,7 @@ type CsvStorageMode =
   | 'accrualReport'
   | 'ozonCogs'
   | 'wildberriesAccrualReport'
+  | 'wildberriesForeignAccrualReport'
   | 'wildberriesCogs'
 
 type CsvStorageRecord = {

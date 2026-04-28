@@ -23,12 +23,16 @@ export function WildberriesPage() {
     downloadPdf,
     error,
     fileName,
+    foreignFileName,
+    foreignReportLabel,
+    uploadStatusText,
     hasResults,
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
+    onForeignFileUpload,
     onFileUpload,
     setIsArticlePatternExclude,
     setCogsMatchingMode,
@@ -83,6 +87,9 @@ export function WildberriesPage() {
         hasResults={hasResults}
         fileName={fileName}
         primaryFileLabel="Еженедельный детализированный отчет"
+        primaryUploadStatusText={uploadStatusText}
+        additionalPrimaryFileName={foreignFileName}
+        additionalPrimaryFileLabel={foreignReportLabel}
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
         secondaryFileHint='Добавьте файл себестоимости, чтобы получить точный отчет. Обязательные колонки: "Артикул" и "Себестоимость".'
@@ -92,6 +99,7 @@ export function WildberriesPage() {
         error={error}
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
+        onAdditionalPrimaryFileUpload={onForeignFileUpload}
         onSecondaryFileUpload={onCogsFileUpload}
         onDownloadPdf={downloadPdf}
       />

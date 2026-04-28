@@ -19,6 +19,14 @@ type ReportUploadPanelProps = {
   hasResults: boolean
   fileName: string
   primaryFileLabel?: string
+  primaryUploadStatusText?: string
+  primaryUploadButtonText?: string
+  primaryRefreshButtonText?: string
+  additionalPrimaryFileName?: string
+  additionalPrimaryFileLabel?: string
+  additionalPrimaryUploadButtonText?: string
+  additionalPrimaryRefreshButtonText?: string
+  additionalPrimaryTooltipText?: string
   secondaryFileName?: string
   secondaryFileLabel?: string
   secondaryFileHint?: string
@@ -28,6 +36,7 @@ type ReportUploadPanelProps = {
   error: string
   showWildberriesWarning: boolean
   onFileUpload: (event: ChangeEvent<HTMLInputElement>) => void
+  onAdditionalPrimaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
   onSecondaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
   onDownloadPdf: () => void
 }
@@ -37,6 +46,14 @@ export function ReportUploadPanel({
   hasResults,
   fileName,
   primaryFileLabel = '',
+  primaryUploadStatusText = '',
+  primaryUploadButtonText = 'Загрузить основной отчет',
+  primaryRefreshButtonText = 'Обновить основной отчет',
+  additionalPrimaryFileName = '',
+  additionalPrimaryFileLabel = 'Отчет по другим странам',
+  additionalPrimaryUploadButtonText = 'Загрузить отчет по выкупам',
+  additionalPrimaryRefreshButtonText = 'Обновить отчет по выкупам',
+  additionalPrimaryTooltipText = 'Небольшой дополнительный отчет WB по продажам в других странах. Скачивается в том же разделе, где основной еженедельный отчет.',
   secondaryFileName = '',
   secondaryFileLabel = 'CSV себестоимости товаров (опционально)',
   secondaryFileHint = '',
@@ -46,11 +63,13 @@ export function ReportUploadPanel({
   error,
   showWildberriesWarning,
   onFileUpload,
+  onAdditionalPrimaryFileUpload,
   onSecondaryFileUpload,
   onDownloadPdf,
 }: ReportUploadPanelProps) {
   const [isMissingCopied, setIsMissingCopied] = useState(false)
   const primaryFileInputRef = useRef<HTMLInputElement | null>(null)
+  const additionalPrimaryFileInputRef = useRef<HTMLInputElement | null>(null)
   const secondaryFileInputRef = useRef<HTMLInputElement | null>(null)
   const hasMissingArticles = secondaryMissingArticles.length > 0
 
@@ -81,14 +100,48 @@ export function ReportUploadPanel({
           onChange={onFileUpload}
           disabled={isProcessing}
         />
-        <UiFlex wrap="wrap" align="center" justify="between" gap={10}>
-          <Button
-            type="primary"
-            onClick={() => primaryFileInputRef.current?.click()}
+        {onAdditionalPrimaryFileUpload && (
+          <input
+            ref={additionalPrimaryFileInputRef}
+            className={cn(`${BLOCK_NAME}__hidden-file-input`)}
+            type="file"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            onChange={onAdditionalPrimaryFileUpload}
             disabled={isProcessing}
-          >
-            Выбрать файл
-          </Button>
+          />
+        )}
+        <UiFlex wrap="wrap" align="center" justify="between" gap={10}>
+          <UiFlex wrap="wrap" align="center" gap={24}>
+            <Button
+              type="primary"
+              onClick={() => primaryFileInputRef.current?.click()}
+              disabled={isProcessing}
+            >
+              {fileName ? primaryRefreshButtonText : primaryUploadButtonText}
+            </Button>
+            {onAdditionalPrimaryFileUpload && (
+              <UiFlex align="center" gap={6}>
+                <Button
+                  type={additionalPrimaryFileName ? 'default' : 'dashed'}
+                  onClick={() => additionalPrimaryFileInputRef.current?.click()}
+                  disabled={isProcessing}
+                >
+                  {additionalPrimaryFileName
+                    ? additionalPrimaryRefreshButtonText
+                    : additionalPrimaryUploadButtonText}
+                </Button>
+                <Tooltip title={additionalPrimaryTooltipText}>
+                  <button
+                    type="button"
+                    className={cn(`${BLOCK_NAME}__additional-tooltip-trigger`)}
+                    aria-label="Информация об отчете по другим странам"
+                  >
+                    ?
+                  </button>
+                </Tooltip>
+              </UiFlex>
+            )}
+          </UiFlex>
           <Button
             onClick={onDownloadPdf}
             disabled={isProcessing || !hasResults}
@@ -96,14 +149,39 @@ export function ReportUploadPanel({
             Скачать метрики в PDF
           </Button>
         </UiFlex>
-        <Typography
-          variant="body3"
-          color={fileName ? 'accent' : 'muted'}
-          semiBold={Boolean(fileName)}
-          className={cn(`${BLOCK_NAME}__file-meta`)}
-        >
-          {fileName ? `Загружен: ${fileName}` : 'Файл не выбран'}
-        </Typography>
+        {primaryUploadStatusText ? (
+          <Typography
+            variant="body3"
+            color="accent"
+            semiBold
+            className={cn(`${BLOCK_NAME}__file-meta`)}
+          >
+            {primaryUploadStatusText}
+          </Typography>
+        ) : (
+          <>
+            <Typography
+              variant="body3"
+              color={fileName ? 'accent' : 'muted'}
+              semiBold={Boolean(fileName)}
+              className={cn(`${BLOCK_NAME}__file-meta`)}
+            >
+              {fileName ? `Загружен: ${fileName}` : 'Файл не выбран'}
+            </Typography>
+            {onAdditionalPrimaryFileUpload && (
+              <Typography
+                variant="body3"
+                color={additionalPrimaryFileName ? 'accent' : 'muted'}
+                semiBold={Boolean(additionalPrimaryFileName)}
+                className={cn(`${BLOCK_NAME}__file-meta`)}
+              >
+                {additionalPrimaryFileName
+                  ? `${additionalPrimaryFileLabel}: ${additionalPrimaryFileName}`
+                  : `${additionalPrimaryFileLabel}: файл не выбран`}
+              </Typography>
+            )}
+          </>
+        )}
       </UiCard>
 
       {onSecondaryFileUpload && (

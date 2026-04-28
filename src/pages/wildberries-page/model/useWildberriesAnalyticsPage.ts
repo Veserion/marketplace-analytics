@@ -11,7 +11,7 @@ import {
   getWildberriesMissingCogsArticles,
   type WildberriesTopProductItem,
 } from '@/entities/wildberries-report'
-import { formatValue } from '@/shared/lib/csv'
+import { formatValue, normalize, parseCsv } from '@/shared/lib/csv'
 import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
@@ -30,6 +30,51 @@ const STRUCTURE_PREFIX = 'Структура: '
 const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
 const COGS_FILE_ALIAS = 'Себестоимость'
 const WB_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей Ozon'
+const FOREIGN_REPORT_LABEL = 'Отчет по продажам в других странах'
+
+function stripBom(value: string): string {
+  return value.startsWith('\uFEFF') ? value.slice(1) : value
+}
+
+function escapeCsvCell(value: string): string {
+  if (!/[;"\r\n]/.test(value)) return value
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+function rowsToCsv(rows: string[][]): string {
+  return rows.map((row) => row.map((cell) => escapeCsvCell(cell ?? '')).join(';')).join('\n')
+}
+
+function parseCsvRows(csvSource: string): string[][] {
+  return parseCsv(stripBom(csvSource))
+}
+
+function mergeWildberriesReports(
+  primaryCsvSource: string | null,
+  foreignCsvSource: string | null,
+): string | null {
+  if (!primaryCsvSource && !foreignCsvSource) return null
+  if (!primaryCsvSource) return foreignCsvSource
+  if (!foreignCsvSource) return primaryCsvSource
+
+  const primaryRows = parseCsvRows(primaryCsvSource)
+  const foreignRows = parseCsvRows(foreignCsvSource)
+  if (primaryRows.length === 0 || foreignRows.length === 0) {
+    throw new Error('Не удалось объединить отчеты Wildberries: один из файлов пустой.')
+  }
+
+  const primaryHeader = primaryRows[0] ?? []
+  const foreignHeader = foreignRows[0] ?? []
+  const normalizedPrimaryHeader = primaryHeader.map((cell) => normalize(cell))
+  const normalizedForeignHeader = foreignHeader.map((cell) => normalize(cell))
+  const sameHeader = normalizedPrimaryHeader.length === normalizedForeignHeader.length
+    && normalizedPrimaryHeader.every((cell, index) => cell === normalizedForeignHeader[index])
+  if (!sameHeader) {
+    throw new Error('Не удалось объединить отчеты Wildberries: набор колонок в файлах не совпадает.')
+  }
+
+  return rowsToCsv([primaryHeader, ...primaryRows.slice(1), ...foreignRows.slice(1)])
+}
 
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
@@ -106,8 +151,10 @@ function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
 }
 
 export function useWildberriesAnalyticsPage() {
-  const [csvSource, setCsvSource] = useState<string | null>(null)
+  const [primaryCsvSource, setPrimaryCsvSource] = useState<string | null>(null)
   const [fileName, setFileName] = useState('')
+  const [foreignCsvSource, setForeignCsvSource] = useState<string | null>(null)
+  const [foreignFileName, setForeignFileName] = useState('')
   const [cogsCsvSource, setCogsCsvSource] = useState<string | null>(null)
   const [cogsFileName, setCogsFileName] = useState('')
   const [cogsFallbackNote, setCogsFallbackNote] = useState('')
@@ -119,6 +166,22 @@ export function useWildberriesAnalyticsPage() {
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
+
+  const mergedCsvBuild = useMemo(() => {
+    try {
+      return {
+        csvSource: mergeWildberriesReports(primaryCsvSource, foreignCsvSource),
+        error: '',
+      }
+    } catch (err) {
+      return {
+        csvSource: null,
+        error: err instanceof Error ? err.message : 'Не удалось объединить отчеты Wildberries.',
+      }
+    }
+  }, [primaryCsvSource, foreignCsvSource])
+
+  const csvSource = mergedCsvBuild.csvSource
 
   const cogsByArticleMap = useMemo(() => {
     if (!cogsCsvSource) return null
@@ -175,7 +238,14 @@ export function useWildberriesAnalyticsPage() {
   }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent, isArticlePatternExclude])
 
   const reports = reportBuild.reports
-  const error = uploadError || reportBuild.error
+  const periodLabel = reports?.find((report) => report.title === 'Итоги периода')?.periodLabel ?? ''
+  const uploadStatusText = useMemo(() => {
+    const loadedCount = Number(Boolean(fileName)) + Number(Boolean(foreignFileName))
+    if (!loadedCount || !periodLabel) return ''
+    const reportLabel = loadedCount > 1 ? 'Загружены отчеты' : 'Загружен отчет'
+    return `${reportLabel} ${periodLabel}`
+  }, [fileName, foreignFileName, periodLabel])
+  const error = uploadError || mergedCsvBuild.error || reportBuild.error
   const hasResults = Boolean(reports)
 
   const onVatRateChange = (value: number): void => {
@@ -191,16 +261,44 @@ export function useWildberriesAnalyticsPage() {
     if (!file) return
 
     setUploadError('')
-    setCsvSource(null)
+    setPrimaryCsvSource(null)
     setFileName(file.name)
     setIsProcessing(true)
 
     try {
       const text = await readUploadFileAsCsv(file)
-      setCsvSource(text)
+      setPrimaryCsvSource(text)
       try {
         await saveCsvRecord({
           mode: 'wildberriesAccrualReport',
+          csvText: text,
+          fileName: file.name,
+          updatedAt: Date.now(),
+        })
+      } catch {
+        // Ignore persistence errors to keep file upload flow functional.
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const onForeignFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadError('')
+    setForeignFileName(file.name)
+    setIsProcessing(true)
+
+    try {
+      const text = await readUploadFileAsCsv(file)
+      setForeignCsvSource(text)
+      try {
+        await saveCsvRecord({
+          mode: 'wildberriesForeignAccrualReport',
           csvText: text,
           fileName: file.name,
           updatedAt: Date.now(),
@@ -257,11 +355,18 @@ export function useWildberriesAnalyticsPage() {
 
   useEffect(() => {
     let isCancelled = false
-    Promise.all([getCsvRecord('wildberriesAccrualReport'), getCsvRecord('wildberriesCogs'), getCsvRecord('ozonCogs')])
-      .then(([mainRecord, wbCogsRecord, ozonCogsRecord]) => {
+    Promise.all([
+      getCsvRecord('wildberriesAccrualReport'),
+      getCsvRecord('wildberriesForeignAccrualReport'),
+      getCsvRecord('wildberriesCogs'),
+      getCsvRecord('ozonCogs'),
+    ])
+      .then(([mainRecord, foreignRecord, wbCogsRecord, ozonCogsRecord]) => {
         if (isCancelled) return
-        setCsvSource(mainRecord?.csvText ?? null)
+        setPrimaryCsvSource(mainRecord?.csvText ?? null)
         setFileName(mainRecord?.fileName ?? '')
+        setForeignCsvSource(foreignRecord?.csvText ?? null)
+        setForeignFileName(foreignRecord?.fileName ?? '')
         if (wbCogsRecord?.csvText) {
           setCogsCsvSource(wbCogsRecord.csvText)
           setCogsFileName(COGS_FILE_ALIAS)
@@ -301,6 +406,7 @@ export function useWildberriesAnalyticsPage() {
 
   const downloadPdf = async (): Promise<void> => {
     if (!reports) return
+    const pdfSource = [fileName, foreignFileName].filter(Boolean).join(' + ')
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
     await configurePdfFont(doc)
@@ -309,7 +415,7 @@ export function useWildberriesAnalyticsPage() {
       theme: PDF_THEMES.wildberries,
       title: 'Marketplace Analytics',
       subtitle: 'Wildberries / Отчет по поступлениям',
-      source: fileName,
+      source: pdfSource,
       sections: buildWildberriesPdfSections(reports),
     })
     doc.save(`wildberries-analytics-${Date.now()}.pdf`)
@@ -323,12 +429,16 @@ export function useWildberriesAnalyticsPage() {
     downloadPdf,
     error,
     fileName,
+    foreignFileName,
+    foreignReportLabel: FOREIGN_REPORT_LABEL,
+    uploadStatusText,
     hasResults,
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
+    onForeignFileUpload,
     onFileUpload,
     setIsArticlePatternExclude,
     setCogsMatchingMode,
