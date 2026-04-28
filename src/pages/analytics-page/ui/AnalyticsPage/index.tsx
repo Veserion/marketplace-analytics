@@ -22,6 +22,8 @@ export function AnalyticsPage() {
     accrualReports,
     accrualArticlePattern,
     articlePattern,
+    cogsFallbackNote,
+    cogsFileName,
     clearMetrics,
     downloadPdf,
     error,
@@ -33,6 +35,7 @@ export function AnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
+    onCogsFileUpload,
     onFileUpload,
     onSwitchOzonCalculation,
     onTaxRateChange,
@@ -109,9 +112,14 @@ export function AnalyticsPage() {
         isProcessing={isProcessing}
         hasResults={hasResults}
         fileName={fileName}
+        secondaryFileName={cogsFileName}
+        secondaryFileLabel="Себестоимость товаров"
+        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryUsageNote={cogsFallbackNote}
         error={error}
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
+        onSecondaryFileUpload={onCogsFileUpload}
         onDownloadPdf={downloadPdf}
       />
 
@@ -129,7 +137,7 @@ export function AnalyticsPage() {
           {createElement(lazyAccrualResults, {
             reports: accrualReports,
             showAccrualOverview: true,
-            cogsMissingValueText: 'Нет данных: загрузите "Юнит экономика" за тот же период',
+            cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
           })}
         </Suspense>
       )}

@@ -6,6 +6,14 @@ import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
 
+function hasHeaderCell(row: string[], headerName: string): boolean {
+  return row.some((cell) => normalize(cell) === headerName)
+}
+
+function findHeaderRowIndex(rows: string[][], requiredHeaders: string[]): number {
+  return rows.findIndex((row) => requiredHeaders.every((header) => hasHeaderCell(row, header)))
+}
+
 function patternToRegex(pattern: string): RegExp | null {
   const normalized = pattern.trim()
   if (!normalized) return null
@@ -206,7 +214,11 @@ export function buildUnitEconomicsReports(
   excludePattern = false,
 ): ReportGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
-  const headerIndex = rows.findIndex((row) => normalize(row[0]) === OZON_CSV_LAYOUT.unitHeaderFirstCell)
+  const headerIndex = findHeaderRowIndex(rows, [
+    OZON_CSV_LAYOUT.unitHeaderFirstCell,
+    OZON_UNIT_COLUMNS.article,
+    OZON_UNIT_COLUMNS.revenue,
+  ])
   if (headerIndex === -1) {
     throw new Error(`Не найдена строка заголовков с колонкой ${OZON_CSV_LAYOUT.unitHeaderFirstCell}.`)
   }
@@ -246,9 +258,99 @@ function normalizeArticleKey(article: string): string {
   return normalize(article).toLowerCase()
 }
 
+function parseCsvWithDelimiterFallback(rawCsv: string): string[][] {
+  const normalized = rawCsv.replace(/^\uFEFF/, '')
+  const semicolonRows = parseCsv(normalized, OZON_CSV_LAYOUT.delimiter)
+  if (semicolonRows.some((row) => row.length > 1)) return semicolonRows
+  return parseCsv(normalized, ',')
+}
+
+function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
+  const normalizedHeaders = headers.map((header) => normalize(header).toLowerCase().replace(/ё/g, 'е'))
+  const articleIdx = normalizedHeaders.findIndex(
+    (header) => header === normalize(OZON_UNIT_COLUMNS.article).toLowerCase().replace(/ё/g, 'е'),
+  )
+  if (articleIdx === -1) return null
+
+  const cogsIdx = normalizedHeaders.findIndex(
+    (header) => header === normalize(OZON_UNIT_COLUMNS.cogs).toLowerCase().replace(/ё/g, 'е'),
+  )
+  if (cogsIdx === -1) return null
+
+  return { articleIdx, cogsIdx }
+}
+
+type CogsRow = {
+  article: string
+  cogs: number
+}
+
+function parseOzonCogsRows(rawCsv: string): CogsRow[] | null {
+  const rows = parseCsvWithDelimiterFallback(rawCsv)
+  const headerIndex = rows.findIndex((row) => findCogsHeader(row) !== null)
+  if (headerIndex === -1) return null
+
+  const header = findCogsHeader(rows[headerIndex])
+  if (!header) return null
+
+  const dataRows = rows
+    .slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => normalize(cell) !== ''))
+
+  const result: CogsRow[] = []
+  for (const row of dataRows) {
+    const article = normalize(row[header.articleIdx] || '')
+    const cogs = parseNumber(row[header.cogsIdx] || '')
+    if (!article || cogs === null) continue
+    result.push({ article, cogs })
+  }
+  return result
+}
+
+function escapeCsvCell(value: string): string {
+  if (!/[;"\r\n]/.test(value)) return value
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+export function extractOzonCogsCsv(rawCsv: string): string | null {
+  const parsedRows = parseOzonCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const lines = [`${OZON_UNIT_COLUMNS.article};${OZON_UNIT_COLUMNS.cogs}`]
+  for (const row of parsedRows) {
+    lines.push(`${escapeCsvCell(row.article)};${String(row.cogs)}`)
+  }
+  return lines.join('\n')
+}
+
+export function buildOzonCogsMap(rawCsv: string): Map<string, number> | null {
+  const parsedRows = parseOzonCogsRows(rawCsv)
+  if (!parsedRows) return null
+
+  const byArticle = new Map<string, { sum: number, count: number }>()
+  for (const row of parsedRows) {
+    const articleKey = normalizeArticleKey(row.article)
+    const current = byArticle.get(articleKey) || { sum: 0, count: 0 }
+    current.sum += row.cogs
+    current.count += 1
+    byArticle.set(articleKey, current)
+  }
+
+  const result = new Map<string, number>()
+  for (const [article, stats] of byArticle.entries()) {
+    if (stats.count === 0) continue
+    result.set(article, stats.sum / stats.count)
+  }
+  return result
+}
+
 export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | null {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
-  const headerIndex = rows.findIndex((row) => normalize(row[0]) === OZON_CSV_LAYOUT.unitHeaderFirstCell)
+  const headerIndex = findHeaderRowIndex(rows, [
+    OZON_CSV_LAYOUT.unitHeaderFirstCell,
+    OZON_UNIT_COLUMNS.article,
+    OZON_UNIT_COLUMNS.cogs,
+  ])
   if (headerIndex === -1) return null
 
   const headers = rows[headerIndex].map((cell) => normalize(cell))
@@ -283,15 +385,17 @@ export function buildAccrualReports(
   rawCsv: string,
   vatRatePercent = 5,
   taxRatePercent = 6,
-  unitArticleCogsMap: Map<string, number> | null = null,
+  cogsByArticleMap: Map<string, number> | null = null,
   articlePattern = '*',
   excludePattern = false,
 ): AccrualGroup[] {
   const rows = parseCsv(rawCsv.replace(/^\uFEFF/, ''), OZON_CSV_LAYOUT.delimiter)
-  const headerIndex = rows.findIndex(
-    (row) => normalize(row[0]) === OZON_CSV_LAYOUT.accrualHeaderFirstCell
-      && normalize(row[1]) === OZON_CSV_LAYOUT.accrualHeaderSecondCell,
-  )
+  const headerIndex = findHeaderRowIndex(rows, [
+    OZON_CSV_LAYOUT.accrualHeaderFirstCell,
+    OZON_CSV_LAYOUT.accrualHeaderSecondCell,
+    OZON_ACCRUAL_COLUMNS.amount,
+    OZON_ACCRUAL_COLUMNS.serviceGroup,
+  ])
   if (headerIndex === -1) {
     throw new Error('Не найдена строка заголовков отчета по начислениям.')
   }
@@ -316,7 +420,7 @@ export function buildAccrualReports(
   ))
 
   const accrualCogsFromUnitMap = (() => {
-    if (!unitArticleCogsMap || unitArticleCogsMap.size === 0) return null
+    if (!cogsByArticleMap || cogsByArticleMap.size === 0) return null
     if (
       !colIndex.has(OZON_ACCRUAL_COLUMNS.article)
       || !colIndex.has(OZON_ACCRUAL_COLUMNS.qty)
@@ -333,7 +437,7 @@ export function buildAccrualReports(
       const articleKey = normalizeArticleKey(getCell(row, OZON_ACCRUAL_COLUMNS.article))
       const quantity = parseNumber(getCell(row, OZON_ACCRUAL_COLUMNS.qty))
       if (!articleKey || quantity === null) continue
-      const unitCost = unitArticleCogsMap.get(articleKey)
+      const unitCost = cogsByArticleMap.get(articleKey)
       if (unitCost === undefined) continue
       total += quantity * unitCost
       matchedRows += 1

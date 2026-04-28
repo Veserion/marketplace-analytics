@@ -51,7 +51,6 @@ export function ReportUploadPanel({
   const primaryFileInputId = useId()
   const secondaryFileInputId = useId()
   const primaryFileInputRef = useRef<HTMLInputElement | null>(null)
-  const secondaryFileInputRef = useRef<HTMLInputElement | null>(null)
   const hasMissingArticles = secondaryMissingArticles.length > 0
 
   const copyMissingArticles = async (): Promise<void> => {
@@ -79,7 +78,7 @@ export function ReportUploadPanel({
             id={primaryFileInputId}
             className={cn(`${BLOCK_NAME}__file-input`)}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={onFileUpload}
             disabled={isProcessing}
           />
@@ -121,21 +120,13 @@ export function ReportUploadPanel({
             </Typography>
           )}
           <input
-            ref={secondaryFileInputRef}
             id={secondaryFileInputId}
             className={cn(`${BLOCK_NAME}__file-input`)}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={onSecondaryFileUpload}
             disabled={isProcessing}
           />
-          <Button
-            className={cn(`${BLOCK_NAME}__file-button`)}
-            onClick={() => secondaryFileInputRef.current?.click()}
-            disabled={isProcessing}
-          >
-            Выбрать файл
-          </Button>
           {secondaryFileName && (
             <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__file-meta`)}>
               Файл себестоимости: {secondaryFileName}

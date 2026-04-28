@@ -20,6 +20,7 @@ export function WildberriesPage() {
   const navigate = useNavigate()
   const {
     articlePattern,
+    cogsFallbackNote,
     cogsFileName,
     cogsMatchingMode,
     downloadPdf,
@@ -97,6 +98,7 @@ export function WildberriesPage() {
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
         secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryUsageNote={cogsFallbackNote}
         secondaryMissingArticles={missingCogsArticles}
         secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
         error={error}

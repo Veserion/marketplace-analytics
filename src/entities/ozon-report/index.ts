@@ -1,5 +1,5 @@
 export { METRICS } from '@/entities/ozon-report/config/metrics'
-export { buildAccrualReports, buildUnitArticleCogsMap, buildUnitEconomicsReports } from '@/entities/ozon-report/model/report-builders'
+export { buildAccrualReports, buildOzonCogsMap, buildUnitArticleCogsMap, buildUnitEconomicsReports, extractOzonCogsCsv } from '@/entities/ozon-report/model/report-builders'
 export { getUnitMetricClassValue, getUnitMetricDisplay, getUnitMetricDisplayValue } from '@/entities/ozon-report/model/unit-metric-view'
 export type {
   AccrualGroup,

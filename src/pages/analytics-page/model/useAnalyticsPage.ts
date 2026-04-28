@@ -3,8 +3,9 @@ import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import {
   buildAccrualReports,
-  buildUnitArticleCogsMap,
+  buildOzonCogsMap,
   buildUnitEconomicsReports,
+  extractOzonCogsCsv,
   getUnitMetricClassValue,
   getUnitMetricDisplay,
   METRICS,
@@ -18,6 +19,7 @@ import type {
 import { formatValue } from '@/shared/lib/csv'
 import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
@@ -28,32 +30,16 @@ const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не в
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
-const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
+const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
 const STRUCTURE_PREFIX = 'Структура: '
+const COGS_FILE_ALIAS = 'Себестоимость'
+const OZON_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей WB'
 
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
   const raw = window.localStorage.getItem(key)
   const parsed = raw === null ? Number.NaN : Number(raw)
   return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function getPeriodKeyFromFileName(fileName: string): string | null {
-  const normalized = fileName.trim()
-  if (!normalized) return null
-  const match = normalized.match(/(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}(?:\.\d{4})?)/)
-  if (!match) return null
-  const start = match[1]
-  const endRaw = match[2]
-  const year = start.split('.')[2]
-  const end = /^\d{2}\.\d{2}$/.test(endRaw) ? `${endRaw}.${year}` : endRaw
-  return `${start}-${end}`
-}
-
-function hasSamePeriod(unitFileName: string, accrualFileName: string): boolean {
-  const unitPeriod = getPeriodKeyFromFileName(unitFileName)
-  const accrualPeriod = getPeriodKeyFromFileName(accrualFileName)
-  return Boolean(unitPeriod && accrualPeriod && unitPeriod === accrualPeriod)
 }
 
 function getValueTone(value: number | null): PdfMetricTone {
@@ -221,7 +207,6 @@ export function useOzonAnalyticsPage() {
   const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('unitEconomics')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
   const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
-  const [accrualFileName, setAccrualFileName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [fileName, setFileName] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -232,7 +217,9 @@ export function useOzonAnalyticsPage() {
   const [isUnitArticlePatternExclude, setIsUnitArticlePatternExclude] = useState(false)
   const [isAccrualArticlePatternExclude, setIsAccrualArticlePatternExclude] = useState(false)
   const [unitCsvSource, setUnitCsvSource] = useState<string | null>(null)
-  const [unitFileName, setUnitFileName] = useState('')
+  const [cogsCsvSource, setCogsCsvSource] = useState<string | null>(null)
+  const [cogsFileName, setCogsFileName] = useState('')
+  const [cogsFallbackNote, setCogsFallbackNote] = useState('')
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
@@ -259,17 +246,19 @@ export function useOzonAnalyticsPage() {
     }
   }, [articlePattern, isOzonUnitEconomics, isUnitArticlePatternExclude, taxRatePercent, unitCsvSource, vatRatePercent])
   const unitReports = unitReportBuild.reports
+  const cogsByArticleMap = useMemo(() => {
+    if (!cogsCsvSource) return null
+    return buildOzonCogsMap(cogsCsvSource)
+  }, [cogsCsvSource])
   const accrualReportBuild = useMemo(() => {
     if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
-      const samePeriod = hasSamePeriod(unitFileName, accrualFileName)
-      const unitArticleCogsMap = samePeriod && unitCsvSource ? buildUnitArticleCogsMap(unitCsvSource) : null
       return {
         reports: buildAccrualReports(
           accrualCsvSource,
           vatRatePercent,
           taxRatePercent,
-          unitArticleCogsMap,
+          cogsByArticleMap,
           accrualArticlePattern,
           isAccrualArticlePatternExclude,
         ),
@@ -284,12 +273,10 @@ export function useOzonAnalyticsPage() {
   }, [
     accrualArticlePattern,
     accrualCsvSource,
-    accrualFileName,
     isAccrualArticlePatternExclude,
     taxRatePercent,
-    unitCsvSource,
-    unitFileName,
     vatRatePercent,
+    cogsByArticleMap,
   ])
   const accrualReports = accrualReportBuild.reports
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
@@ -330,13 +317,11 @@ export function useOzonAnalyticsPage() {
     setIsProcessing(true)
 
     try {
-      const text = await file.text()
+      const text = await readUploadFileAsCsv(file)
       if (ozonCalculationType === 'accrualReport') {
         setAccrualCsvSource(text)
-        setAccrualFileName(file.name)
       } else {
         setUnitCsvSource(text)
-        setUnitFileName(file.name)
       }
 
       try {
@@ -344,6 +329,46 @@ export function useOzonAnalyticsPage() {
           mode: ozonCalculationType,
           csvText: text,
           fileName: file.name,
+          updatedAt: Date.now(),
+        })
+      } catch {
+        // Ignore persistence errors to keep file upload flow functional.
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const onCogsFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadError('')
+    setIsProcessing(true)
+
+    try {
+      const text = await readUploadFileAsCsv(file)
+      const compactCsv = extractOzonCogsCsv(text)
+      if (!compactCsv) {
+        setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
+        return
+      }
+      const parsedMap = buildOzonCogsMap(compactCsv)
+      if (!parsedMap) {
+        setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
+        return
+      }
+
+      setCogsCsvSource(compactCsv)
+      setCogsFileName(COGS_FILE_ALIAS)
+      setCogsFallbackNote('')
+      try {
+        await saveCsvRecord({
+          mode: 'ozonCogs',
+          csvText: compactCsv,
+          fileName: COGS_FILE_ALIAS,
           updatedAt: Date.now(),
         })
       } catch {
@@ -368,14 +393,32 @@ export function useOzonAnalyticsPage() {
 
   useEffect(() => {
     let isCancelled = false
-    Promise.all([getCsvRecord('unitEconomics'), getCsvRecord('accrualReport')])
-      .then(([unitRecord, accrualRecord]) => {
+    Promise.all([
+      getCsvRecord('unitEconomics'),
+      getCsvRecord('accrualReport'),
+      getCsvRecord('ozonCogs'),
+      getCsvRecord('wildberriesCogs'),
+    ])
+      .then(([unitRecord, accrualRecord, ozonCogsRecord, wbCogsRecord]) => {
         if (isCancelled) return
 
         setUnitCsvSource(unitRecord?.csvText ?? null)
         setAccrualCsvSource(accrualRecord?.csvText ?? null)
-        setUnitFileName(unitRecord?.fileName ?? '')
-        setAccrualFileName(accrualRecord?.fileName ?? '')
+
+        if (ozonCogsRecord?.csvText) {
+          setCogsCsvSource(ozonCogsRecord.csvText)
+          setCogsFileName(COGS_FILE_ALIAS)
+          setCogsFallbackNote('')
+        } else if (wbCogsRecord?.csvText) {
+          setCogsCsvSource(wbCogsRecord.csvText)
+          setCogsFileName(COGS_FILE_ALIAS)
+          setCogsFallbackNote(OZON_COGS_FALLBACK_NOTE)
+        } else {
+          setCogsCsvSource(null)
+          setCogsFileName('')
+          setCogsFallbackNote('')
+        }
+
         if (ozonCalculationType === 'unitEconomics') {
           setFileName(unitRecord?.fileName ?? '')
         } else {
@@ -416,6 +459,8 @@ export function useOzonAnalyticsPage() {
     accrualReports,
     accrualArticlePattern,
     articlePattern,
+    cogsFallbackNote,
+    cogsFileName,
     clearMetrics,
     downloadPdf,
     error,
@@ -428,6 +473,7 @@ export function useOzonAnalyticsPage() {
     isProcessing,
     isUnitArticlePatternExclude,
     onFileUpload,
+    onCogsFileUpload,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,
