@@ -6,6 +6,46 @@ import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
 
+function formatDateLabel(date: Date): string {
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const year = String(date.getUTCFullYear())
+  return `${day}.${month}.${year}`
+}
+
+function excelSerialToDate(serial: number): Date | null {
+  if (!Number.isFinite(serial)) return null
+  if (serial < 1 || serial > 100000) return null
+  const timestamp = Date.UTC(1899, 11, 30) + Math.round(serial) * 24 * 60 * 60 * 1000
+  const date = new Date(timestamp)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function parseAccrualDateLabelToTimestamp(raw: string): number | null {
+  const normalized = normalize(raw)
+  if (!normalized || normalized === 'Без даты') return null
+
+  const serialMatch = normalized.match(/^\d+(?:[.,]\d+)?$/)
+  if (serialMatch) {
+    const serial = Number(normalized.replace(',', '.'))
+    const date = excelSerialToDate(serial)
+    return date ? date.getTime() : null
+  }
+
+  const [day, month, year] = normalized.split('.').map(Number)
+  if ([day, month, year].some((part) => Number.isNaN(part))) return null
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? null : date.getTime()
+}
+
+function normalizeAccrualDateLabel(raw: string): string {
+  const normalized = normalize(raw)
+  if (!normalized) return ''
+  const timestamp = parseAccrualDateLabelToTimestamp(normalized)
+  if (timestamp === null) return normalized
+  return formatDateLabel(new Date(timestamp))
+}
+
 function hasHeaderCell(row: string[], headerName: string): boolean {
   return row.some((cell) => normalize(cell) === headerName)
 }
@@ -470,7 +510,7 @@ export function buildAccrualReports(
 
     const group = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.serviceGroup)) || 'Без группы'
     const type = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.accrualType)) || 'Без типа'
-    const date = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.accrualDate)) || 'Без даты'
+    const date = normalizeAccrualDateLabel(getCell(row, OZON_ACCRUAL_COLUMNS.accrualDate)) || 'Без даты'
     const scheme = normalize(getCell(row, OZON_ACCRUAL_COLUMNS.scheme))
 
     total += amount
@@ -619,12 +659,7 @@ export function buildAccrualReports(
 
   const accrualPeriodLabel = (() => {
     const timestamps = Array.from(sumByDate.keys())
-      .map((label) => {
-        const [day, month, year] = label.split('.').map(Number)
-        if ([day, month, year].some((part) => Number.isNaN(part))) return null
-        const date = new Date(year, month - 1, day)
-        return Number.isNaN(date.getTime()) ? null : date.getTime()
-      })
+      .map((label) => parseAccrualDateLabelToTimestamp(label))
       .filter((timestamp): timestamp is number => timestamp !== null)
       .sort((a, b) => a - b)
     if (timestamps.length === 0) return undefined
@@ -725,9 +760,12 @@ export function buildAccrualReports(
       title: 'Динамика по датам начисления',
       metrics: Array.from(sumByDate.entries())
         .sort(([a], [b]) => {
-          const [da, ma, ya] = a.split('.').map(Number)
-          const [db, mb, yb] = b.split('.').map(Number)
-          return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime()
+          const aTs = parseAccrualDateLabelToTimestamp(a)
+          const bTs = parseAccrualDateLabelToTimestamp(b)
+          if (aTs !== null && bTs !== null) return aTs - bTs
+          if (aTs !== null) return -1
+          if (bTs !== null) return 1
+          return a.localeCompare(b, 'ru')
         })
         .map(([label, value]) => ({
           label,

@@ -13,8 +13,8 @@ type OzonCalculationTabsProps = {
 
 export function OzonCalculationTabs({ value, onChange }: OzonCalculationTabsProps) {
   const items: { key: OzonCalculationType, label: string }[] = [
-    { key: 'unitEconomics', label: 'Юнит экономика' },
     { key: 'accrualReport', label: 'Отчет по начислениям' },
+    { key: 'unitEconomics', label: 'Юнит экономика' },
   ]
 
   return (

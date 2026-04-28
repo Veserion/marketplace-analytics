@@ -204,7 +204,7 @@ function buildOzonAccrualPdfSections(reports: AccrualGroup[]): PdfSection[] {
 }
 
 export function useOzonAnalyticsPage() {
-  const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('unitEconomics')
+  const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('accrualReport')
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
   const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
