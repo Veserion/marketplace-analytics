@@ -75,7 +75,7 @@ const WB_COMMISSION_LABEL = 'Комиссия ВБ'
 const PAYMENT_SERVICES_LABEL = 'Эквайринг'
 const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
 const MARKETPLACE_EXPENSES_FORMULA = [
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.wbCommission}"))`,
+  `(SUM("${WB_REVENUE_COLUMNS.retailPrice}") - SUM("${WB_REVENUE_COLUMNS.payout}"))`,
   `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
   `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
   `ABS(SUM("${WB_EXPENSE_COLUMNS.storage}"))`,
@@ -736,6 +736,7 @@ export function buildWildberriesAccrualReports(
   let returnsAmount = 0
   let revenueBeforeSpp = 0
   let revenueWithoutSpp = 0
+  let payoutForSoldItems = 0
   let cogsFromFile = 0
   let cogsMatchedRows = 0
 
@@ -762,6 +763,7 @@ export function buildWildberriesAccrualReports(
       const saleRevenue = row.retailPrice
       revenueBeforeSpp += saleRevenue
       revenueWithoutSpp += row.sellerRealized
+      payoutForSoldItems += row.payout
       const saleDate = row.salesDate || 'Без даты'
       addToMap(salesDateRangeMap, saleDate, 0)
       const salesScheme = resolveSalesScheme(row, schemeBySrid, schemeByBasketId)
@@ -777,7 +779,6 @@ export function buildWildberriesAccrualReports(
         }
       }
     }
-    wbCommissionAmount += absValue(row.wbCommission)
     logisticsAmount += absValue(row.logisticsCost)
     paymentServicesAmount += absValue(row.paymentServicesCommission)
     storageAmount += absValue(row.storageCost)
@@ -809,6 +810,8 @@ export function buildWildberriesAccrualReports(
     }
     addToMap(groupTypeBreakdown.get(reason)!, breakdownType, amount)
   }
+
+  wbCommissionAmount = revenueBeforeSpp - payoutForSoldItems
 
   const sppAndPromotions = revenueBeforeSpp - revenueWithoutSpp
   const returnsExpense = returnsAmount === 0 ? 0 : -Math.abs(returnsAmount)
@@ -884,7 +887,7 @@ export function buildWildberriesAccrualReports(
         label,
         value,
         type: 'currency',
-        formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.wbCommission}"))`,
+        formula: `SUM("${WB_REVENUE_COLUMNS.retailPrice}") - SUM("${WB_REVENUE_COLUMNS.payout}")`,
         shareText: formatSalesShare(value),
       }
     }

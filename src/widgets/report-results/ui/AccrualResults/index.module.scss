@@ -181,7 +181,7 @@
   border: 1px solid var(--color-border-muted);
   border-radius: 12px;
   background: var(--color-bg-surface-soft);
-  padding: 10px 6px 4px;
+  padding: 14px 6px 4px;
 }
 
 .AccrualResults__dynamics-tooltip {
@@ -201,6 +201,11 @@
 
 .AccrualResults__dynamics-tooltip-value--negative {
   color: var(--color-text-negative);
+}
+
+.AccrualResults__dynamics-total {
+  margin-top: 6px;
+  padding: 0 10px 4px;
 }
 
 @media (max-width: 860px) {

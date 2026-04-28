@@ -26,7 +26,6 @@ const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const DEFAULT_COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите "Юнит экономика" за тот же период'
 const STRUCTURE_PREFIX = 'Структура: '
-const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
 const REVENUE_WITHOUT_SPP_LABEL = 'Выручка без СПП'
 const RETURNS_LABEL = 'Возвраты'
 const SPP_AND_PROMOTIONS_LABEL = 'СПП и акции'
@@ -34,6 +33,7 @@ const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
 const GROUPED_TOTAL_LABEL = 'Итог'
+const POSITIVE_REVENUE_ADJUSTMENT_LABELS = new Set(['Добровольная компенсация', 'Компенсация скидки'])
 const MAX_OVERVIEW_ITEMS = 8
 const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
   RETURNS_LABEL,
@@ -128,7 +128,7 @@ type OverviewItem = {
 }
 
 type OverviewModel = {
-  salesTotal: AccrualGroup['metrics'][number] | null
+  salesTotalValue: number
   salesItems: OverviewItem[]
   accrualTotal: AccrualGroup['metrics'][number] | null
   accrualItems: OverviewItem[]
@@ -152,11 +152,15 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
   const returns = getMetric(totalsReport, RETURNS_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
-  const salesTotal = getMetric(totalsReport, REVENUE_BEFORE_SPP_LABEL)
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
 
-  const salesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions, returns]
+  const groupedRevenueAdjustments = groupedReport.metrics
+    .filter((metric) =>
+      POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
+      && metric.value !== null)
+
+  const baseSalesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions, returns]
     .filter((metric): metric is AccrualGroup['metrics'][number] => Boolean(metric && metric.value !== null))
     .map((metric, index) => ({
       label: metric.label,
@@ -165,11 +169,23 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       color: getOverviewColor(index),
     }))
 
+  const salesItems: OverviewItem[] = [
+    ...baseSalesItems,
+    ...groupedRevenueAdjustments.map((metric, index) => ({
+      label: metric.label,
+      value: metric.value || 0,
+      formula: metric.formula,
+      color: getOverviewColor(baseSalesItems.length + index),
+    })),
+  ]
+  const salesTotalValue = salesItems.reduce((acc, item) => acc + item.value, 0)
+
   const groupedItems = groupedReport.metrics
     .filter((metric) =>
       metric.label !== SALES_GROUP_LABEL
       && metric.label !== RETURNS_LABEL
       && metric.label !== GROUPED_TOTAL_LABEL
+      && !POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
     .map((metric, index) => ({
       label: metric.label,
@@ -190,7 +206,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   }
 
   return {
-    salesTotal,
+    salesTotalValue,
     salesItems,
     accrualTotal,
     accrualItems,
@@ -243,12 +259,9 @@ export function AccrualResults({
             <Typography
               variant="h2"
               color="primary"
-              className={getPrimaryMetricValueClassName(overviewModel.salesTotal?.label || '', overviewModel.salesTotal?.value ?? null)}
+              className={getValueClassName(overviewModel.salesTotalValue)}
             >
-              {formatOverviewCurrency(normalizeTotalsDisplayValue(
-                overviewModel.salesTotal?.label || '',
-                overviewModel.salesTotal?.value ?? null,
-              ))}
+              {formatOverviewCurrency(overviewModel.salesTotalValue)}
             </Typography>
             <div className={cn(`${BLOCK_NAME}__overview-bar`)}>
               {overviewModel.salesItems.map((item) => (
@@ -355,6 +368,7 @@ export function AccrualResults({
               shareText: metric.shareText,
             }))
           : []
+        const dynamicsTotalValue = dynamicsChartData.reduce((sum, point) => sum + point.value, 0)
 
         return (
           <article className={cn(`${BLOCK_NAME}__card`)} key={report.title}>
@@ -425,6 +439,9 @@ export function AccrualResults({
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__dynamics-total`)}>
+                  Итого: {formatValue(dynamicsTotalValue, 'currency')}
+                </Typography>
               </div>
             ) : (
               <UiMetricsList
