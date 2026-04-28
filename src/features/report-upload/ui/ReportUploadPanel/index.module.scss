@@ -4,12 +4,6 @@
   gap: 10px;
 }
 
-.ReportUploadPanel__primary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .ReportUploadPanel__upload-card {
   border: 1px solid var(--color-border-muted);
   border-radius: 12px;
@@ -17,20 +11,7 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.ReportUploadPanel__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.ReportUploadPanel__secondary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ReportUploadPanel__title {
@@ -39,8 +20,63 @@
   font-weight: 700;
 }
 
-.ReportUploadPanel__secondary-hint {
+.ReportUploadPanel__secondary-note {
   margin: 0;
+}
+
+.ReportUploadPanel__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ReportUploadPanel__usage-tooltip-trigger {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+  color: #faad14;
+  font-size: 16px;
+  cursor: help;
+}
+
+.ReportUploadPanel__usage-tooltip-trigger:hover,
+.ReportUploadPanel__usage-tooltip-trigger:focus-visible {
+  opacity: 0.9;
+}
+
+.ReportUploadPanel__hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+.ReportUploadPanel__notice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.ReportUploadPanel__notice--loader {
+  background: var(--color-bg-surface-info);
+  border-color: var(--color-border-info);
+}
+
+.ReportUploadPanel__notice--warning {
+  background: var(--color-bg-status-warning-soft);
+  border-color: var(--color-border-warning);
+}
+
+.ReportUploadPanel__notice--error {
+  background: var(--color-bg-status-danger);
+  border-color: var(--color-border-danger);
 }
 
 .ReportUploadPanel__file-meta {
@@ -63,12 +99,6 @@
 
 .ReportUploadPanel__secondary-alert-text {
   margin: 0;
-}
-
-.ReportUploadPanel__secondary-alert-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .ReportUploadPanel__copy-missing-button {
@@ -96,94 +126,4 @@
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-.ReportUploadPanel__file-input {
-  border: 1px solid var(--color-border-input);
-  border-radius: 10px;
-  padding: 6px;
-  background: var(--color-bg-surface-muted);
-  color: var(--color-text-secondary);
-  max-width: 100%;
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.ReportUploadPanel__file-input::file-selector-button {
-  border: 1px solid var(--color-border-control);
-  border-radius: 8px;
-  background: var(--color-bg-surface-soft);
-  color: var(--color-text-secondary);
-  padding: 7px 10px;
-  margin-right: 10px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.ReportUploadPanel__file-input::-webkit-file-upload-button {
-  border: 1px solid var(--color-border-control);
-  border-radius: 8px;
-  background: var(--color-bg-surface-soft);
-  color: var(--color-text-secondary);
-  padding: 7px 10px;
-  margin-right: 10px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.ReportUploadPanel__file-input:hover::file-selector-button,
-.ReportUploadPanel__file-input:hover::-webkit-file-upload-button {
-  background: var(--color-bg-surface-hover);
-}
-
-.ReportUploadPanel__file-input:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.ReportUploadPanel__file-input:disabled::file-selector-button,
-.ReportUploadPanel__file-input:disabled::-webkit-file-upload-button {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.ReportUploadPanel__download-button {
-  border: 1px solid var(--color-border-control);
-  border-radius: 10px;
-  background: var(--color-bg-surface-soft);
-  color: var(--color-text-secondary);
-  padding: 9px 12px;
-  cursor: pointer;
-}
-
-.ReportUploadPanel__download-button:hover {
-  background: var(--color-bg-surface-hover);
-}
-
-.ReportUploadPanel__download-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.ReportUploadPanel__notice {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-}
-
-.ReportUploadPanel__notice--loader {
-  background: var(--color-bg-surface-info);
-  border-color: var(--color-border-info);
-}
-
-.ReportUploadPanel__notice--warning {
-  background: var(--color-bg-status-warning-soft);
-  border-color: var(--color-border-warning);
-}
-
-.ReportUploadPanel__notice--error {
-  background: var(--color-bg-status-danger);
-  border-color: var(--color-border-danger);
 }

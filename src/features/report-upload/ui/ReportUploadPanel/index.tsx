@@ -1,8 +1,10 @@
 import classNames from 'classnames/bind'
+import { ExclamationCircleFilled } from '@ant-design/icons'
 import Alert from 'antd/es/alert'
 import Button from 'antd/es/button'
-import { useId, useRef, useState } from 'react'
-import type {ChangeEvent} from 'react'
+import Tooltip from 'antd/es/tooltip'
+import { useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { UiCard } from '@/shared/ui-kit/card'
 import { UiFlex } from '@/shared/ui-kit/flex'
 import { UiPanel } from '@/shared/ui-kit/panel'
@@ -31,26 +33,25 @@ type ReportUploadPanelProps = {
 }
 
 export function ReportUploadPanel({
-                                    isProcessing,
-                                    hasResults,
-                                    fileName,
-                                    primaryFileLabel = '',
-                                    secondaryFileName = '',
-                                    secondaryFileLabel = 'CSV себестоимости товаров (опционально)',
-                                    secondaryFileHint = '',
-                                    secondaryUsageNote = '',
-                                    secondaryMissingArticles = [],
-                                    secondaryAlertText = '',
-                                    error,
-                                    showWildberriesWarning,
-                                    onFileUpload,
-                                    onSecondaryFileUpload,
-                                    onDownloadPdf,
-                                  }: ReportUploadPanelProps) {
+  isProcessing,
+  hasResults,
+  fileName,
+  primaryFileLabel = '',
+  secondaryFileName = '',
+  secondaryFileLabel = 'CSV себестоимости товаров (опционально)',
+  secondaryFileHint = '',
+  secondaryUsageNote = '',
+  secondaryMissingArticles = [],
+  secondaryAlertText = '',
+  error,
+  showWildberriesWarning,
+  onFileUpload,
+  onSecondaryFileUpload,
+  onDownloadPdf,
+}: ReportUploadPanelProps) {
   const [isMissingCopied, setIsMissingCopied] = useState(false)
-  const primaryFileInputId = useId()
-  const secondaryFileInputId = useId()
   const primaryFileInputRef = useRef<HTMLInputElement | null>(null)
+  const secondaryFileInputRef = useRef<HTMLInputElement | null>(null)
   const hasMissingArticles = secondaryMissingArticles.length > 0
 
   const copyMissingArticles = async (): Promise<void> => {
@@ -72,66 +73,87 @@ export function ReportUploadPanel({
             {primaryFileLabel}
           </Typography>
         )}
-        <UiFlex wrap="wrap" align="center" gap={12}>
-          <input
-            ref={primaryFileInputRef}
-            id={primaryFileInputId}
-            className={cn(`${BLOCK_NAME}__file-input`)}
-            type="file"
-            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            onChange={onFileUpload}
-            disabled={isProcessing}
-          />
+        <input
+          ref={primaryFileInputRef}
+          className={cn(`${BLOCK_NAME}__hidden-file-input`)}
+          type="file"
+          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          onChange={onFileUpload}
+          disabled={isProcessing}
+        />
+        <UiFlex wrap="wrap" align="center" justify="between" gap={10}>
           <Button
-            className={cn(`${BLOCK_NAME}__file-button`)}
+            type="primary"
             onClick={() => primaryFileInputRef.current?.click()}
             disabled={isProcessing}
           >
             Выбрать файл
           </Button>
           <Button
-            className={cn(`${BLOCK_NAME}__file-button`)}
             onClick={onDownloadPdf}
             disabled={isProcessing || !hasResults}
           >
             Скачать отчет
           </Button>
         </UiFlex>
-        {fileName && (
-          <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__file-meta`)}>
-            Файл: {fileName}
-          </Typography>
-        )}
+        <Typography
+          variant="body3"
+          color={fileName ? 'accent' : 'muted'}
+          semiBold={Boolean(fileName)}
+          className={cn(`${BLOCK_NAME}__file-meta`)}
+        >
+          {fileName ? `Загружен: ${fileName}` : 'Файл не выбран'}
+        </Typography>
       </UiCard>
 
       {onSecondaryFileUpload && (
         <UiCard className={cn(`${BLOCK_NAME}__upload-card`)} padding="sm">
-          <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
-            {secondaryFileLabel}
-          </Typography>
+          <div className={cn(`${BLOCK_NAME}__title-row`)}>
+            <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
+              {secondaryFileLabel}
+            </Typography>
+            {secondaryUsageNote && (
+              <Tooltip title={secondaryUsageNote}>
+                <button
+                  type="button"
+                  className={cn(`${BLOCK_NAME}__usage-tooltip-trigger`)}
+                  aria-label="Информация о применяемом файле себестоимости"
+                >
+                  <ExclamationCircleFilled />
+                </button>
+              </Tooltip>
+            )}
+          </div>
           {secondaryFileHint && (
             <Typography variant="body3" color="muted" semiBold className={cn(`${BLOCK_NAME}__secondary-note`)}>
               {secondaryFileHint}
             </Typography>
           )}
-          {secondaryUsageNote && (
-            <Typography variant="body3" color="accent" semiBold className={cn(`${BLOCK_NAME}__secondary-note`)}>
-              {secondaryUsageNote}
-            </Typography>
-          )}
           <input
-            id={secondaryFileInputId}
-            className={cn(`${BLOCK_NAME}__file-input`)}
+            ref={secondaryFileInputRef}
+            className={cn(`${BLOCK_NAME}__hidden-file-input`)}
             type="file"
             accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={onSecondaryFileUpload}
             disabled={isProcessing}
           />
-          {secondaryFileName && (
-            <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__file-meta`)}>
-              Файл себестоимости: {secondaryFileName}
-            </Typography>
-          )}
+          <UiFlex wrap="wrap" align="center" gap={10}>
+            <Button
+              type="default"
+              onClick={() => secondaryFileInputRef.current?.click()}
+              disabled={isProcessing}
+            >
+              Выбрать файл
+            </Button>
+          </UiFlex>
+          <Typography
+            variant="body3"
+            color={secondaryFileName ? 'accent' : 'muted'}
+            semiBold={Boolean(secondaryFileName)}
+            className={cn(`${BLOCK_NAME}__file-meta`)}
+          >
+            {secondaryFileName ? `Загружен: ${secondaryFileName}` : 'Файл не выбран'}
+          </Typography>
           {hasMissingArticles && (
             <div className={cn(`${BLOCK_NAME}__secondary-alert`)}>
               <Typography variant="body2" color="negative" className={cn(`${BLOCK_NAME}__secondary-alert-text`)}>

@@ -85,7 +85,7 @@ export function WildberriesPage() {
         primaryFileLabel="Еженедельный детализированный отчет"
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
-        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость".'
+        secondaryFileHint='Добавьте файл себестоимости, чтобы получить точный отчет. Обязательные колонки: "Артикул" и "Себестоимость".'
         secondaryUsageNote={cogsFallbackNote}
         secondaryMissingArticles={missingCogsArticles}
         secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
