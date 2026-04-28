@@ -1,4 +1,14 @@
 import classNames from 'classnames/bind'
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
 import { UiAccordion } from '@/shared/ui-kit/accordion'
@@ -41,11 +51,23 @@ const OVERVIEW_COLORS = [
   '#d96b9f',
   '#7f93ae',
 ]
+const DYNAMICS_REPORT_TITLE = 'Динамика по датам начисления'
+const compactRubleFormatter = new Intl.NumberFormat('ru-RU', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+})
 
 type AccrualResultsProps = {
   reports: AccrualGroup[]
   cogsMissingValueText?: string
   showAccrualOverview?: boolean
+}
+
+type DynamicsChartPoint = {
+  dateLabel: string
+  value: number
+  valueText: string
+  shareText?: string | null
 }
 
 function getValueClassName(value: number | null): string {
@@ -193,6 +215,10 @@ function normalizeTotalsDisplayValue(label: string, value: number | null): numbe
   return value
 }
 
+function formatCompactRuble(value: number): string {
+  return `${compactRubleFormatter.format(value)} ₽`
+}
+
 export function AccrualResults({
   reports,
   cogsMissingValueText = DEFAULT_COGS_MISSING_VALUE_TEXT,
@@ -315,9 +341,20 @@ export function AccrualResults({
       {baseReports.map((report) => {
         const isWbSalesSchemeReport = report.title === 'Схема работы'
           && report.metrics.some((metric) => metric.label.startsWith('FBS') || metric.label.startsWith('FBW') || metric.label.startsWith('Не указано'))
+        const isAccrualDynamicsReport = report.title === DYNAMICS_REPORT_TITLE
         const reportTitle = report.title === 'Итоги периода' && report.periodLabel
           ? `${report.title} ${report.periodLabel}`
           : report.title
+        const dynamicsChartData: DynamicsChartPoint[] = isAccrualDynamicsReport
+          ? report.metrics
+            .filter((metric): metric is typeof metric & { value: number } => metric.value !== null)
+            .map((metric) => ({
+              dateLabel: metric.label,
+              value: metric.value,
+              valueText: formatValue(metric.value, metric.type),
+              shareText: metric.shareText,
+            }))
+          : []
 
         return (
           <article className={cn(`${BLOCK_NAME}__card`)} key={report.title}>
@@ -328,19 +365,82 @@ export function AccrualResults({
               )}
             </header>
 
-            <UiMetricsList
-              hideThirdColumn={isWbSalesSchemeReport}
-              rows={report.metrics.map((metric) => (
-                toMetricRow(
-                  report.title,
-                  metric,
-                  isWbSalesSchemeReport
-                    ? cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--positive`)
-                    : getPrimaryMetricValueClassName(metric.label, metric.value),
-                  cogsMissingValueText,
-                )
-              ))}
-            />
+            {isAccrualDynamicsReport ? (
+              <div className={cn(`${BLOCK_NAME}__dynamics-chart`)}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart
+                    data={dynamicsChartData}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 6 }}
+                  >
+                    <CartesianGrid stroke="var(--color-border-subtle)" strokeDasharray="4 4" />
+                    <XAxis
+                      dataKey="dateLabel"
+                      minTickGap={24}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--color-border-subtle)' }}
+                      tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
+                    />
+                    <YAxis
+                      tickFormatter={formatCompactRuble}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
+                      width={72}
+                    />
+                    <ReferenceLine y={0} stroke="var(--color-border-muted)" />
+                    <RechartsTooltip
+                      cursor={{ stroke: 'var(--color-border-muted)' }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload || payload.length === 0) return null
+                        const point = payload[0]?.payload as DynamicsChartPoint | undefined
+                        if (!point) return null
+
+                        return (
+                          <div className={cn(`${BLOCK_NAME}__dynamics-tooltip`)}>
+                            <Typography variant="body3" color="accent" semiBold>{point.dateLabel}</Typography>
+                            <Typography
+                              variant="body3"
+                              color="primary"
+                              className={cn({
+                                [`${BLOCK_NAME}__dynamics-tooltip-value--positive`]: point.value > 0,
+                                [`${BLOCK_NAME}__dynamics-tooltip-value--negative`]: point.value < 0,
+                              })}
+                            >
+                              {point.valueText}
+                            </Typography>
+                            {point.shareText && (
+                              <Typography variant="caption" color="muted">{point.shareText}</Typography>
+                            )}
+                          </div>
+                        )
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="var(--color-positive, #1f8b4c)"
+                      strokeWidth={3.5}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <UiMetricsList
+                hideThirdColumn={isWbSalesSchemeReport}
+                rows={report.metrics.map((metric) => (
+                  toMetricRow(
+                    report.title,
+                    metric,
+                    isWbSalesSchemeReport
+                      ? cn(`${BLOCK_NAME}__metric-value`, `${BLOCK_NAME}__metric-value--positive`)
+                      : getPrimaryMetricValueClassName(metric.label, metric.value),
+                    cogsMissingValueText,
+                  )
+                ))}
+              />
+            )}
           </article>
         )
       })}
