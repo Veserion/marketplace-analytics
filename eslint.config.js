@@ -57,7 +57,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/app/App.tsx'],
+    files: ['src/app/App/index.tsx'],
     rules: {
       'no-restricted-syntax': 'off',
     },
