@@ -4,6 +4,26 @@
   gap: 14px;
 }
 
+.UnitExtraParamsPanel__title-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.UnitExtraParamsPanel__section {
+  padding: 12px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 12px;
+  background: var(--color-bg-surface-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.UnitExtraParamsPanel__section-title {
+  margin: 0;
+}
+
 .UnitExtraParamsPanel__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(200px, 1fr));
@@ -16,8 +36,31 @@
   gap: 6px;
 }
 
+.UnitExtraParamsPanel__number-input {
+  width: 200px;
+  max-width: 100%;
+}
+
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-handler-wrap) {
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: 32px;
+  border-inline-start: 1px solid var(--color-border-input);
+  background: var(--color-bg-surface-soft);
+}
+
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-handler) {
+  color: var(--color-text-muted);
+}
+
+.UnitExtraParamsPanel__number-input :global(.ant-input-number-handler:hover) {
+  color: var(--color-text-accent);
+  background: var(--color-bg-surface-subtle);
+}
+
 .UnitExtraParamsPanel__hint {
   margin: 0;
+  white-space: pre-line;
 }
 
 .UnitExtraParamsPanel__checkbox {
@@ -29,17 +72,9 @@
 }
 
 .UnitExtraParamsPanel__radio-group {
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-muted);
-  border-radius: 10px;
-  background: var(--color-bg-surface-soft);
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.UnitExtraParamsPanel__radio-title {
-  margin: 0;
 }
 
 .UnitExtraParamsPanel__radio-options {
@@ -50,4 +85,10 @@
 
 .UnitExtraParamsPanel__radio-option {
   margin-inline-end: 0;
+}
+
+@media (max-width: 860px) {
+  .UnitExtraParamsPanel__grid {
+    grid-template-columns: 1fr;
+  }
 }

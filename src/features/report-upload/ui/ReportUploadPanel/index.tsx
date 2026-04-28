@@ -93,7 +93,7 @@ export function ReportUploadPanel({
             onClick={onDownloadPdf}
             disabled={isProcessing || !hasResults}
           >
-            Скачать отчет
+            Скачать метрики в PDF
           </Button>
         </UiFlex>
         <Typography
@@ -143,7 +143,7 @@ export function ReportUploadPanel({
               onClick={() => secondaryFileInputRef.current?.click()}
               disabled={isProcessing}
             >
-              Выбрать файл
+              {secondaryFileName ? 'Загрузить свежий файл' : 'Выбрать файл'}
             </Button>
           </UiFlex>
           <Typography

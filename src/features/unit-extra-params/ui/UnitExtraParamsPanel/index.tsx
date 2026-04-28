@@ -56,85 +56,119 @@ export function UnitExtraParamsPanel({
     ? onAccrualArticlePatternExcludeChange
     : onUnitArticlePatternExcludeChange
   const patternHint = isAccrualMode
-    ? 'Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.'
-    : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
+    ? 'Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.\nПримеры: `st*` — все артикулы, начинающиеся с `st`; `??123` — любые 2 символа перед `123`.'
+    : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.\nПримеры: `st*` — все артикулы, начинающиеся с `st`; `??123` — любые 2 символа перед `123`.'
+  const titleSummaryParts = [
+    `НДС ${vatRatePercent}%`,
+    `Налог ${taxRatePercent}%`,
+  ]
+
+  if (onPatternChange) {
+    titleSummaryParts.push(`Паттерн ${activePattern || '*'}`)
+  }
 
   return (
     <UiAccordion
-      title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
+      title={(
+        <div className={cn(`${BLOCK_NAME}__title-wrap`)}>
+          <Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>
+          <Typography as="span" variant="body3" color="muted">
+            {titleSummaryParts.join(' · ')}
+          </Typography>
+        </div>
+      )}
       isOpen={isOpen}
       onToggle={() => onToggleOpen()}
       contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
     >
-          <div className={cn(`${BLOCK_NAME}__grid`)}>
-            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
-              <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
-              <InputNumber<number>
-                id="vatRateInput"
-                min={0}
-                step={0.1}
-                controls={false}
-                value={vatRatePercent}
-                onChange={(value) => onVatRateChange(typeof value === 'number' ? value : 0)}
-              />
-            </label>
-            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="taxRateInput">
-              <Typography as="span" variant="body2" color="accent" semiBold>Налог, %</Typography>
-              <InputNumber<number>
-                id="taxRateInput"
-                min={0}
-                step={0.1}
-                controls={false}
-                value={taxRatePercent}
-                onChange={(value) => onTaxRateChange(typeof value === 'number' ? value : 0)}
-              />
-            </label>
-          </div>
-          {onPatternChange && (
-            <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="articlePatternInput">
-              <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
-              <Input
-                id="articlePatternInput"
-                value={activePattern}
-                onChange={(event) => onPatternChange(event.target.value)}
-                placeholder="Например: st*"
-              />
-              <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
-                {patternHint}
-              </Typography>
-              {onPatternExcludeChange && (
-                <Checkbox
-                  className={cn(`${BLOCK_NAME}__checkbox`)}
-                  checked={activePatternExclude}
-                  onChange={(event) => onPatternExcludeChange(event.target.checked)}
-                >
-                  <Typography as="span" variant="body3" color="accent" semiBold>
-                    Исключать совпадения по паттерну
-                  </Typography>
-                </Checkbox>
-              )}
-            </label>
-          )}
-          {onCogsMatchingModeChange && (
-            <div className={cn(`${BLOCK_NAME}__radio-group`)}>
-              <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__radio-title`)}>
-                Сопоставление себестоимости
-              </Typography>
-              <Radio.Group
-                className={cn(`${BLOCK_NAME}__radio-options`)}
-                name="cogsMatchingMode"
-                value={cogsMatchingMode}
-                onChange={(event) => onCogsMatchingModeChange(event.target.value as 'full' | 'digits')}
+      <section className={cn(`${BLOCK_NAME}__section`)}>
+        <Typography as="h3" variant="h5" color="accent" className={cn(`${BLOCK_NAME}__section-title`)}>
+          Налоги
+        </Typography>
+        <div className={cn(`${BLOCK_NAME}__grid`)}>
+          <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
+            <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
+            <InputNumber<number>
+              className={cn(`${BLOCK_NAME}__number-input`)}
+              id="vatRateInput"
+              min={0}
+              step={1}
+              controls
+              value={vatRatePercent}
+              onChange={(value) => onVatRateChange(typeof value === 'number' ? value : 0)}
+            />
+          </label>
+          <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="taxRateInput">
+            <Typography as="span" variant="body2" color="accent" semiBold>Налог, %</Typography>
+            <InputNumber<number>
+              className={cn(`${BLOCK_NAME}__number-input`)}
+              id="taxRateInput"
+              min={0}
+              step={1}
+              controls
+              value={taxRatePercent}
+              onChange={(value) => onTaxRateChange(typeof value === 'number' ? value : 0)}
+            />
+          </label>
+        </div>
+      </section>
+
+      {onPatternChange && (
+        <section className={cn(`${BLOCK_NAME}__section`)}>
+          <Typography as="h3" variant="h5" color="accent" className={cn(`${BLOCK_NAME}__section-title`)}>
+            Фильтрация
+          </Typography>
+          <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="articlePatternInput">
+            <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
+            <Input
+              id="articlePatternInput"
+              value={activePattern}
+              onChange={(event) => onPatternChange(event.target.value)}
+              placeholder="Например: st*"
+            />
+            <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
+              {patternHint}
+            </Typography>
+            {onPatternExcludeChange && (
+              <Checkbox
+                className={cn(`${BLOCK_NAME}__checkbox`)}
+                checked={activePatternExclude}
+                onChange={(event) => onPatternExcludeChange(event.target.checked)}
               >
-                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="full">
-                  <Typography as="span" variant="body2" color="accent">Точное</Typography>
-                </Radio>
-                <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="digits">
-                  <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
-                </Radio>
-              </Radio.Group>
-            </div>
-          )}
+                <Typography as="span" variant="body3" color="accent" semiBold>
+                  Исключать совпадения по паттерну
+                </Typography>
+              </Checkbox>
+            )}
+          </label>
+        </section>
+      )}
+
+      {onCogsMatchingModeChange && (
+        <section className={cn(`${BLOCK_NAME}__section`)}>
+          <Typography as="h3" variant="h5" color="accent" className={cn(`${BLOCK_NAME}__section-title`)}>
+            Сопоставление
+          </Typography>
+          <div className={cn(`${BLOCK_NAME}__radio-group`)}>
+            <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
+              Выберите режим сопоставления себестоимости с артикулами из отчета.
+            </Typography>
+            <Radio.Group
+              className={cn(`${BLOCK_NAME}__radio-options`)}
+              name="cogsMatchingMode"
+              value={cogsMatchingMode}
+              onChange={(event) => onCogsMatchingModeChange(event.target.value as 'full' | 'digits')}
+            >
+              <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="full">
+                <Typography as="span" variant="body2" color="accent">Точное</Typography>
+              </Radio>
+              <Radio className={cn(`${BLOCK_NAME}__radio-option`)} value="digits">
+                <Typography as="span" variant="body2" color="accent">По цифрам</Typography>
+              </Radio>
+            </Radio.Group>
+          </div>
+        </section>
+      )}
     </UiAccordion>
   )
 }

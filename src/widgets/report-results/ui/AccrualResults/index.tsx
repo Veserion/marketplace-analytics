@@ -347,7 +347,6 @@ export function AccrualResults({
 
       {structureReports.length > 0 && (
         <UiAccordion
-          className={cn(`${BLOCK_NAME}__structure-details`)}
           title={(
             <Typography as="span" variant="h3" color="accent">
               Сруктура расчета
