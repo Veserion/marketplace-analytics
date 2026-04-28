@@ -9,7 +9,9 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 export async function configurePdfFont(doc: jsPDF): Promise<void> {
-  const response = await fetch('/fonts/Arial.ttf')
+  const baseUrl = import.meta.env.BASE_URL || '/'
+  const fontUrl = `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}fonts/Arial.ttf`
+  const response = await fetch(fontUrl)
   if (!response.ok) return
   const buffer = await response.arrayBuffer()
   const base64 = toBase64(new Uint8Array(buffer))
