@@ -2,7 +2,6 @@ import classNames from 'classnames/bind'
 import { createElement, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MarketplaceTabs } from '@/features/marketplace-switcher'
-import { MetricsSelectorPanel } from '@/features/metrics-selector'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
@@ -24,14 +23,12 @@ export function AnalyticsPage() {
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
-    clearMetrics,
     downloadPdf,
     error,
     fileName,
     hasResults,
     isAccrualArticlePatternExclude,
     isExtraParamsOpen,
-    isMetricsOpen,
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
@@ -41,16 +38,12 @@ export function AnalyticsPage() {
     onTaxRateChange,
     onVatRateChange,
     ozonCalculationType,
-    selectAllMetrics,
-    selectedMetricSet,
     setArticlePattern,
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
-    setIsMetricsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,
     taxRatePercent,
-    toggleMetric,
     unitReports,
     vatRatePercent,
   } = useOzonAnalyticsPage()
@@ -97,17 +90,6 @@ export function AnalyticsPage() {
         onTaxRateChange={onTaxRateChange}
       />
 
-      {isOzonUnitEconomics && (
-        <MetricsSelectorPanel
-          isOpen={isMetricsOpen}
-          selectedMetricSet={selectedMetricSet}
-          onToggleOpen={() => setIsMetricsOpen((prev) => !prev)}
-          onToggleMetric={toggleMetric}
-          onSelectAll={selectAllMetrics}
-          onClearAll={clearMetrics}
-        />
-      )}
-
       <ReportUploadPanel
         isProcessing={isProcessing}
         hasResults={hasResults}
@@ -127,7 +109,6 @@ export function AnalyticsPage() {
         <Suspense fallback={null}>
           {createElement(lazyUnitEconomicsResults, {
             reports: unitReports,
-            selectedMetricSet,
           })}
         </Suspense>
       )}

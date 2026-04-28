@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import type { MetricKey, ReportGroup } from '@/entities/ozon-report/model/types'
+import type { ReportGroup } from '@/entities/ozon-report/model/types'
 import { getUnitMetricClassValue, getUnitMetricDisplay } from '@/entities/ozon-report/model/unit-metric-view'
 import { Typography, UiMetricsList } from '@/shared/ui-kit'
 import type { UiMetricsListRow } from '@/shared/ui-kit'
@@ -12,7 +12,6 @@ const BLOCK_NAME = 'UnitEconomicsResults'
 
 type UnitEconomicsResultsProps = {
   reports: ReportGroup[]
-  selectedMetricSet: Set<MetricKey>
 }
 
 function getValueClassName(value: number | null): string {
@@ -22,11 +21,10 @@ function getValueClassName(value: number | null): string {
   return cn(`${BLOCK_NAME}__metric-value`)
 }
 
-export function UnitEconomicsResults({ reports, selectedMetricSet }: UnitEconomicsResultsProps) {
+export function UnitEconomicsResults({ reports }: UnitEconomicsResultsProps) {
   return (
     <section className={cn(BLOCK_NAME)}>
       {reports.map((report) => {
-        const visibleMetrics = report.metrics.filter((metric) => selectedMetricSet.has(metric.key))
         return (
           <article className={cn(`${BLOCK_NAME}__card`)} key={report.title}>
             <header className={cn(`${BLOCK_NAME}__header`)}>
@@ -35,7 +33,7 @@ export function UnitEconomicsResults({ reports, selectedMetricSet }: UnitEconomi
             </header>
 
             <UiMetricsList
-              rows={visibleMetrics.map<UiMetricsListRow>((metric) => {
+              rows={report.metrics.map<UiMetricsListRow>((metric) => {
                 const display = getUnitMetricDisplay(metric, report)
                 return {
                   id: metric.key,

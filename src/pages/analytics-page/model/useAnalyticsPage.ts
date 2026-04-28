@@ -8,11 +8,9 @@ import {
   extractOzonCogsCsv,
   getUnitMetricClassValue,
   getUnitMetricDisplay,
-  METRICS,
 } from '@/entities/ozon-report'
 import type {
   AccrualGroup,
-  MetricKey,
   OzonCalculationType,
   ReportGroup,
 } from '@/entities/ozon-report'
@@ -78,13 +76,11 @@ function getOzonAccrualMetricTone(label: string, value: number | null): PdfMetri
 
 function buildUnitPdfSections(
   reports: ReportGroup[],
-  selectedMetricSet: Set<MetricKey>,
 ): PdfSection[] {
   const sections: PdfSection[] = []
 
   for (const report of reports) {
     const rows: PdfSection['rows'] = report.metrics
-      .filter((metric) => selectedMetricSet.has(metric.key))
       .map((metric) => {
         const display = getUnitMetricDisplay(metric, report)
         return {
@@ -205,13 +201,11 @@ function buildOzonAccrualPdfSections(reports: AccrualGroup[]): PdfSection[] {
 
 export function useOzonAnalyticsPage() {
   const [ozonCalculationType, setOzonCalculationType] = useState<OzonCalculationType>('accrualReport')
-  const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(METRICS.map((metric) => metric.key))
   const [accrualCsvSource, setAccrualCsvSource] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [fileName, setFileName] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [isExtraParamsOpen, setIsExtraParamsOpen] = useState(false)
-  const [isMetricsOpen, setIsMetricsOpen] = useState(false)
   const [articlePattern, setArticlePattern] = useState('')
   const [accrualArticlePattern, setAccrualArticlePattern] = useState('*')
   const [isUnitArticlePatternExclude, setIsUnitArticlePatternExclude] = useState(false)
@@ -224,7 +218,6 @@ export function useOzonAnalyticsPage() {
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
   const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
-  const selectedMetricSet = useMemo(() => new Set<MetricKey>(selectedMetrics), [selectedMetrics])
   const unitReportBuild = useMemo(() => {
     if (!isOzonUnitEconomics || !unitCsvSource) return { reports: null as ReportGroup[] | null, error: '' }
     try {
@@ -295,13 +288,6 @@ export function useOzonAnalyticsPage() {
   const onTaxRateChange = (value: number): void => {
     setTaxRatePercent(Number.isFinite(value) ? value : 0)
   }
-
-  const toggleMetric = (key: MetricKey): void => {
-    setSelectedMetrics((prev) => (prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]))
-  }
-
-  const selectAllMetrics = (): void => setSelectedMetrics(METRICS.map((metric) => metric.key))
-  const clearMetrics = (): void => setSelectedMetrics([])
 
   const onFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0]
@@ -440,7 +426,7 @@ export function useOzonAnalyticsPage() {
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
     await configurePdfFont(doc)
     const sections = isOzonUnitEconomics && unitReports
-      ? buildUnitPdfSections(unitReports, selectedMetricSet)
+      ? buildUnitPdfSections(unitReports)
       : buildOzonAccrualPdfSections(accrualReports || [])
 
     renderPdfReport({
@@ -461,14 +447,12 @@ export function useOzonAnalyticsPage() {
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
-    clearMetrics,
     downloadPdf,
     error,
     fileName,
     hasResults,
     isAccrualArticlePatternExclude,
     isExtraParamsOpen,
-    isMetricsOpen,
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
@@ -478,16 +462,12 @@ export function useOzonAnalyticsPage() {
     onTaxRateChange,
     onVatRateChange,
     ozonCalculationType,
-    selectAllMetrics,
-    selectedMetricSet,
     setArticlePattern,
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
-    setIsMetricsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,
     taxRatePercent,
-    toggleMetric,
     unitReports,
     vatRatePercent,
   }
