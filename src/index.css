@@ -101,9 +101,15 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 2% 12%, var(--color-page-radial-start), transparent 28%),
     radial-gradient(circle at 95% 88%, var(--color-page-radial-end), transparent 32%),
@@ -185,5 +191,5 @@ select {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
