@@ -2,7 +2,7 @@ import classNames from 'classnames/bind'
 import Input from 'antd/es/input'
 import { UiPanel } from '@/shared/ui-kit/panel'
 import { Typography } from '@/shared/ui-kit/typography'
-import styles from './ArticlePatternPanel.module.scss'
+import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'ArticlePatternPanel'

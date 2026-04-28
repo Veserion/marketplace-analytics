@@ -1,0 +1,30 @@
+.WildberriesPage {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.WildberriesPage__hero {
+  background: linear-gradient(120deg, var(--color-hero-wb-start) 0%, var(--color-hero-wb-mid) 55%, var(--color-hero-wb-end) 100%);
+  border-radius: 20px;
+  padding: 26px 28px;
+  color: var(--color-surface-contrast);
+  box-shadow: 0 20px 60px var(--shadow-hero-wb);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.WildberriesPage__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.86;
+}
+
+.WildberriesPage__subtitle {
+  max-width: 760px;
+  opacity: 0.92;
+}

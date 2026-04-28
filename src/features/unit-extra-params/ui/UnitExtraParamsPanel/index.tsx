@@ -6,7 +6,7 @@ import Radio from 'antd/es/radio'
 import { UiDisclosure } from '@/shared/ui-kit/disclosure'
 import { UiPanel } from '@/shared/ui-kit/panel'
 import { Typography } from '@/shared/ui-kit/typography'
-import styles from './UnitExtraParamsPanel.module.scss'
+import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'UnitExtraParamsPanel'

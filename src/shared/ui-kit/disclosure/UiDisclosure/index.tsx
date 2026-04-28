@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import Collapse from 'antd/es/collapse'
 import classNames from 'classnames'
-import styles from './UiDisclosure.module.scss'
+import styles from './index.module.scss'
 
 const BLOCK_NAME = 'UiDisclosure'
 const PANEL_KEY = 'content'

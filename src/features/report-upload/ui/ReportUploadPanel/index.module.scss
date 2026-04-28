@@ -1,0 +1,106 @@
+.ReportUploadPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ReportUploadPanel__upload-card {
+  border-color: var(--color-border-muted);
+  background: var(--color-bg-surface-soft);
+  gap: 8px;
+}
+
+.ReportUploadPanel__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.ReportUploadPanel__secondary-note {
+  margin: 0;
+}
+
+.ReportUploadPanel__secondary-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-danger);
+  background: var(--color-bg-status-danger);
+}
+
+.ReportUploadPanel__secondary-alert-text {
+  margin: 0;
+}
+
+.ReportUploadPanel__copy-missing-button {
+  border-color: var(--color-border-danger-strong) !important;
+  background: var(--color-bg-status-danger-soft) !important;
+  color: var(--color-text-negative-strong) !important;
+}
+
+.ReportUploadPanel__copy-missing-button:hover,
+.ReportUploadPanel__copy-missing-button:focus-visible {
+  background: var(--color-bg-status-danger);
+}
+
+.ReportUploadPanel__missing-list {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--color-border-danger-dashed);
+  background: var(--color-bg-status-danger-pale);
+  color: var(--color-text-negative-strong);
+  font-size: 12px;
+  line-height: 1.35;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ReportUploadPanel__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ReportUploadPanel__file-button {
+  border-color: var(--color-border-control) !important;
+  border-radius: 10px !important;
+  background: var(--color-bg-surface-soft) !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 600;
+}
+
+.ReportUploadPanel__file-button:hover,
+.ReportUploadPanel__file-button:focus-visible {
+  background: var(--color-bg-surface-hover);
+}
+
+.ReportUploadPanel__notice {
+  border-radius: 10px !important;
+}
+
+.ReportUploadPanel__notice :global(.ant-alert-message) {
+  color: var(--color-text-secondary);
+  margin: 0 !important;
+}
+
+.ReportUploadPanel__notice--loader {
+  background: var(--color-bg-surface-info);
+  border-color: var(--color-border-info);
+}
+
+.ReportUploadPanel__notice--warning {
+  background: var(--color-bg-status-warning-soft);
+  border-color: var(--color-border-warning);
+}
+
+.ReportUploadPanel__notice--error {
+  background: var(--color-bg-status-danger);
+  border-color: var(--color-border-danger);
+}

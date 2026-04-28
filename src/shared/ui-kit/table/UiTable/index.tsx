@@ -4,7 +4,7 @@ import Button from 'antd/es/button'
 import Input from 'antd/es/input'
 import Table from 'antd/es/table'
 import type { ColumnsType as TableColumnsType } from 'antd/es/table'
-import styles from './UiTable.module.scss'
+import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'UiTable'
