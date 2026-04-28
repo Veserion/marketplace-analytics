@@ -123,6 +123,9 @@
 
 .AccrualResults__metric-value--muted {
   color: var(--color-text-subtle);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .AccrualResults__secondary-details {
