@@ -2,12 +2,12 @@ import classNames from 'classnames/bind'
 import { ExclamationCircleFilled } from '@ant-design/icons'
 import Alert from 'antd/es/alert'
 import Button from 'antd/es/button'
-import Tooltip from 'antd/es/tooltip'
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { UiCard } from '@/shared/ui-kit/card'
 import { UiFlex } from '@/shared/ui-kit/flex'
 import { UiPanel } from '@/shared/ui-kit/panel'
+import { InfoTooltip } from '@/shared/ui-kit/tooltip'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -130,15 +130,15 @@ export function ReportUploadPanel({
                     ? additionalPrimaryRefreshButtonText
                     : additionalPrimaryUploadButtonText}
                 </Button>
-                <Tooltip title={additionalPrimaryTooltipText}>
-                  <button
-                    type="button"
-                    className={cn(`${BLOCK_NAME}__additional-tooltip-trigger`)}
-                    aria-label="Информация об отчете по другим странам"
-                  >
-                    ?
-                  </button>
-                </Tooltip>
+                <InfoTooltip
+                  ariaLabel="Информация об отчете по другим странам"
+                  content={additionalPrimaryTooltipText}
+                  icon={(
+                    <span className={cn(`${BLOCK_NAME}__additional-tooltip-trigger`)} aria-hidden="true">
+                      ?
+                    </span>
+                  )}
+                />
               </UiFlex>
             )}
           </UiFlex>
@@ -191,15 +191,15 @@ export function ReportUploadPanel({
               {secondaryFileLabel}
             </Typography>
             {secondaryUsageNote && (
-              <Tooltip title={secondaryUsageNote}>
-                <button
-                  type="button"
-                  className={cn(`${BLOCK_NAME}__usage-tooltip-trigger`)}
-                  aria-label="Информация о применяемом файле себестоимости"
-                >
-                  <ExclamationCircleFilled />
-                </button>
-              </Tooltip>
+              <InfoTooltip
+                ariaLabel="Информация о применяемом файле себестоимости"
+                content={secondaryUsageNote}
+                icon={(
+                  <span className={cn(`${BLOCK_NAME}__usage-tooltip-trigger`)} aria-hidden="true">
+                    <ExclamationCircleFilled />
+                  </span>
+                )}
+              />
             )}
           </div>
           {secondaryFileHint && (

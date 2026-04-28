@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { InfoTooltip } from '@/shared/ui-kit/tooltip'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
@@ -11,7 +11,7 @@ type FormulaTooltipIconProps = {
 
 export function FormulaTooltipIcon({ formula }: FormulaTooltipIconProps) {
   return (
-    <UiTooltipIcon
+    <InfoTooltip
       ariaLabel={`Формула: ${formula}`}
       content={formula}
       icon={(

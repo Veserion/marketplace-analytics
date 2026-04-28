@@ -1,0 +1,42 @@
+.InfoTooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-link);
+  cursor: default;
+}
+
+.InfoTooltip__default-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-bg-surface-info-strong);
+  color: var(--color-text-link);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.InfoTooltip--sm .InfoTooltip__default-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+}
+
+.InfoTooltip__portal {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  min-width: 220px;
+  max-width: min(420px, 65vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg-tooltip);
+  color: var(--color-surface-contrast);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 8px 22px var(--shadow-tooltip);
+  pointer-events: none;
+  z-index: 1000;
+}

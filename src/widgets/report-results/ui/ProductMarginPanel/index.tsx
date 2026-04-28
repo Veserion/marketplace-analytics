@@ -1,16 +1,18 @@
 import classNames from 'classnames/bind'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { OZON_UNIT_COLUMNS } from '@/entities/ozon-report/model/columns'
 import type { ProductMarginItem } from '@/entities/ozon-report/model/types'
 import { UiDisclosure } from '@/shared/ui-kit/disclosure'
 import { UiTable } from '@/shared/ui-kit/table'
 import type { UiTableColumn } from '@/shared/ui-kit/table'
-import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { InfoTooltip } from '@/shared/ui-kit/tooltip'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'ProductMarginPanel'
 const OZON_SEARCH_URL = 'https://www.ozon.ru/search/?text='
+const MARGIN_SOURCE_TOOLTIP = `Показатель маржинальности за период: колонка "${OZON_UNIT_COLUMNS.salesShare}". Прибыль на единицу товара: колонка "${OZON_UNIT_COLUMNS.unitProfit}".`
 
 type MarkLevel = 'risk' | 'warning' | 'normal' | 'super'
 
@@ -56,6 +58,14 @@ function buildOzonSearchUrl(article: string): string {
 }
 
 export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const formulaIcon = (
+    <span aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 7.04163V10.375M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10ZM9.9585 12.875H10.0418V12.9583H9.9585V12.875Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </span>
+  )
   const rows = useMemo<ProductMarginTableRow[]>(
     () => items.map((item) => ({ ...item, markLevel: getMarkByMargin(item.marginSharePercent) })),
     [items],
@@ -87,10 +97,18 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
       width: '30%',
       title: (
         <span className={cn(`${BLOCK_NAME}__header-with-hint`)}>
-          Маржинальность
-          <UiTooltipIcon
+          Показатель маржинальности за период
+          <InfoTooltip
             ariaLabel="Маржинальность без учета налогов"
             content="Маржинальность без учета налогов"
+            size="sm"
+            icon={(
+              <span className={cn(`${BLOCK_NAME}__margin-header-info`)} aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 5.83331V10M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10ZM9.9585 13.125H10.0418V13.2083H9.9585V13.125Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+            )}
           />
         </span>
       ),
@@ -109,7 +127,7 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
     },
     {
       key: 'profit',
-      title: 'Прибыль',
+      title: 'Прибыль на единицу товара',
       width: '25%',
       renderCell: (row) => <span>{formatCurrency(row.profitPerUnit)}</span>,
       filterable: true,
@@ -123,8 +141,21 @@ export function ProductMarginPanel({ items }: ProductMarginPanelProps) {
   return (
     <section className={cn(BLOCK_NAME)}>
       <UiDisclosure
+        isOpen={isOpen}
+        onToggle={setIsOpen}
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
-        title={<Typography variant="h5" color="accent">Потоварная маржинальность</Typography>}
+        title={(
+          <span className={cn(`${BLOCK_NAME}__title-with-hint`)}>
+            <Typography variant="h5" color="accent">Потоварная маржинальность</Typography>
+            {isOpen && (
+              <InfoTooltip
+                ariaLabel="Из каких столбцов Ozon берутся значения для таблицы потоварной маржинальности"
+                content={MARGIN_SOURCE_TOOLTIP}
+                icon={formulaIcon}
+              />
+            )}
+          </span>
+        )}
       >
           <div className={cn(`${BLOCK_NAME}__legend`)}>
             {MARGIN_LEGEND_ITEMS.map((item) => (

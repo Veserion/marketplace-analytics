@@ -2,7 +2,7 @@ import classNames from 'classnames/bind'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
-import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { InfoTooltip } from '@/shared/ui-kit/tooltip'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -312,7 +312,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
                   style={{ backgroundColor: segment.color }}
                 />
                 <Typography variant="body1" color="primary" semiBold>{segment.label}</Typography>
-                <UiTooltipIcon
+                <InfoTooltip
                   ariaLabel={`Пояснение для категории ${segment.label}`}
                   content={segment.hint}
                 />

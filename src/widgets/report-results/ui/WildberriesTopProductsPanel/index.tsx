@@ -4,7 +4,7 @@ import type { WildberriesTopProductItem } from '@/entities/wildberries-report'
 import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { UiTable } from '@/shared/ui-kit/table'
 import type { UiTableColumn } from '@/shared/ui-kit/table'
-import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
+import { InfoTooltip } from '@/shared/ui-kit/tooltip'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -101,7 +101,7 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
       title: (
         <span className={cn(`${BLOCK_NAME}__header-with-hint`)}>
           Кол-во, шт
-          <UiTooltipIcon
+          <InfoTooltip
             ariaLabel='ABC-группировка по накопленной доле продаж'
             content='Цвет: по накопленной доле продаж (ABC+D): 0-50% — super, 50-80% — normal, 80-95% — warning, 95-100% — risk.'
           />
@@ -151,7 +151,7 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
       title: (
         <span className={cn(`${BLOCK_NAME}__header-with-hint`)}>
           Себестоимость
-          <UiTooltipIcon
+          <InfoTooltip
             ariaLabel='Формула себестоимости'
             content='Себестоимость проданных единиц по артикулу: себестоимость из загруженного CSV × количество продаж.'
           />

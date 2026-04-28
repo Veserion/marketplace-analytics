@@ -161,10 +161,10 @@ body[data-theme='purple'] {
   --color-hero-ozon-mid: #5c3283;
   --color-hero-ozon-end: #7a3f8f;
 
-  --color-page-radial-start: rgba(242, 230, 246, 0.5);
-  --color-page-radial-end: rgba(237, 227, 246, 0.5);
-  --color-page-gradient-start: #faf5ff;
-  --color-page-gradient-end: #f7f3fc;
+  --color-page-radial-start: rgba(239, 234, 244, 0.24);
+  --color-page-radial-end: rgba(235, 230, 241, 0.24);
+  --color-page-gradient-start: #f8f6fb;
+  --color-page-gradient-end: #f4f1f8;
 
   --color-accent: var(--color-text-accent);
   --color-positive: var(--color-text-positive);

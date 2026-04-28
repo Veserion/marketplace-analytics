@@ -279,8 +279,14 @@ export function buildUnitEconomicsReports(
     articlePattern,
     excludePattern,
   ))
-  const printablePattern = articlePattern.trim() || '*'
-  const titlePrefix = excludePattern ? 'Артикул НЕ соответствует паттерну' : 'Артикул соответствует паттерну'
+  const normalizedPattern = articlePattern.trim()
+  const hasActivePattern = normalizedPattern !== '' && normalizedPattern !== '*'
+  const printablePattern = normalizedPattern || '*'
+  const reportTitle = !hasActivePattern
+    ? 'Юнит-экономика'
+    : excludePattern
+      ? `Юнит-экономика по артикулам вне паттерна "${printablePattern}"`
+      : `Юнит-экономика по выбранным артикулам "${printablePattern}"`
 
   return [
     buildUnitEconomicsReport(
@@ -289,7 +295,7 @@ export function buildUnitEconomicsReports(
       getCell,
       vatRatePercent,
       taxRatePercent,
-      `${titlePrefix} "${printablePattern}"`,
+      reportTitle,
     ),
   ]
 }
