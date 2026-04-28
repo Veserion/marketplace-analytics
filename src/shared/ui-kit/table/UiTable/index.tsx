@@ -33,6 +33,7 @@ type UiTableProps<T> = {
   emptyText?: string
   initialSort?: { key: string, direction: SortDirection } | null
   showHeaderFilters?: boolean
+  scrollX?: number | string | true
 }
 
 type TableRecord<T> = {
@@ -64,6 +65,7 @@ export function UiTable<T>({
   emptyText = 'Нет данных',
   initialSort = null,
   showHeaderFilters = true,
+  scrollX,
 }: UiTableProps<T>) {
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [sortState, setSortState] = useState<{ key: string, direction: SortDirection } | null>(initialSort)
@@ -165,6 +167,7 @@ export function UiTable<T>({
       columns={tableColumns}
       dataSource={dataSource}
       rowKey="__key"
+      scroll={scrollX ? { x: scrollX } : undefined}
       pagination={false}
       tableLayout="fixed"
       locale={{ emptyText: <span className={cn(`${BLOCK_NAME}__empty`)}>{emptyText}</span> }}

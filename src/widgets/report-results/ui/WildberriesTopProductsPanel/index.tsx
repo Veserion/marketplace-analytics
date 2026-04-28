@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { useMemo } from 'react'
 import type { WildberriesTopProductItem } from '@/entities/wildberries-report'
-import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { UiTable } from '@/shared/ui-kit/table'
 import type { UiTableColumn } from '@/shared/ui-kit/table'
 import { UiTooltipIcon } from '@/shared/ui-kit/tooltip'
@@ -173,7 +173,7 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
 
   return (
     <section className={cn(BLOCK_NAME)}>
-      <UiDisclosure
+      <UiAccordion
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
         title={<Typography variant='h3' color='accent'>Все товары по количеству продаж</Typography>}
       >
@@ -187,9 +187,10 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
             rowKey={(row) => (row.isTotal ? '__total__' : row.article)}
             initialSort={{ key: 'salesCount', direction: 'desc' }}
             showHeaderFilters={false}
+            scrollX={980}
             emptyText='Нет строк с продажами в выбранном фильтре артикулов.'
           />
-      </UiDisclosure>
+      </UiAccordion>
     </section>
   )
 }

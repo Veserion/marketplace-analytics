@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import { formatValue } from '@/shared/lib/csv'
-import { UiDisclosure } from '@/shared/ui-kit/disclosure'
+import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { UiMetricsList } from '@/shared/ui-kit/metrics-list'
 import type { UiMetricsListRow } from '@/shared/ui-kit/metrics-list'
 import { Typography } from '@/shared/ui-kit/typography'
@@ -346,7 +346,7 @@ export function AccrualResults({
       })}
 
       {structureReports.length > 0 && (
-        <UiDisclosure
+        <UiAccordion
           className={cn(`${BLOCK_NAME}__structure-details`)}
           title={(
             <Typography as="span" variant="h3" color="accent">
@@ -368,7 +368,7 @@ export function AccrualResults({
               </section>
             ))}
           </div>
-        </UiDisclosure>
+        </UiAccordion>
       )}
     </section>
   )

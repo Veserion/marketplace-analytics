@@ -32,7 +32,7 @@ export function UiMetricsList({ rows, className, hideThirdColumn = false }: UiMe
             <Typography as="span" variant="body2" color={row.labelColor ?? 'accent'} semiBold>{row.label}</Typography>
             {row.formula && <FormulaTooltipIcon formula={row.formula} />}
           </div>
-          <Typography as="span" variant="body1" semiBold className={row.valueClassName}>
+          <Typography as="span" variant="body1" semiBold className={cn(`${BLOCK_NAME}__metric-value`, row.valueClassName)}>
             {row.valueText}
           </Typography>
           {!hideThirdColumn && (

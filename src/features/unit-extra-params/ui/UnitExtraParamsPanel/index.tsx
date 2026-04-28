@@ -3,8 +3,7 @@ import Checkbox from 'antd/es/checkbox'
 import Input from 'antd/es/input'
 import InputNumber from 'antd/es/input-number'
 import Radio from 'antd/es/radio'
-import { UiDisclosure } from '@/shared/ui-kit/disclosure'
-import { UiPanel } from '@/shared/ui-kit/panel'
+import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -61,13 +60,12 @@ export function UnitExtraParamsPanel({
     : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.'
 
   return (
-    <UiPanel>
-      <UiDisclosure
-        title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
-        isOpen={isOpen}
-        onToggle={() => onToggleOpen()}
-        contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
-      >
+    <UiAccordion
+      title={<Typography as="span" variant="h2" color="accent" bold>Дополнительные параметры</Typography>}
+      isOpen={isOpen}
+      onToggle={() => onToggleOpen()}
+      contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
+    >
           <div className={cn(`${BLOCK_NAME}__grid`)}>
             <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="vatRateInput">
               <Typography as="span" variant="body2" color="accent" semiBold>НДС, %</Typography>
@@ -137,7 +135,6 @@ export function UnitExtraParamsPanel({
               </Radio.Group>
             </div>
           )}
-      </UiDisclosure>
-    </UiPanel>
+    </UiAccordion>
   )
 }

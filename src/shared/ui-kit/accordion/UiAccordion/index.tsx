@@ -1,0 +1,79 @@
+import { useState } from 'react'
+import type { ReactNode } from 'react'
+import Collapse from 'antd/es/collapse'
+import classNames from 'classnames'
+import styles from './index.module.scss'
+
+const BLOCK_NAME = 'UiAccordion'
+const PANEL_KEY = 'content'
+
+type UiAccordionProps = {
+  title: ReactNode
+  children: ReactNode
+  className?: string
+  triggerClassName?: string
+  titleClassName?: string
+  contentClassName?: string
+  contentInnerClassName?: string
+  meta?: ReactNode
+  isOpen?: boolean
+  defaultOpen?: boolean
+  disabled?: boolean
+  onToggle?: (nextOpen: boolean) => void
+}
+
+export function UiAccordion({
+  title,
+  children,
+  className,
+  triggerClassName,
+  titleClassName,
+  contentClassName,
+  contentInnerClassName,
+  meta,
+  isOpen,
+  defaultOpen = false,
+  disabled = false,
+  onToggle,
+}: UiAccordionProps) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen)
+  const isControlled = typeof isOpen === 'boolean'
+  const open = isControlled ? Boolean(isOpen) : internalOpen
+
+  const handleToggle = (keys: string[]): void => {
+    if (disabled) return
+    const nextOpen = keys.includes(PANEL_KEY)
+    if (!isControlled) {
+      setInternalOpen(nextOpen)
+    }
+    onToggle?.(nextOpen)
+  }
+
+  return (
+    <Collapse
+      ghost
+      bordered={false}
+      collapsible={disabled ? 'disabled' : undefined}
+      activeKey={open ? [PANEL_KEY] : []}
+      onChange={handleToggle}
+      className={classNames(styles[BLOCK_NAME], className)}
+      expandIconPlacement="end"
+      items={[
+        {
+          key: PANEL_KEY,
+          label: <span className={classNames(styles[`${BLOCK_NAME}__title`], titleClassName)}>{title}</span>,
+          extra: meta ? <span className={styles[`${BLOCK_NAME}__meta`]}>{meta}</span> : undefined,
+          children: (
+            <div className={classNames(styles[`${BLOCK_NAME}__content-inner`], contentInnerClassName)}>
+              {children}
+            </div>
+          ),
+          classNames: {
+            body: classNames(styles[`${BLOCK_NAME}__content`], contentClassName),
+            header: classNames(styles[`${BLOCK_NAME}__trigger`], triggerClassName),
+          },
+        },
+      ]}
+    />
+  )
+}

@@ -1,4 +1,5 @@
 export { UiMetricsList } from '@/shared/ui-kit/metrics-list'
+export { UiAccordion } from '@/shared/ui-kit/accordion'
 export { UiCard } from '@/shared/ui-kit/card'
 export { UiDisclosure } from '@/shared/ui-kit/disclosure'
 export { UiFlex } from '@/shared/ui-kit/flex'

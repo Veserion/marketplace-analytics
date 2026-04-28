@@ -41,7 +41,33 @@
 
 @media (max-width: 860px) {
   .UiMetricsList__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    align-items: start;
+  }
+
+  .UiMetricsList__metric-title {
+    grid-column: 1 / -1;
+  }
+
+  .UiMetricsList__metric-value {
+    grid-column: 1;
+    text-align: left;
+  }
+
+  .UiMetricsList__metric-percent {
+    grid-column: 2;
+    text-align: right;
+    align-self: start;
+  }
+
+  .UiMetricsList--two-columns .UiMetricsList__row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .UiMetricsList--two-columns .UiMetricsList__metric-title,
+  .UiMetricsList--two-columns .UiMetricsList__metric-value {
+    grid-column: 1;
   }
 }
