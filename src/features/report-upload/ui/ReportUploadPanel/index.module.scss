@@ -43,6 +43,14 @@
   margin: 0;
 }
 
+.ReportUploadPanel__file-meta {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .ReportUploadPanel__secondary-alert {
   display: flex;
   flex-direction: column;

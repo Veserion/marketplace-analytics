@@ -114,7 +114,7 @@ export function AnalyticsPage() {
         fileName={fileName}
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
-        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость".'
         secondaryUsageNote={cogsFallbackNote}
         error={error}
         showWildberriesWarning={false}

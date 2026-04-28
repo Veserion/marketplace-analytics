@@ -102,12 +102,19 @@
 
   .AccrualCostStructure__layout {
     flex-direction: column;
+    gap: 24px;
   }
 
   .AccrualCostStructure__chart {
     width: 100%;
     min-width: 0;
     flex-basis: auto;
+  }
+
+  .AccrualCostStructure__legend {
+    width: 100%;
+    flex: 0 0 auto;
+    align-self: stretch;
   }
 
   .AccrualCostStructure__item {

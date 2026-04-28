@@ -5,14 +5,11 @@ import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
 import { useWildberriesAnalyticsPage } from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
-import { UiPanel } from '@/shared/ui-kit/panel'
-import { UiTabs } from '@/shared/ui-kit/tabs'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'WildberriesPage'
-const WB_CALCULATION_ITEMS = [{ key: 'accrualReport', label: 'Отчет по поступлениям' }] as const
 const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({ default: module.AccrualResults })))
 const lazyWildberriesTopProductsPanel = lazy(async () => import('@/widgets/report-results/ui/WildberriesTopProductsPanel').then((module) => ({ default: module.WildberriesTopProductsPanel })))
 
@@ -65,15 +62,6 @@ export function WildberriesPage() {
 
       <MarketplaceTabs activeMarketplace="wildberries" onChange={onSwitchMarketplace} />
 
-      <UiPanel title="Вариант расчёта">
-        <UiTabs
-          items={WB_CALCULATION_ITEMS.map((item) => ({ key: item.key, label: item.label }))}
-          value="accrualReport"
-          onChange={() => undefined}
-          ariaLabel="Вариант расчёта для Wildberries"
-        />
-      </UiPanel>
-
       <UnitExtraParamsPanel
         isOpen={isExtraParamsOpen}
         isAccrualMode
@@ -97,7 +85,7 @@ export function WildberriesPage() {
         primaryFileLabel="Еженедельный детализированный отчет"
         secondaryFileName={cogsFileName}
         secondaryFileLabel="Себестоимость товаров"
-        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость" (регистр не важен).'
+        secondaryFileHint='Для формирования более полного отчета желательно добавить файл себестоимости. Обязательные колонки: "Артикул" и "Себестоимость".'
         secondaryUsageNote={cogsFallbackNote}
         secondaryMissingArticles={missingCogsArticles}
         secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
