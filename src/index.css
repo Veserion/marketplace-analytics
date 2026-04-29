@@ -95,6 +95,8 @@
   --color-tabs-active-text: var(--color-bg-surface);
   --color-tabs-active-hover-bg: var(--color-text-accent-strong);
   --color-tabs-active-hover-border: var(--color-text-accent-deep);
+  --color-header-bg: rgb(255 255 255 / 76%);
+  --color-header-border: var(--color-border-soft);
 }
 
 * {
@@ -182,6 +184,8 @@ body[data-theme='purple'] {
   --color-tabs-active-text: var(--color-bg-surface);
   --color-tabs-active-hover-bg: var(--color-text-accent-strong);
   --color-tabs-active-hover-border: var(--color-text-accent-deep);
+  --color-header-bg: rgb(252 247 255 / 78%);
+  --color-header-border: var(--color-border-soft);
 }
 
 button,

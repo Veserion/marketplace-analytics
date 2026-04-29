@@ -5,3 +5,7 @@
     radial-gradient(circle at 95% 88%, var(--color-page-radial-end), transparent 32%),
     linear-gradient(180deg, var(--color-page-gradient-start) 0%, var(--color-page-gradient-end) 100%);
 }
+
+.App__main {
+  min-height: calc(100dvh - 64px);
+}

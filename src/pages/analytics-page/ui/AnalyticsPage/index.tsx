@@ -1,7 +1,5 @@
 import classNames from 'classnames/bind'
 import { createElement, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
@@ -16,7 +14,6 @@ const lazyUnitEconomicsResults = lazy(async () => import('@/widgets/report-resul
 const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({ default: module.AccrualResults })))
 
 export function AnalyticsPage() {
-  const navigate = useNavigate()
   const {
     accrualReports,
     accrualArticlePattern,
@@ -48,25 +45,19 @@ export function AnalyticsPage() {
     vatRatePercent,
   } = useOzonAnalyticsPage()
 
-  const onSwitchMarketplace = (marketplace: 'wildberries' | 'ozon'): void => {
-    navigate(marketplace === 'wildberries' ? '/wildberries' : '/ozon')
-  }
-
   return (
     <main className={cn(BLOCK_NAME)}>
       <header className={cn(`${BLOCK_NAME}__hero`)}>
         <Typography variant="caption" color="light" className={cn(`${BLOCK_NAME}__eyebrow`)}>
-          Marketplace Analytics
+          Marketplace Metrics
         </Typography>
         <Typography as="h1" variant="h1" color="light" className={cn(`${BLOCK_NAME}__title`)}>
-          Аналитика продаж маркетплейсов
+          Аналитика Ozon
         </Typography>
         <Typography as="p" variant="body1" color="light" className={cn(`${BLOCK_NAME}__subtitle`)}>
-          Выберите площадку, метрики и загрузите CSV. Расчёт и отчёт в PDF формируются на лету.
+          Получите полную аналитику просто скачав отчеты в кабинете селлера и загрузив их в формате CSV или Excel.
         </Typography>
       </header>
-
-      <MarketplaceTabs activeMarketplace="ozon" onChange={onSwitchMarketplace} />
 
       <UiPanel title="Вариант расчёта">
         <OzonCalculationTabs value={ozonCalculationType} onChange={onSwitchOzonCalculation} />

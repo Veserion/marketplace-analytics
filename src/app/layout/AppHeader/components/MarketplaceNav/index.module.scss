@@ -1,0 +1,37 @@
+.MarketplaceNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 26px;
+}
+
+.MarketplaceNav__button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.MarketplaceNav__label {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.MarketplaceNav__button--ozon .MarketplaceNav__label {
+  color: #1f5fbf;
+}
+
+.MarketplaceNav__button--wildberries .MarketplaceNav__label {
+  color: #6b3d97;
+}
+
+.MarketplaceNav__button--active .MarketplaceNav__label {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 1140px) {
+  .MarketplaceNav__label {
+    font-size: 20px;
+  }
+}

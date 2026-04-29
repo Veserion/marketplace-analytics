@@ -1,7 +1,5 @@
 import classNames from 'classnames/bind'
 import { createElement, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MarketplaceTabs } from '@/features/marketplace-switcher'
 import { ReportUploadPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
 import { useWildberriesAnalyticsPage } from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
@@ -14,7 +12,6 @@ const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/
 const lazyWildberriesTopProductsPanel = lazy(async () => import('@/widgets/report-results/ui/WildberriesTopProductsPanel').then((module) => ({ default: module.WildberriesTopProductsPanel })))
 
 export function WildberriesPage() {
-  const navigate = useNavigate()
   const {
     articlePattern,
     cogsFallbackNote,
@@ -46,10 +43,6 @@ export function WildberriesPage() {
     vatRatePercent,
   } = useWildberriesAnalyticsPage()
 
-  const onSwitchMarketplace = (marketplace: 'wildberries' | 'ozon'): void => {
-    navigate(marketplace === 'wildberries' ? '/wildberries' : '/ozon')
-  }
-
   return (
     <main className={cn(BLOCK_NAME)}>
       <header className={cn(`${BLOCK_NAME}__hero`)}>
@@ -63,8 +56,6 @@ export function WildberriesPage() {
           Загрузите еженедельный детализированный отчет Wildberries для расчета поступлений и структуры начислений.
         </Typography>
       </header>
-
-      <MarketplaceTabs activeMarketplace="wildberries" onChange={onSwitchMarketplace} />
 
       <UnitExtraParamsPanel
         isOpen={isExtraParamsOpen}

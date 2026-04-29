@@ -16,6 +16,7 @@ type UiTabsProps<T extends string> = {
   value: T
   onChange: (value: T) => void
   ariaLabel: string
+  className?: string
 }
 
 export function UiTabs<T extends string>({
@@ -23,11 +24,12 @@ export function UiTabs<T extends string>({
   value,
   onChange,
   ariaLabel,
+  className = '',
 }: UiTabsProps<T>) {
   const style = { '--ui-tabs-count': items.length } as CSSProperties
 
   return (
-    <section className={cn(BLOCK_NAME)} aria-label={ariaLabel} style={style}>
+    <section className={cn(BLOCK_NAME, className)} aria-label={ariaLabel} style={style}>
       {items.map((item) => (
         <button
           key={item.key}

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Marketplace Metrics MM bar chart logo</title>
+  <desc id="desc">Compact double M monogram built from analytics bars using Ozon blue and Wildberries magenta.</desc>
+
+  <rect width="64" height="64" rx="14" fill="#101828"/>
+
+  <rect x="9" y="29" width="7.5" height="22.5" rx="3.75" fill="#005BFF"/>
+  <rect x="19" y="16.5" width="7.5" height="35" rx="3.75" fill="#005BFF"/>
+  <rect x="29" y="29" width="7.5" height="22.5" rx="3.75" fill="#CB11AB"/>
+  <rect x="39" y="16.5" width="7.5" height="35" rx="3.75" fill="#CB11AB"/>
+  <rect x="49" y="29" width="7.5" height="22.5" rx="3.75" fill="#CB11AB"/>
+
+  <path
+          d="M12.75 29L22.75 16.5L32.75 29L42.75 16.5L52.75 29"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="5.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+  />
+</svg>

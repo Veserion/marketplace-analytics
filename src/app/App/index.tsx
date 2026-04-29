@@ -2,6 +2,7 @@ import classNames from 'classnames/bind'
 import { createElement, lazy, Suspense, useEffect } from 'react'
 import ConfigProvider from 'antd/es/config-provider'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AppHeader } from '@/app/layout/AppHeader'
 import { getAntdTheme } from '@/app/theme/antd-theme'
 import styles from './index.module.scss'
 import '@/app/styles/app.scss'
@@ -29,14 +30,17 @@ function App() {
   return (
     <ConfigProvider theme={antdTheme}>
       <div className={cn(BLOCK_NAME)} data-theme={appTheme}>
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/ozon" replace />} />
-            <Route path="/ozon" element={createElement(lazyAnalyticsPage)} />
-            <Route path="/wildberries" element={createElement(lazyWildberriesPage)} />
-            <Route path="*" element={<Navigate to="/ozon" replace />} />
-          </Routes>
-        </Suspense>
+        <AppHeader />
+        <main className={cn(`${BLOCK_NAME}__main`)}>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/ozon" replace />} />
+              <Route path="/ozon" element={createElement(lazyAnalyticsPage)} />
+              <Route path="/wildberries" element={createElement(lazyWildberriesPage)} />
+              <Route path="*" element={<Navigate to="/ozon" replace />} />
+            </Routes>
+          </Suspense>
+        </main>
       </div>
     </ConfigProvider>
   )
