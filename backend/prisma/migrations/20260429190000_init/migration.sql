@@ -1,12 +1,12 @@
 CREATE TYPE "OrganizationRole" AS ENUM ('owner', 'admin', 'member');
 CREATE TYPE "Marketplace" AS ENUM ('ozon', 'wildberries');
 CREATE TYPE "ConnectionStatus" AS ENUM ('not_connected', 'connected', 'invalid');
-CREATE TYPE "AuditAction" AS ENUM ('email_code_requested', 'email_code_verified', 'user_registered', 'user_logged_in', 'credentials_saved', 'credentials_deleted');
+CREATE TYPE "AuditAction" AS ENUM ('user_registered', 'user_logged_in', 'credentials_saved', 'credentials_deleted');
 
 CREATE TABLE "User" (
   "id" TEXT NOT NULL,
   "email" TEXT NOT NULL,
-  "passwordHash" TEXT,
+  "passwordHash" TEXT NOT NULL,
   "name" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -21,18 +21,6 @@ CREATE TABLE "Organization" (
   "updatedAt" TIMESTAMP(3) NOT NULL,
 
   CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
-);
-
-CREATE TABLE "EmailAuthCode" (
-  "id" TEXT NOT NULL,
-  "email" TEXT NOT NULL,
-  "codeHash" TEXT NOT NULL,
-  "attempts" INTEGER NOT NULL DEFAULT 0,
-  "expiresAt" TIMESTAMP(3) NOT NULL,
-  "consumedAt" TIMESTAMP(3),
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  CONSTRAINT "EmailAuthCode_pkey" PRIMARY KEY ("id")
 );
 
 CREATE TABLE "OrganizationMember" (
@@ -72,8 +60,6 @@ CREATE TABLE "AuditLog" (
 );
 
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-CREATE INDEX "EmailAuthCode_email_idx" ON "EmailAuthCode"("email");
-CREATE INDEX "EmailAuthCode_expiresAt_idx" ON "EmailAuthCode"("expiresAt");
 CREATE UNIQUE INDEX "OrganizationMember_userId_organizationId_key" ON "OrganizationMember"("userId", "organizationId");
 CREATE INDEX "OrganizationMember_organizationId_idx" ON "OrganizationMember"("organizationId");
 CREATE UNIQUE INDEX "MarketplaceConnection_organizationId_marketplace_key" ON "MarketplaceConnection"("organizationId", "marketplace");

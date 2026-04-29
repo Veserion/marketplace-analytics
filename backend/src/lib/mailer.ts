@@ -6,6 +6,13 @@ type SendEmailCodeInput = {
   code: string
 }
 
+export class MailDeliveryError extends Error {
+  constructor(message = 'Не удалось отправить email. Проверьте SMTP-настройки отправителя.') {
+    super(message)
+    this.name = 'MailDeliveryError'
+  }
+}
+
 function hasSmtpConfig(): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD)
 }
@@ -26,10 +33,16 @@ export async function sendEmailCode({ email, code }: SendEmailCodeInput): Promis
     },
   })
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to: email,
-    subject: 'Код входа в Маркетплейс Метрику',
-    text: `Ваш код входа: ${code}. Код действует ${env.EMAIL_CODE_TTL_MINUTES} минут.`,
-  })
+  try {
+    await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to: email,
+      subject: 'Код входа в Маркетплейс Метрику',
+      text: `Ваш код входа: ${code}. Код действует ${env.EMAIL_CODE_TTL_MINUTES} минут.`,
+    })
+  } catch (error) {
+    throw new MailDeliveryError(
+      'Не удалось отправить код. Проверьте, что SMTP_FROM является подтвержденным отправителем в UniSender Go.',
+    )
+  }
 }

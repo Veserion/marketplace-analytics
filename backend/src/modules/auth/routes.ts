@@ -32,6 +32,7 @@ const requestEmailCodeSchema = z.object({
 const verifyEmailCodeSchema = z.object({
   email: z.email().toLowerCase(),
   code: z.string().regex(/^\d{6}$/),
+  password: z.string().min(8).optional(),
   name: z.string().trim().min(1).max(120).optional(),
   organizationName: z.string().trim().min(1).max(120).optional(),
 })
@@ -94,7 +95,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: 'Invalid or expired email code.' })
     }
 
+    if (body.password) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: body.email },
+        select: { passwordHash: true },
+      })
+
+      if (existingUser?.passwordHash) {
+        return reply.code(409).send({ error: 'User with this email already exists.' })
+      }
+    }
+
     const organizationName = body.organizationName ?? body.name ?? body.email
+    const passwordHash = body.password ? await hashPassword(body.password) : null
     const result = await prisma.$transaction(async (tx) => {
       await tx.emailAuthCode.update({
         where: { id: authCode.id },
@@ -107,6 +120,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           id: true,
           email: true,
           name: true,
+          passwordHash: true,
           memberships: {
             orderBy: { createdAt: 'asc' },
             take: 1,
@@ -125,10 +139,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           throw new Error('User has no organization.')
         }
 
-        if (body.name && !existingUser.name) {
+        if ((body.name && !existingUser.name) || (passwordHash && !existingUser.passwordHash)) {
           await tx.user.update({
             where: { id: existingUser.id },
-            data: { name: body.name },
+            data: {
+              name: body.name && !existingUser.name ? body.name : undefined,
+              passwordHash: passwordHash && !existingUser.passwordHash ? passwordHash : undefined,
+            },
           })
         }
 
@@ -157,6 +174,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       const user = await tx.user.create({
         data: {
           email: body.email,
+          passwordHash,
           name: body.name,
         },
         select: { id: true, email: true, name: true },

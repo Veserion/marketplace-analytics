@@ -24,6 +24,8 @@ npm install
 
 2. Создать `.env` на основе `.env.example`.
 
+Backend автоматически загружает переменные из `backend/.env` при запуске.
+
 Сгенерировать ключ шифрования:
 
 ```bash
@@ -33,7 +35,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 3. Запустить Postgres:
 
 ```bash
-docker compose up -d
+npm run db:up
 ```
 
 4. Применить миграции базы данных:
@@ -81,6 +83,36 @@ Endpoints с авторизацией через `Authorization: Bearer <token>`
 Ключи шифруются перед записью в PostgreSQL. В ответах API возвращаются только маска ключа, статус и даты.
 
 Не теряйте `ENCRYPTION_KEY`. Без него сохраненные ключи маркетплейсов нельзя будет расшифровать.
+
+## Частые ошибки
+
+### `role "marketplace" does not exist`
+
+Backend подключается к Postgres пользователем из `DATABASE_URL`, но в текущей базе такого пользователя нет.
+
+Если используете локальный Docker Compose из этого проекта:
+
+```bash
+npm run db:up
+npm run prisma:migrate
+```
+
+Docker Compose проекта публикует Postgres на `localhost:5433`, чтобы не конфликтовать с локальным Postgres на `5432`.
+
+В `backend/.env` должно быть:
+
+```env
+DATABASE_URL="postgresql://marketplace:marketplace@localhost:5433/marketplace_analytics"
+```
+
+Если вы хотите использовать уже установленный локальный Postgres на `localhost:5432`, создайте пользователя и базу в нем:
+
+
+```bash
+psql postgres -c "CREATE ROLE marketplace WITH LOGIN PASSWORD 'marketplace';"
+psql postgres -c "CREATE DATABASE marketplace_analytics OWNER marketplace;"
+npm run prisma:migrate
+```
 
 ## Регистрация и вход по email-коду
 
