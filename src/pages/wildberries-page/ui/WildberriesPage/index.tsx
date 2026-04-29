@@ -47,13 +47,13 @@ export function WildberriesPage() {
     <main className={cn(BLOCK_NAME)}>
       <header className={cn(`${BLOCK_NAME}__hero`)}>
         <Typography variant="caption" color="light" className={cn(`${BLOCK_NAME}__eyebrow`)}>
-          Marketplace Analytics
+          Marketplace Metrics
         </Typography>
         <Typography as="h1" variant="h1" color="light" className={cn(`${BLOCK_NAME}__title`)}>
           Аналитика Wildberries
         </Typography>
         <Typography as="p" variant="body1" color="light" className={cn(`${BLOCK_NAME}__subtitle`)}>
-          Загрузите еженедельный детализированный отчет Wildberries для расчета поступлений и структуры начислений.
+          Получите полную аналитику просто скачав отчеты в кабинете селлера и загрузив их в формате CSV или Excel.
         </Typography>
       </header>
 
@@ -101,6 +101,7 @@ export function WildberriesPage() {
             reports,
             showAccrualOverview: true,
             cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
+            isWildberries: true,
           })}
         </Suspense>
       )}

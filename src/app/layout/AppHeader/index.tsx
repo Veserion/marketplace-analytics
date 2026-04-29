@@ -43,7 +43,7 @@ export function AppHeader() {
             src="/marketplace-metrics-logo.svg"
             alt="Marketplace Metrics"
           />
-          <Typography as="span" variant="h4" color="accent">
+          <Typography as="span" variant="h2" color="accent" className={cn(`${BLOCK_NAME}__brand-text`)}>
             Marketplace Metrics
           </Typography>
         </button>

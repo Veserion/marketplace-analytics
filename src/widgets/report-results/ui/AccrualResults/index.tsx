@@ -1,4 +1,6 @@
 import classNames from 'classnames/bind'
+import Radio from 'antd/es/radio'
+import { useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -61,6 +63,7 @@ type AccrualResultsProps = {
   reports: AccrualGroup[]
   cogsMissingValueText?: string
   showAccrualOverview?: boolean
+  isWildberries?: boolean
 }
 
 type DynamicsChartPoint = {
@@ -68,6 +71,60 @@ type DynamicsChartPoint = {
   value: number
   valueText: string
   shareText?: string | null
+}
+
+type DynamicsViewMode = 'chart' | 'table'
+type DateRange = {
+  from: number
+  to: number
+}
+
+const DYNAMICS_VIEW_OPTIONS: Array<{ label: string, value: DynamicsViewMode }> = [
+  { label: 'График', value: 'chart' },
+  { label: 'Таблица', value: 'table' },
+]
+
+function toDateTimestamp(label: string): number | null {
+  const normalized = label.trim()
+  if (!normalized) return null
+
+  const dotParts = normalized.split('.').map(Number)
+  if (dotParts.length === 3 && dotParts.every((part) => !Number.isNaN(part))) {
+    const [day, month, year] = dotParts
+    const date = new Date(year, month - 1, day)
+    const time = date.getTime()
+    return Number.isNaN(time) ? null : time
+  }
+
+  const dashParts = normalized.split('-').map(Number)
+  if (dashParts.length === 3 && dashParts.every((part) => !Number.isNaN(part))) {
+    const [year, month, day] = dashParts
+    const date = new Date(year, month - 1, day)
+    const time = date.getTime()
+    return Number.isNaN(time) ? null : time
+  }
+
+  const parsed = Date.parse(normalized)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function parseDateRangeFromPeriodLabel(periodLabel?: string): DateRange | null {
+  if (!periodLabel) return null
+  const matches = periodLabel.match(/\d{1,2}\.\d{1,2}\.\d{4}|\d{4}-\d{1,2}-\d{1,2}/g) || []
+  if (matches.length === 0) return null
+
+  const fromLabel = matches[0]
+  const toLabel = matches[matches.length - 1]
+  if (!fromLabel || !toLabel) return null
+
+  const from = toDateTimestamp(fromLabel)
+  const to = toDateTimestamp(toLabel)
+  if (from === null || to === null) return null
+
+  return {
+    from: Math.min(from, to),
+    to: Math.max(from, to),
+  }
 }
 
 function getValueClassName(value: number | null): string {
@@ -239,9 +296,15 @@ export function AccrualResults({
   reports,
   cogsMissingValueText = DEFAULT_COGS_MISSING_VALUE_TEXT,
   showAccrualOverview = false,
+  isWildberries = false,
 }: AccrualResultsProps) {
+  const [dynamicsViewMode, setDynamicsViewMode] = useState<DynamicsViewMode>('chart')
   const structureReports = reports.filter((report) => report.title.startsWith('Структура:'))
   const baseReports = reports.filter((report) => !report.title.startsWith('Структура:'))
+  const totalsReport = baseReports.find((report) => report.title === 'Итоги периода')
+  const wildberriesPeriodRange = isWildberries
+    ? parseDateRangeFromPeriodLabel(totalsReport?.periodLabel)
+    : null
   const overviewModel = showAccrualOverview ? buildOverviewModel(reports) : null
   const salesAbsSum = overviewModel
     ? overviewModel.salesItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
@@ -368,7 +431,15 @@ export function AccrualResults({
               shareText: metric.shareText,
             }))
           : []
-        const dynamicsTotalValue = dynamicsChartData.reduce((sum, point) => sum + point.value, 0)
+        const filteredDynamicsChartData = isWildberries && wildberriesPeriodRange
+          ? dynamicsChartData.filter((point) => {
+            const timestamp = toDateTimestamp(point.dateLabel)
+            return timestamp !== null
+              && timestamp >= wildberriesPeriodRange.from
+              && timestamp <= wildberriesPeriodRange.to
+          })
+          : dynamicsChartData
+        const dynamicsTotalValue = filteredDynamicsChartData.reduce((sum, point) => sum + point.value, 0)
 
         return (
           <article className={cn(`${BLOCK_NAME}__card`)} key={report.title}>
@@ -380,68 +451,87 @@ export function AccrualResults({
             </header>
 
             {isAccrualDynamicsReport ? (
-              <div className={cn(`${BLOCK_NAME}__dynamics-chart`)}>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart
-                    data={dynamicsChartData}
-                    margin={{ top: 8, right: 12, left: 0, bottom: 6 }}
-                  >
-                    <CartesianGrid stroke="var(--color-border-subtle)" strokeDasharray="4 4" />
-                    <XAxis
-                      dataKey="dateLabel"
-                      minTickGap={24}
-                      tickLine={false}
-                      axisLine={{ stroke: 'var(--color-border-subtle)' }}
-                      tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
-                    />
-                    <YAxis
-                      tickFormatter={formatCompactRuble}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
-                      width={72}
-                    />
-                    <ReferenceLine y={0} stroke="var(--color-border-muted)" />
-                    <RechartsTooltip
-                      cursor={{ stroke: 'var(--color-border-muted)' }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload || payload.length === 0) return null
-                        const point = payload[0]?.payload as DynamicsChartPoint | undefined
-                        if (!point) return null
+              <div className={cn(`${BLOCK_NAME}__dynamics`)}>
+                <Radio.Group
+                  block
+                  className={cn(`${BLOCK_NAME}__dynamics-view-switch`)}
+                  options={DYNAMICS_VIEW_OPTIONS}
+                  optionType="button"
+                  value={dynamicsViewMode}
+                  onChange={(event) => setDynamicsViewMode(event.target.value as DynamicsViewMode)}
+                />
 
-                        return (
-                          <div className={cn(`${BLOCK_NAME}__dynamics-tooltip`)}>
-                            <Typography variant="body3" color="accent" semiBold>{point.dateLabel}</Typography>
-                            <Typography
-                              variant="body3"
-                              color="primary"
-                              className={cn({
-                                [`${BLOCK_NAME}__dynamics-tooltip-value--positive`]: point.value > 0,
-                                [`${BLOCK_NAME}__dynamics-tooltip-value--negative`]: point.value < 0,
-                              })}
-                            >
-                              {point.valueText}
-                            </Typography>
-                            {point.shareText && (
-                              <Typography variant="caption" color="muted">{point.shareText}</Typography>
-                            )}
-                          </div>
-                        )
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="var(--color-positive, #1f8b4c)"
-                      strokeWidth={3.5}
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__dynamics-total`)}>
-                  Итого: {formatValue(dynamicsTotalValue, 'currency')}
-                </Typography>
+                {dynamicsViewMode === 'chart' ? (
+                  <div className={cn(`${BLOCK_NAME}__dynamics-chart`)}>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart
+                        data={filteredDynamicsChartData}
+                        margin={{ top: 8, right: 12, left: 0, bottom: 6 }}
+                      >
+                        <CartesianGrid stroke="var(--color-border-subtle)" strokeDasharray="4 4" />
+                        <XAxis
+                          dataKey="dateLabel"
+                          minTickGap={24}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border-subtle)' }}
+                          tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
+                        />
+                        <YAxis
+                          tickFormatter={formatCompactRuble}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
+                          width={72}
+                        />
+                        <ReferenceLine y={0} stroke="var(--color-border-muted)" />
+                        <RechartsTooltip
+                          cursor={{ stroke: 'var(--color-border-muted)' }}
+                          content={({ active, payload }) => {
+                            if (!active || !payload || payload.length === 0) return null
+                            const point = payload[0]?.payload as DynamicsChartPoint | undefined
+                            if (!point) return null
+
+                            return (
+                              <div className={cn(`${BLOCK_NAME}__dynamics-tooltip`)}>
+                                <Typography variant="body3" color="accent" semiBold>{point.dateLabel}</Typography>
+                                <Typography
+                                  variant="body3"
+                                  color="primary"
+                                  className={cn({
+                                    [`${BLOCK_NAME}__dynamics-tooltip-value--positive`]: point.value > 0,
+                                    [`${BLOCK_NAME}__dynamics-tooltip-value--negative`]: point.value < 0,
+                                  })}
+                                >
+                                  {point.valueText}
+                                </Typography>
+                                {point.shareText && (
+                                  <Typography variant="caption" color="muted">{point.shareText}</Typography>
+                                )}
+                              </div>
+                            )
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          stroke="var(--color-positive, #1f8b4c)"
+                          strokeWidth={3.5}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <Typography variant="body2" color="accent" semiBold className={cn(`${BLOCK_NAME}__dynamics-total`)}>
+                      Итого: {formatValue(dynamicsTotalValue, 'currency')}
+                    </Typography>
+                  </div>
+                ) : (
+                  <UiMetricsList
+                    rows={report.metrics.map((metric) => (
+                      toMetricRow(report.title, metric, getValueClassName(metric.value), cogsMissingValueText)
+                    ))}
+                  />
+                )}
               </div>
             ) : (
               <UiMetricsList

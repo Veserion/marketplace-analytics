@@ -34,9 +34,8 @@
   object-fit: contain;
 }
 
-.AppHeader__brand :global(.Typography) {
-  font-size: 20px;
-  line-height: 1.1;
+.AppHeader__brand-text {
+  color: #444445 !important;
 }
 
 .AppHeader__nav {
@@ -69,10 +68,6 @@
   .AppHeader__content {
     padding: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .AppHeader__brand :global(.Typography) {
-    font-size: 16px;
   }
 
   .AppHeader__nav {
