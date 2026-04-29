@@ -27,6 +27,10 @@
   line-height: 1.18;
 }
 
+.ProfilePage__workspace {
+  margin-top: 8px;
+}
+
 .ProfilePage__layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -37,6 +41,12 @@
 .ProfilePage__sidebar {
   position: sticky;
   top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ProfilePage__section-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -53,6 +63,7 @@
   box-shadow: 0 8px 18px rgb(18 48 93 / 5%);
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 4px;
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
@@ -71,6 +82,19 @@
 .ProfilePage__section-title {
   color: var(--color-text-accent);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ProfilePage__section-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
 }
 
 .ProfilePage__section-description {
@@ -93,6 +117,29 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.ProfilePage__api-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--color-border-base);
+  border-radius: 12px;
+  background: var(--color-bg-surface-info);
+}
+
+.ProfilePage__api-note-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 
 .ProfilePage__card-head {
@@ -123,12 +170,58 @@
   flex-direction: column;
   gap: 6px;
   color: var(--color-text-accent);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
 }
 
-.ProfilePage__status-tag {
+.ProfilePage__connection-meta {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-bg-surface-info);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.ProfilePage__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.ProfilePage__compact-alert {
+  margin-bottom: 2px;
+}
+
+.ProfilePage__action-button--danger:hover {
+  border-color: var(--color-border-danger);
+  background: var(--color-bg-status-danger-soft);
+}
+
+.ProfilePage__action-button--danger .ProfilePage__section-title {
+  color: var(--color-text-negative);
+}
+
+.ProfilePage__security-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 560px;
+}
+
+.ProfilePage__security-primary-button {
   width: fit-content;
+  min-width: 220px;
+  min-height: 42px;
+}
+
+.ProfilePage__security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .ProfilePage__empty-state {
@@ -203,8 +296,6 @@
 
   .ProfilePage__sidebar {
     position: static;
-    display: grid;
-    grid-template-columns: 1fr;
   }
 
   .ProfilePage__cards-grid {

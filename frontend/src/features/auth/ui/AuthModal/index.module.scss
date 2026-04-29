@@ -1,0 +1,96 @@
+.AuthModal :global(.ant-modal-content) {
+  border-radius: 18px;
+  padding: 28px;
+  border: 1px solid var(--color-border-soft);
+  box-shadow: 0 18px 60px rgb(16 40 74 / 22%);
+}
+
+.AuthModal :global(.ant-modal-close) {
+  top: 18px;
+  inset-inline-end: 18px;
+}
+
+.AuthModal :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+.AuthModal :global(.ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.AuthModal :global(.ant-form-item-label > label) {
+  color: var(--color-text-accent);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.AuthModal :global(.ant-input),
+.AuthModal :global(.ant-input-affix-wrapper) {
+  height: 42px;
+  border-radius: 10px;
+}
+
+.AuthModal :global(.ant-input-affix-wrapper .ant-input) {
+  height: auto;
+}
+
+.AuthModal__head {
+  padding-right: 32px;
+  margin-bottom: 22px;
+}
+
+.AuthModal__title {
+  margin: 0 0 8px;
+  color: var(--color-text-accent);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.AuthModal__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.AuthModal__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.AuthModal__alert {
+  margin-bottom: 16px;
+}
+
+.AuthModal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.AuthModal__actions :global(.ant-btn) {
+  min-height: 42px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.AuthModal__secondaryButton {
+  border-color: var(--color-border-control);
+  color: var(--color-text-accent);
+}
+
+@media (max-width: 520px) {
+  .AuthModal {
+    max-width: calc(100vw - 24px);
+  }
+
+  .AuthModal :global(.ant-modal-content) {
+    padding: 22px;
+  }
+
+  .AuthModal__actions {
+    grid-template-columns: 1fr;
+  }
+}

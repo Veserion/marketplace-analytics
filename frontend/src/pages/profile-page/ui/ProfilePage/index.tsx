@@ -1,135 +1,67 @@
 import classNames from 'classnames/bind'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/features/auth'
+import { apiRequest } from '@/shared/api/client'
 import {
-  ApiOutlined,
-  CloudUploadOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  LockOutlined,
-  ReloadOutlined,
-  SafetyOutlined,
-} from '@ant-design/icons'
-import Alert from 'antd/es/alert'
-import Button from 'antd/es/button'
-import Input from 'antd/es/input'
-import Popconfirm from 'antd/es/popconfirm'
-import Tag from 'antd/es/tag'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  clearCsvRecords,
   deleteCsvRecord,
   getCsvRecords,
   type CsvStorageMode,
   type CsvStorageRecord,
 } from '@/shared/lib/indexed-db'
-import { UiCard } from '@/shared/ui-kit/card'
-import { UiPanel } from '@/shared/ui-kit/panel'
 import { Typography } from '@/shared/ui-kit/typography'
+import { ApiKeysSection } from './components/ApiKeysSection'
+import { ProfileSidebar } from './components/ProfileSidebar'
+import { SecuritySection } from './components/SecuritySection'
+import { UploadedFilesSection } from './components/UploadedFilesSection'
+import type {
+  Marketplace,
+  MarketplaceConnection,
+  ProfileSection,
+  SecurityFormState,
+  SecurityStep,
+  StatusMessage,
+} from './components/types'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'ProfilePage'
 
-type ProfileSection = 'apiKeys' | 'uploadedFiles' | 'dataSecurity'
+function upsertConnection(
+  connections: MarketplaceConnection[],
+  nextConnection: MarketplaceConnection,
+): MarketplaceConnection[] {
+  const hasConnection = connections.some((connection) => connection.marketplace === nextConnection.marketplace)
+  if (!hasConnection) return [...connections, nextConnection]
 
-type SectionItem = {
-  key: ProfileSection
-  title: string
-  description: string
+  return connections.map((connection) => (
+    connection.marketplace === nextConnection.marketplace ? nextConnection : connection
+  ))
 }
 
-type CsvRecordMeta = {
-  title: string
-  marketplace: string
-  kind: string
-}
-
-const PROFILE_SECTIONS: SectionItem[] = [
-  {
-    key: 'apiKeys',
-    title: 'API-ключи',
-    description: 'Подключения маркетплейсов',
-  },
-  {
-    key: 'uploadedFiles',
-    title: 'Загруженные файлы',
-    description: 'Отчеты и себестоимость',
-  },
-  {
-    key: 'dataSecurity',
-    title: 'Данные и безопасность',
-    description: 'Локальное хранение',
-  },
-]
-
-const CSV_RECORD_META: Record<CsvStorageMode, CsvRecordMeta> = {
-  unitEconomics: {
-    title: 'Ozon: юнит-экономика',
-    marketplace: 'Ozon',
-    kind: 'Основной отчет',
-  },
-  accrualReport: {
-    title: 'Ozon: отчет по поступлениям',
-    marketplace: 'Ozon',
-    kind: 'Основной отчет',
-  },
-  ozonCogs: {
-    title: 'Ozon: себестоимость',
-    marketplace: 'Ozon',
-    kind: 'Справочник',
-  },
-  wildberriesAccrualReport: {
-    title: 'Wildberries: еженедельный отчет',
-    marketplace: 'Wildberries',
-    kind: 'Основной отчет',
-  },
-  wildberriesForeignAccrualReport: {
-    title: 'Wildberries: отчет по другим странам',
-    marketplace: 'Wildberries',
-    kind: 'Дополнительный отчет',
-  },
-  wildberriesCogs: {
-    title: 'Wildberries: себестоимость',
-    marketplace: 'Wildberries',
-    kind: 'Справочник',
-  },
-}
-
-const LOCAL_STORAGE_KEYS = [
-  'unit_economics_vat_rate_percent',
-  'unit_economics_tax_rate_percent',
-  'wildberries_accrual_vat_rate_percent',
-  'wildberries_accrual_tax_rate_percent',
-  'wildberries_cogs_matching_mode',
-]
-
-function formatDate(timestamp: number): string {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(timestamp)
-}
-
-function formatSize(value: string): string {
-  const bytes = new Blob([value]).size
-  if (bytes < 1024) return `${bytes} Б`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`
+const INITIAL_SECURITY_FORM: SecurityFormState = {
+  code: '',
+  newPassword: '',
+  repeatPassword: '',
 }
 
 export function ProfilePage() {
+  const { session, logout } = useAuth()
+  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState<ProfileSection>('apiKeys')
   const [records, setRecords] = useState<CsvStorageRecord[]>([])
   const [filesError, setFilesError] = useState('')
   const [isFilesLoading, setIsFilesLoading] = useState(true)
-  const [isClearingData, setIsClearingData] = useState(false)
-
-  const sortedRecords = useMemo(
-    () => [...records].sort((a, b) => b.updatedAt - a.updatedAt),
-    [records],
-  )
+  const [connections, setConnections] = useState<MarketplaceConnection[]>([])
+  const [isConnectionsLoading, setIsConnectionsLoading] = useState(false)
+  const [savingMarketplace, setSavingMarketplace] = useState<Marketplace | null>(null)
+  const [credentialsMessage, setCredentialsMessage] = useState<StatusMessage | null>(null)
+  const [ozonCredentials, setOzonCredentials] = useState({ clientId: '', apiKey: '' })
+  const [wildberriesToken, setWildberriesToken] = useState('')
+  const [securityStep, setSecurityStep] = useState<SecurityStep>('requestCode')
+  const [securityForm, setSecurityForm] = useState<SecurityFormState>(INITIAL_SECURITY_FORM)
+  const [isSecurityPending, setIsSecurityPending] = useState(false)
+  const [securityMessage, setSecurityMessage] = useState<StatusMessage | null>(null)
 
   const loadRecords = useCallback(async (): Promise<void> => {
     setFilesError('')
@@ -142,6 +74,26 @@ export function ProfilePage() {
       setIsFilesLoading(false)
     }
   }, [])
+
+  const loadConnections = useCallback(async (): Promise<void> => {
+    if (!session) return
+
+    setCredentialsMessage(null)
+    setIsConnectionsLoading(true)
+    try {
+      const response = await apiRequest<{ connections: MarketplaceConnection[] }>('/marketplace-connections', {
+        token: session.token,
+      })
+      setConnections(response.connections)
+    } catch (err) {
+      setCredentialsMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось загрузить подключения.',
+      })
+    } finally {
+      setIsConnectionsLoading(false)
+    }
+  }, [session])
 
   useEffect(() => {
     let isCancelled = false
@@ -165,6 +117,25 @@ export function ProfilePage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!session) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      void loadConnections()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [loadConnections, session])
+
+  const onSectionChange = (section: ProfileSection): void => {
+    setActiveSection(section)
+    if (section !== 'security') return
+
+    setSecurityStep('requestCode')
+    setSecurityForm(INITIAL_SECURITY_FORM)
+    setSecurityMessage(null)
+  }
+
   const onDeleteRecord = async (mode: CsvStorageMode): Promise<void> => {
     setFilesError('')
     try {
@@ -175,20 +146,148 @@ export function ProfilePage() {
     }
   }
 
-  const onClearLocalData = async (): Promise<void> => {
-    setFilesError('')
-    setIsClearingData(true)
-    try {
-      await clearCsvRecords()
-      if (typeof window !== 'undefined') {
-        LOCAL_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key))
-      }
-      setRecords([])
-    } catch {
-      setFilesError('Не удалось очистить локальные данные.')
-    } finally {
-      setIsClearingData(false)
+  const onSaveOzonCredentials = async (): Promise<void> => {
+    if (!session) return
+    if (!ozonCredentials.clientId.trim() || !ozonCredentials.apiKey.trim()) {
+      setCredentialsMessage({ type: 'error', text: 'Введите Client ID и API Key Ozon.' })
+      return
     }
+
+    setCredentialsMessage(null)
+    setSavingMarketplace('ozon')
+    try {
+      const response = await apiRequest<{ connection: MarketplaceConnection }>('/marketplace-connections/ozon/credentials', {
+        method: 'PUT',
+        token: session.token,
+        body: JSON.stringify(ozonCredentials),
+      })
+      setConnections((currentConnections) => upsertConnection(currentConnections, response.connection))
+      setOzonCredentials({ clientId: '', apiKey: '' })
+      setCredentialsMessage({ type: 'success', text: 'Ключи Ozon сохранены.' })
+    } catch (err) {
+      setCredentialsMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось сохранить ключи Ozon.',
+      })
+    } finally {
+      setSavingMarketplace(null)
+    }
+  }
+
+  const onSaveWildberriesCredentials = async (): Promise<void> => {
+    if (!session) return
+    if (!wildberriesToken.trim()) {
+      setCredentialsMessage({ type: 'error', text: 'Введите токен Wildberries.' })
+      return
+    }
+
+    setCredentialsMessage(null)
+    setSavingMarketplace('wildberries')
+    try {
+      const response = await apiRequest<{ connection: MarketplaceConnection }>('/marketplace-connections/wildberries/credentials', {
+        method: 'PUT',
+        token: session.token,
+        body: JSON.stringify({ token: wildberriesToken }),
+      })
+      setConnections((currentConnections) => upsertConnection(currentConnections, response.connection))
+      setWildberriesToken('')
+      setCredentialsMessage({ type: 'success', text: 'Токен Wildberries сохранен.' })
+    } catch (err) {
+      setCredentialsMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось сохранить токен Wildberries.',
+      })
+    } finally {
+      setSavingMarketplace(null)
+    }
+  }
+
+  const onDeleteCredentials = async (marketplace: Marketplace): Promise<void> => {
+    if (!session) return
+
+    setCredentialsMessage(null)
+    setSavingMarketplace(marketplace)
+    try {
+      const response = await apiRequest<{ connection: MarketplaceConnection }>(`/marketplace-connections/${marketplace}/credentials`, {
+        method: 'DELETE',
+        token: session.token,
+      })
+      setConnections((currentConnections) => upsertConnection(currentConnections, response.connection))
+      setCredentialsMessage({ type: 'success', text: 'Подключение отключено.' })
+    } catch (err) {
+      setCredentialsMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось отключить подключение.',
+      })
+    } finally {
+      setSavingMarketplace(null)
+    }
+  }
+
+  const onRequestPasswordCode = async (): Promise<void> => {
+    if (!session) return
+
+    setSecurityMessage(null)
+    setIsSecurityPending(true)
+    try {
+      await apiRequest<{ ok: true }>('/me/password-code/request', {
+        method: 'POST',
+        token: session.token,
+      })
+      setSecurityStep('changePassword')
+      setSecurityMessage({ type: 'success', text: 'Код отправлен на email аккаунта.' })
+    } catch (err) {
+      setSecurityMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось отправить код.',
+      })
+    } finally {
+      setIsSecurityPending(false)
+    }
+  }
+
+  const onConfirmPasswordChange = async (): Promise<void> => {
+    if (!session) return
+    if (!/^\d{6}$/.test(securityForm.code)) {
+      setSecurityMessage({ type: 'error', text: 'Введите 6 цифр из письма.' })
+      return
+    }
+    if (securityForm.newPassword !== securityForm.repeatPassword) {
+      setSecurityMessage({ type: 'error', text: 'Новый пароль и повтор не совпадают.' })
+      return
+    }
+    if (securityForm.newPassword.length < 8) {
+      setSecurityMessage({ type: 'error', text: 'Новый пароль должен быть не короче 8 символов.' })
+      return
+    }
+
+    setSecurityMessage(null)
+    setIsSecurityPending(true)
+    try {
+      await apiRequest<{ ok: true }>('/me/password-code/verify', {
+        method: 'POST',
+        token: session.token,
+        body: JSON.stringify({
+          code: securityForm.code,
+          newPassword: securityForm.newPassword,
+        }),
+      })
+      setSecurityForm(INITIAL_SECURITY_FORM)
+      setSecurityStep('requestCode')
+      setSecurityMessage({ type: 'success', text: 'Пароль обновлен.' })
+    } catch (err) {
+      setSecurityMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Не удалось сменить пароль.',
+      })
+    } finally {
+      setIsSecurityPending(false)
+    }
+  }
+
+  const onLogout = (): void => {
+    logout()
+    navigate('/ozon')
   }
 
   return (
@@ -201,217 +300,60 @@ export function ProfilePage() {
           <Typography as="h1" variant="h1" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
             Настройки аккаунта и данных
           </Typography>
+          {session && (
+            <Typography variant="body2" color="muted" className={cn(`${BLOCK_NAME}__workspace`)}>
+              Рабочее пространство: {session.organization.name}
+            </Typography>
+          )}
         </div>
       </header>
 
       <div className={cn(`${BLOCK_NAME}__layout`)}>
-        <aside className={cn(`${BLOCK_NAME}__sidebar`)} aria-label="Разделы профиля">
-          {PROFILE_SECTIONS.map((section) => (
-            <button
-              key={section.key}
-              type="button"
-              className={cn(`${BLOCK_NAME}__section-button`, {
-                [`${BLOCK_NAME}__section-button--active`]: activeSection === section.key,
-              })}
-              onClick={() => setActiveSection(section.key)}
-            >
-              <span className={cn(`${BLOCK_NAME}__section-title`)}>
-                {section.title}
-              </span>
-              <span className={cn(`${BLOCK_NAME}__section-description`)}>
-                {section.description}
-              </span>
-            </button>
-          ))}
-        </aside>
+        <ProfileSidebar
+          activeSection={activeSection}
+          onSectionChange={onSectionChange}
+          onLogout={onLogout}
+        />
 
         <section className={cn(`${BLOCK_NAME}__content`)}>
           {activeSection === 'apiKeys' && (
-            <UiPanel title="API-ключи">
-              <Alert
-                type="info"
-                showIcon
-                message="Ключи требуют серверного хранения"
-                description="На фронтенде можно собрать форму подключения, но реальные токены Ozon и Wildberries безопаснее сохранять только через backend."
-              />
-              <div className={cn(`${BLOCK_NAME}__cards-grid`)}>
-                <UiCard className={cn(`${BLOCK_NAME}__integration-card`)}>
-                  <div className={cn(`${BLOCK_NAME}__card-head`)}>
-                    <ApiOutlined className={cn(`${BLOCK_NAME}__card-icon`)} />
-                    <div>
-                      <Typography variant="h3" color="accent" className={cn(`${BLOCK_NAME}__card-title`)}>
-                        Ozon Seller API
-                      </Typography>
-                      <Typography variant="body3" color="muted">
-                        Client ID и API Key
-                      </Typography>
-                    </div>
-                  </div>
-                  <label className={cn(`${BLOCK_NAME}__field`)}>
-                    <span>Client ID</span>
-                    <Input placeholder="Будет доступно после подключения backend" disabled />
-                  </label>
-                  <label className={cn(`${BLOCK_NAME}__field`)}>
-                    <span>API Key</span>
-                    <Input.Password placeholder="Будет доступно после подключения backend" disabled />
-                  </label>
-                  <Tag color="default" className={cn(`${BLOCK_NAME}__status-tag`)}>Не подключено</Tag>
-                </UiCard>
-
-                <UiCard className={cn(`${BLOCK_NAME}__integration-card`)}>
-                  <div className={cn(`${BLOCK_NAME}__card-head`)}>
-                    <CloudUploadOutlined className={cn(`${BLOCK_NAME}__card-icon`)} />
-                    <div>
-                      <Typography variant="h3" color="accent" className={cn(`${BLOCK_NAME}__card-title`)}>
-                        Wildberries API
-                      </Typography>
-                      <Typography variant="body3" color="muted">
-                        Токен кабинета продавца
-                      </Typography>
-                    </div>
-                  </div>
-                  <label className={cn(`${BLOCK_NAME}__field`)}>
-                    <span>Token</span>
-                    <Input.Password placeholder="Будет доступно после подключения backend" disabled />
-                  </label>
-                  <label className={cn(`${BLOCK_NAME}__field`)}>
-                    <span>Статус</span>
-                    <Input value="Не подключено" disabled />
-                  </label>
-                  <Tag color="default" className={cn(`${BLOCK_NAME}__status-tag`)}>Не подключено</Tag>
-                </UiCard>
-              </div>
-            </UiPanel>
+            <ApiKeysSection
+              connections={connections}
+              isConnectionsLoading={isConnectionsLoading}
+              savingMarketplace={savingMarketplace}
+              credentialsMessage={credentialsMessage}
+              ozonCredentials={ozonCredentials}
+              wildberriesToken={wildberriesToken}
+              onLoadConnections={() => void loadConnections()}
+              onOzonCredentialsChange={setOzonCredentials}
+              onWildberriesTokenChange={setWildberriesToken}
+              onSaveOzonCredentials={() => void onSaveOzonCredentials()}
+              onSaveWildberriesCredentials={() => void onSaveWildberriesCredentials()}
+              onDeleteCredentials={(marketplace) => void onDeleteCredentials(marketplace)}
+            />
           )}
 
           {activeSection === 'uploadedFiles' && (
-            <UiPanel
-              title="Загруженные файлы"
-              headActions={(
-                <Button icon={<ReloadOutlined />} onClick={() => void loadRecords()} loading={isFilesLoading}>
-                  Обновить
-                </Button>
-              )}
-            >
-              {filesError && <Alert type="error" showIcon message={filesError} />}
-              {sortedRecords.length === 0 ? (
-                <UiCard className={cn(`${BLOCK_NAME}__empty-state`)}>
-                  <DatabaseOutlined className={cn(`${BLOCK_NAME}__empty-icon`)} />
-                  <Typography variant="h3" color="accent">
-                    Файлы не загружены
-                  </Typography>
-                  <Typography variant="body2" color="muted">
-                    После загрузки отчетов Ozon, Wildberries или себестоимости они появятся в этом списке.
-                  </Typography>
-                </UiCard>
-              ) : (
-                <div className={cn(`${BLOCK_NAME}__file-list`)}>
-                  {sortedRecords.map((record) => {
-                    const meta = CSV_RECORD_META[record.mode]
-                    return (
-                      <UiCard key={record.mode} padding="sm" className={cn(`${BLOCK_NAME}__file-card`)}>
-                        <div className={cn(`${BLOCK_NAME}__file-main`)}>
-                          <div>
-                            <div className={cn(`${BLOCK_NAME}__file-tags`)}>
-                              <Tag color={meta.marketplace === 'Ozon' ? 'blue' : 'purple'}>{meta.marketplace}</Tag>
-                              <Tag>{meta.kind}</Tag>
-                            </div>
-                            <Typography variant="h3" color="accent" className={cn(`${BLOCK_NAME}__file-title`)}>
-                              {meta.title}
-                            </Typography>
-                            <Typography variant="body3" color="muted">
-                              {record.fileName}
-                            </Typography>
-                          </div>
-                          <div className={cn(`${BLOCK_NAME}__file-meta`)}>
-                            <Typography variant="body3" color="muted">
-                              {formatDate(record.updatedAt)}
-                            </Typography>
-                            <Typography variant="body3" color="muted">
-                              {formatSize(record.csvText)}
-                            </Typography>
-                          </div>
-                        </div>
-                        <Popconfirm
-                          title="Удалить файл?"
-                          description="Отчет пропадет из локального хранилища."
-                          okText="Удалить"
-                          cancelText="Отмена"
-                          onConfirm={() => void onDeleteRecord(record.mode)}
-                        >
-                          <Button danger icon={<DeleteOutlined />}>
-                            Удалить
-                          </Button>
-                        </Popconfirm>
-                      </UiCard>
-                    )
-                  })}
-                </div>
-              )}
-            </UiPanel>
+            <UploadedFilesSection
+              records={records}
+              filesError={filesError}
+              isFilesLoading={isFilesLoading}
+              onLoadRecords={() => void loadRecords()}
+              onDeleteRecord={(mode) => void onDeleteRecord(mode)}
+            />
           )}
 
-          {activeSection === 'dataSecurity' && (
-            <UiPanel title="Данные и безопасность">
-              {filesError && <Alert type="error" showIcon message={filesError} />}
-              <div className={cn(`${BLOCK_NAME}__cards-grid`)}>
-                <UiCard>
-                  <div className={cn(`${BLOCK_NAME}__card-head`)}>
-                    <LockOutlined className={cn(`${BLOCK_NAME}__card-icon`)} />
-                    <div>
-                      <Typography variant="h3" color="accent" className={cn(`${BLOCK_NAME}__card-title`)}>
-                        Локальные файлы
-                      </Typography>
-                      <Typography variant="body3" color="muted">
-                        Отчеты хранятся в IndexedDB текущего браузера.
-                      </Typography>
-                    </div>
-                  </div>
-                  <Typography variant="body2" color="accent" semiBold>
-                    Сохранено файлов: {records.length}
-                  </Typography>
-                </UiCard>
-
-                <UiCard>
-                  <div className={cn(`${BLOCK_NAME}__card-head`)}>
-                    <SafetyOutlined className={cn(`${BLOCK_NAME}__card-icon`)} />
-                    <div>
-                      <Typography variant="h3" color="accent" className={cn(`${BLOCK_NAME}__card-title`)}>
-                        Настройки расчетов
-                      </Typography>
-                      <Typography variant="body3" color="muted">
-                        НДС, налог и режим сопоставления хранятся в localStorage.
-                      </Typography>
-                    </div>
-                  </div>
-                  <Typography variant="body2" color="accent" semiBold>
-                    Ключей настроек: {LOCAL_STORAGE_KEYS.length}
-                  </Typography>
-                </UiCard>
-              </div>
-
-              <UiCard className={cn(`${BLOCK_NAME}__danger-card`)}>
-                <div>
-                  <Typography variant="h3" color="negative" className={cn(`${BLOCK_NAME}__card-title`)}>
-                    Очистить локальные данные
-                  </Typography>
-                  <Typography variant="body2" color="muted">
-                    Удалит загруженные отчеты, файлы себестоимости и сохраненные параметры расчетов.
-                  </Typography>
-                </div>
-                <Popconfirm
-                  title="Очистить локальные данные?"
-                  description="Действие нельзя отменить."
-                  okText="Очистить"
-                  cancelText="Отмена"
-                  onConfirm={() => void onClearLocalData()}
-                >
-                  <Button danger icon={<DeleteOutlined />} loading={isClearingData}>
-                    Очистить данные
-                  </Button>
-                </Popconfirm>
-              </UiCard>
-            </UiPanel>
+          {activeSection === 'security' && (
+            <SecuritySection
+              email={session?.user.email}
+              securityStep={securityStep}
+              securityForm={securityForm}
+              securityMessage={securityMessage}
+              isSecurityPending={isSecurityPending}
+              onSecurityFormChange={setSecurityForm}
+              onRequestPasswordCode={() => void onRequestPasswordCode()}
+              onConfirmPasswordChange={() => void onConfirmPasswordChange()}
+            />
           )}
         </section>
       </div>

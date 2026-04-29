@@ -34,6 +34,7 @@
   --color-text-secondary: #173359;
   --color-text-muted: #4d6786;
   --color-text-subtle: #6b7f9f;
+  --color-text-placeholder: #7a8ba3;
   --color-text-accent: #12305d;
   --color-text-accent-strong: #194483;
   --color-text-accent-deep: #102a52;
@@ -135,6 +136,7 @@ body[data-theme='purple'] {
   --color-text-secondary: #4e2c72;
   --color-text-muted: #6b5382;
   --color-text-subtle: #7e6897;
+  --color-text-placeholder: #8a759f;
   --color-text-accent: #6b4c8e;
   --color-text-accent-strong: #6b3d97;
   --color-text-accent-deep: #56307b;
@@ -192,6 +194,17 @@ button,
 input,
 select {
   font: inherit;
+}
+
+.ant-input::placeholder,
+.ant-input-number-input::placeholder,
+.ant-picker-input input::placeholder {
+  color: var(--color-text-placeholder) !important;
+  opacity: 1;
+}
+
+.ant-form-item-label > label {
+  font-size: 16px !important;
 }
 
 #root {
