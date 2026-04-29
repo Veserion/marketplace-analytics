@@ -15,6 +15,7 @@ const BLOCK_NAME = 'AppHeader'
 export function AppHeader() {
   const location = useLocation()
   const navigate = useNavigate()
+  const logoSrc = `${import.meta.env.BASE_URL}marketplace-metrics-logo.svg`
 
   const activeMarketplace = location.pathname.includes('/wildberries') ? 'wildberries' : 'ozon'
 
@@ -40,7 +41,7 @@ export function AppHeader() {
         >
           <img
             className={cn(`${BLOCK_NAME}__logo`)}
-            src="/marketplace-metrics-logo.svg"
+            src={logoSrc}
             alt="Marketplace Metrics"
           />
           <Typography as="span" variant="h2" color="accent" className={cn(`${BLOCK_NAME}__brand-text`)}>
