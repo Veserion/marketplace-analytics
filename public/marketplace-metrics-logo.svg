@@ -2,10 +2,10 @@
   <title id="title">Marketplace Metrics MM bar chart logo</title>
   <desc id="desc">Compact double M monogram built from analytics bars using Ozon blue and Wildberries magenta.</desc>
 
-  <rect width="64" height="64" rx="14" fill="#101828"/>
+  <rect width="64" height="64" rx="14" fill="#444445"/>
 
-  <rect x="9" y="29" width="7.5" height="22.5" rx="3.75" fill="#005BFF"/>
-  <rect x="19" y="16.5" width="7.5" height="35" rx="3.75" fill="#005BFF"/>
+  <rect x="9" y="29" width="7.5" height="22.5" rx="3.75" fill="#0059ff"/>
+  <rect x="19" y="16.5" width="7.5" height="35" rx="3.75" fill="#0059ff"/>
   <rect x="29" y="29" width="7.5" height="22.5" rx="3.75" fill="#CB11AB"/>
   <rect x="39" y="16.5" width="7.5" height="35" rx="3.75" fill="#CB11AB"/>
   <rect x="49" y="29" width="7.5" height="22.5" rx="3.75" fill="#CB11AB"/>
