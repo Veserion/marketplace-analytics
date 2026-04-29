@@ -737,6 +737,11 @@ export function buildWildberriesAccrualReports(
   let revenueBeforeSpp = 0
   let revenueWithoutSpp = 0
   let payoutForSoldItems = 0
+  let logisticsForSoldItems = 0
+  let storageForSoldItems = 0
+  let withholdingsForSoldItems = 0
+  let acceptanceOperationsForSoldItems = 0
+  let finesForSoldItems = 0
   let cogsFromFile = 0
   let cogsMatchedRows = 0
 
@@ -764,6 +769,11 @@ export function buildWildberriesAccrualReports(
       revenueBeforeSpp += saleRevenue
       revenueWithoutSpp += row.sellerRealized
       payoutForSoldItems += row.payout
+      logisticsForSoldItems += absValue(row.logisticsCost)
+      storageForSoldItems += absValue(row.storageCost)
+      withholdingsForSoldItems += absValue(row.withholdings)
+      acceptanceOperationsForSoldItems += absValue(row.acceptanceOperations)
+      finesForSoldItems += absValue(row.fines)
       const saleDate = row.salesDate || 'Без даты'
       addToMap(salesDateRangeMap, saleDate, 0)
       const salesScheme = resolveSalesScheme(row, schemeBySrid, schemeByBasketId)
@@ -826,7 +836,13 @@ export function buildWildberriesAccrualReports(
     + vvCorrectionAmount
     + pvzCompensationAmount
     + transportReimbursementAmount
-  const transferToBank = revenueBeforeSpp - marketplaceExpenses
+  const transferToBank =
+    payoutForSoldItems
+    - logisticsForSoldItems
+    - storageForSoldItems
+    - acceptanceOperationsForSoldItems
+    - withholdingsForSoldItems
+    - finesForSoldItems
   const totalRate = (vatRatePercent + taxRatePercent) / 100
   const taxAmount = revenueBeforeSpp !== 0 ? revenueBeforeSpp * totalRate : 0
   const cogs: number | null = cogsMatchedRows > 0 ? cogsFromFile : null
@@ -1025,7 +1041,14 @@ export function buildWildberriesAccrualReports(
           label: 'Перевод в банк',
           value: transferToBank,
           type: 'currency',
-          formula: 'Выручка с учетом СПП - Общие затраты по Маркетплейсу',
+          formula: [
+            'SUM("К перечислению за товар"), фильтр: "Обоснование для оплаты" = "Продажа"',
+            `- ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
+            `- ABS(SUM("${WB_EXPENSE_COLUMNS.storage}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
+            `- ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
+            `- ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
+            `- ABS(SUM("${WB_EXPENSE_COLUMNS.fines}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
+          ].join(' '),
         },
         {
           label: 'Себестоимость',
