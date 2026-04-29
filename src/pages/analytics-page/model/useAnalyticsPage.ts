@@ -432,7 +432,7 @@ export function useOzonAnalyticsPage() {
     renderPdfReport({
       doc,
       theme: isOzonUnitEconomics ? PDF_THEMES.ozonUnit : PDF_THEMES.ozonAccrual,
-      title: 'Marketplace Metrics',
+      title: 'Маркетплейс Метрика',
       subtitle: `Ozon / ${isOzonUnitEconomics ? 'Юнит экономика' : 'Отчет по поступлениям'}`,
       source: fileName,
       sections,

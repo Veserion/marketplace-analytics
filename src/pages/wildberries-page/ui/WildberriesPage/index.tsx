@@ -47,7 +47,7 @@ export function WildberriesPage() {
     <main className={cn(BLOCK_NAME)}>
       <header className={cn(`${BLOCK_NAME}__hero`)}>
         <Typography variant="caption" color="light" className={cn(`${BLOCK_NAME}__eyebrow`)}>
-          Marketplace Metrics
+          Маркетплейс Метрика
         </Typography>
         <Typography as="h1" variant="h1" color="light" className={cn(`${BLOCK_NAME}__title`)}>
           Аналитика Wildberries

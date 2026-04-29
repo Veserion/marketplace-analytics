@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind'
-import { MenuOutlined } from '@ant-design/icons'
+import { MenuOutlined, UserOutlined } from '@ant-design/icons'
 import Button from 'antd/es/button'
 import Dropdown from 'antd/es/dropdown'
 import { useMemo } from 'react'
@@ -42,10 +42,10 @@ export function AppHeader() {
           <img
             className={cn(`${BLOCK_NAME}__logo`)}
             src={logoSrc}
-            alt="Marketplace Metrics"
+            alt="Маркетплейс Метрика"
           />
           <Typography as="span" variant="h2" color="accent" className={cn(`${BLOCK_NAME}__brand-text`)}>
-            Marketplace Metrics
+            Маркетплейс Метрика
           </Typography>
         </button>
 
@@ -54,6 +54,13 @@ export function AppHeader() {
         </div>
 
         <div className={cn(`${BLOCK_NAME}__right`)}>
+          <Button
+            type="default"
+            icon={<UserOutlined />}
+            className={cn(`${BLOCK_NAME}__profile-button`)}
+          >
+            Профиль
+          </Button>
           <div className={cn(`${BLOCK_NAME}__mobile-nav`)}>
             <Dropdown
               trigger={['click']}

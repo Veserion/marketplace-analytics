@@ -413,7 +413,7 @@ export function useWildberriesAnalyticsPage() {
     renderPdfReport({
       doc,
       theme: PDF_THEMES.wildberries,
-      title: 'Marketplace Metrics',
+      title: 'Маркетплейс Метрика',
       subtitle: 'Wildberries / Отчет по поступлениям',
       source: pdfSource,
       sections: buildWildberriesPdfSections(reports),
