@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrganizationRole {
+  owner
+  admin
+  member
+}
+
+enum Marketplace {
+  ozon
+  wildberries
+}
+
+enum ConnectionStatus {
+  not_connected
+  connected
+  invalid
+}
+
+enum AuditAction {
+  email_code_requested
+  email_code_verified
+  user_registered
+  user_logged_in
+  credentials_saved
+  credentials_deleted
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  auditLogs   AuditLog[]
+}
+
+model EmailAuthCode {
+  id         String    @id @default(cuid())
+  email      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     OrganizationMember[]
+  connections MarketplaceConnection[]
+  auditLogs   AuditLog[]
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole @default(member)
+  createdAt      DateTime         @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model MarketplaceConnection {
+  id                   String           @id @default(cuid())
+  organizationId       String
+  marketplace          Marketplace
+  status               ConnectionStatus @default(not_connected)
+  encryptedCredentials String?
+  credentialPreview    String?
+  encryptionKeyVersion Int              @default(1)
+  lastCheckedAt        DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, marketplace])
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  organizationId String?
+  userId         String?
+  action         AuditAction
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+}
