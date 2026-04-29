@@ -18,6 +18,7 @@ export function AppHeader() {
   const logoSrc = `${import.meta.env.BASE_URL}marketplace-metrics-logo.svg`
 
   const activeMarketplace = location.pathname.includes('/wildberries') ? 'wildberries' : 'ozon'
+  const isProfilePage = location.pathname.startsWith('/profile')
 
   const marketplaceItems = useMemo(
     () => [
@@ -55,9 +56,12 @@ export function AppHeader() {
 
         <div className={cn(`${BLOCK_NAME}__right`)}>
           <Button
-            type="default"
+            type="text"
             icon={<UserOutlined />}
-            className={cn(`${BLOCK_NAME}__profile-button`)}
+            className={cn(`${BLOCK_NAME}__profile-button`, {
+              [`${BLOCK_NAME}__profile-button--active`]: isProfilePage,
+            })}
+            onClick={() => void navigate('/profile')}
           >
             Профиль
           </Button>

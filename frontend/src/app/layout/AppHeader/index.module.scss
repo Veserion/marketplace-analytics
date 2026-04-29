@@ -59,9 +59,35 @@
 }
 
 .AppHeader__profile-button {
-  height: 38px;
-  border-radius: 10px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #444445;
+  font-size: 20px;
   font-weight: 600;
+  line-height: 1.1;
+  box-shadow: none;
+}
+
+.AppHeader__profile-button:hover,
+.AppHeader__profile-button:focus {
+  background: transparent !important;
+  color: var(--color-text-accent) !important;
+}
+
+.AppHeader__profile-button :global(.ant-btn-icon) {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.AppHeader__profile-button--active {
+  color: var(--color-text-accent) !important;
+}
+
+.AppHeader__profile-button--active :global(span:not(.ant-btn-icon)) {
+  //text-decoration: underline;
+  //text-underline-offset: 4px;
 }
 
 .AppHeader__burger-button {
@@ -84,10 +110,6 @@
 
   .AppHeader__right {
     min-width: 0;
-  }
-
-  .AppHeader__profile-button {
-    padding-inline: 10px;
   }
 
   .AppHeader__mobile-nav {

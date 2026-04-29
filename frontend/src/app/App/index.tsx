@@ -11,6 +11,7 @@ const cn = classNames.bind(styles)
 const BLOCK_NAME = 'App'
 const lazyAnalyticsPage = lazy(async () => import('@/pages/analytics-page/ui/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
 const lazyWildberriesPage = lazy(async () => import('@/pages/wildberries-page/ui/WildberriesPage').then((module) => ({ default: module.WildberriesPage })))
+const lazyProfilePage = lazy(async () => import('@/pages/profile-page').then((module) => ({ default: module.ProfilePage })))
 
 function App() {
   const location = useLocation()
@@ -37,6 +38,7 @@ function App() {
               <Route path="/" element={<Navigate to="/ozon" replace />} />
               <Route path="/ozon" element={createElement(lazyAnalyticsPage)} />
               <Route path="/wildberries" element={createElement(lazyWildberriesPage)} />
+              <Route path="/profile" element={createElement(lazyProfilePage)} />
               <Route path="*" element={<Navigate to="/ozon" replace />} />
             </Routes>
           </Suspense>

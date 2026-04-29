@@ -1,4 +1,4 @@
-type CsvStorageMode =
+export type CsvStorageMode =
   | 'unitEconomics'
   | 'accrualReport'
   | 'ozonCogs'
@@ -6,7 +6,7 @@ type CsvStorageMode =
   | 'wildberriesForeignAccrualReport'
   | 'wildberriesCogs'
 
-type CsvStorageRecord = {
+export type CsvStorageRecord = {
   mode: CsvStorageMode
   fileName: string
   csvText: string
@@ -57,4 +57,38 @@ export async function getCsvRecord(mode: CsvStorageMode): Promise<CsvStorageReco
   })
   db.close()
   return record
+}
+
+export async function getCsvRecords(): Promise<CsvStorageRecord[]> {
+  const db = await openDb()
+  const records = await new Promise<CsvStorageRecord[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const request = tx.objectStore(STORE_NAME).getAll()
+    request.onsuccess = () => resolve((request.result as CsvStorageRecord[] | undefined) ?? [])
+    request.onerror = () => reject(request.error ?? new Error('Failed to read CSV records.'))
+  })
+  db.close()
+  return records
+}
+
+export async function deleteCsvRecord(mode: CsvStorageMode): Promise<void> {
+  const db = await openDb()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    tx.objectStore(STORE_NAME).delete(mode)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error('Failed to delete CSV record.'))
+  })
+  db.close()
+}
+
+export async function clearCsvRecords(): Promise<void> {
+  const db = await openDb()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    tx.objectStore(STORE_NAME).clear()
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error('Failed to clear CSV records.'))
+  })
+  db.close()
 }
