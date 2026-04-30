@@ -23,6 +23,8 @@ const COGS_MATCHING_MODE_STORAGE_KEY = 'wildberries_cogs_matching_mode'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
+const CANCELLATIONS_AND_NON_PICKUPS_LABEL = 'Отмены и не выкупы'
+const RETURNS_QUANTITY_LABEL = 'Возвраты'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
@@ -100,6 +102,8 @@ function getWbMetricTone(label: string, value: number | null): PdfMetricTone {
   if (label === COGS_LABEL && value === null) return 'muted'
   if (
     label === CANCELLATIONS_AND_RETURNS_LABEL
+    || label === CANCELLATIONS_AND_NON_PICKUPS_LABEL
+    || label === RETURNS_QUANTITY_LABEL
     || label === TAX_LABEL
     || label === COGS_LABEL
     || label === MARKETPLACE_EXPENSES_LABEL

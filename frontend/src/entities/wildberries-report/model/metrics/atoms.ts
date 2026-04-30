@@ -37,7 +37,8 @@ export function buildWildberriesNetEffectSumFormula(filters: string[] = []): str
 
 export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   salesQuantity: `SUM("${WB_QUANTITY_COLUMNS.qty}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
-  returnsAndCancellationsQuantity: `SUM("${WB_QUANTITY_COLUMNS.returnQty}")`,
+  returnsAndCancellationsQuantity: `SUM("${WB_QUANTITY_COLUMNS.returnQty}"), фильтр: "${WB_BASE_COLUMNS.reason}" ≠ "Возврат"`,
+  returnsQuantity: `COUNT(строк), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
   salesRevenueByRetailPrice: `SUM("${WB_REVENUE_COLUMNS.retailPrice}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   returnsRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
@@ -222,11 +223,19 @@ export function calculateWildberriesSalesQuantity(rows: WildberriesAccrualRow[])
 }
 
 /**
- * Атом `Отмены, возвраты, не выкупы`: сумма `Количество возврата` по всем строкам.
- * Используется cell `Отмены, возвраты, не выкупы`.
+ * Атом `Отмены и не выкупы`: сумма `Количество возврата` по строкам, где `Обоснование для оплаты` ≠ "Возврат".
+ * Используется cell `Отмены и не выкупы`.
  */
 export function calculateWildberriesReturnsAndCancellationsQuantity(rows: WildberriesAccrualRow[]): number {
-  return sumRows(rows, (row) => row.returnCount)
+  return sumRows(rows, (row) => row.returnCount, (row) => !isWildberriesReturnRow(row))
+}
+
+/**
+ * Атом `Возвраты`: количество строк, где `Обоснование для оплаты` = "Возврат".
+ * Используется cell `Возвраты` (кол-во).
+ */
+export function calculateWildberriesReturnsQuantity(rows: WildberriesAccrualRow[]): number {
+  return rows.filter(isWildberriesReturnRow).length
 }
 
 /**

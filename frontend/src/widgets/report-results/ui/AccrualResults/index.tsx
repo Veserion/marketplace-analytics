@@ -23,6 +23,7 @@ import styles from './index.module.scss'
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualResults'
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
+const CANCELLATIONS_AND_NON_PICKUPS_LABEL = 'Отмены и не выкупы'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
@@ -140,6 +141,8 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
   }
   if (
     label === CANCELLATIONS_AND_RETURNS_LABEL
+    || label === CANCELLATIONS_AND_NON_PICKUPS_LABEL
+    || label === RETURNS_LABEL
     || label === TAX_LABEL
     || label === COGS_LABEL
     || label === MARKETPLACE_EXPENSES_LABEL
@@ -158,6 +161,8 @@ function toMetricRow(
 ): UiMetricsListRow {
   const shouldForceNegativeInTotals = reportTitle === 'Итоги периода'
     && metric.label !== CANCELLATIONS_AND_RETURNS_LABEL
+    && metric.label !== CANCELLATIONS_AND_NON_PICKUPS_LABEL
+    && metric.type !== 'number'
     && FORCED_NEGATIVE_DISPLAY_LABELS.has(metric.label)
   const normalizedValue = shouldForceNegativeInTotals && metric.value !== null
     ? -Math.abs(metric.value)
@@ -284,6 +289,7 @@ function formatOverviewCurrency(value: number | null): string {
 function normalizeTotalsDisplayValue(label: string, value: number | null): number | null {
   if (value === null) return null
   if (label === CANCELLATIONS_AND_RETURNS_LABEL) return value
+  if (label === CANCELLATIONS_AND_NON_PICKUPS_LABEL) return value
   if (FORCED_NEGATIVE_DISPLAY_LABELS.has(label)) return -Math.abs(value)
   return value
 }

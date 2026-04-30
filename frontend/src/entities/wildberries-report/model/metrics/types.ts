@@ -35,6 +35,7 @@ export type WildberriesSalesScheme = 'FBS' | 'FBW' | 'Не указано'
 export type WildberriesAccrualMetricAtoms = {
   salesQuantity: number
   returnsAndCancellationsQuantity: number
+  returnsQuantity: number
   salesRevenueByRetailPrice: number
   salesRevenueBeforeSpp: number
   returnsRevenueBeforeSpp: number

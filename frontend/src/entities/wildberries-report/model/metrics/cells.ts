@@ -4,7 +4,8 @@ import type { WildberriesAccrualMetricAtoms } from '@/entities/wildberries-repor
 
 export type WildberriesAccrualCells = {
   salesQuantity: number
-  returnsAndCancellationsQuantity: number
+  cancellationsAndNonPickupsQuantity: number
+  returnsQuantity: number
   revenueBeforeSpp: number
   revenueWithoutSpp: number
   sppAndPromotions: number
@@ -21,7 +22,8 @@ export type WildberriesAccrualCells = {
 
 export const WILDBERRIES_ACCRUAL_CELL_FORMULAS = {
   salesQuantity: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesQuantity,
-  returnsAndCancellationsQuantity: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsAndCancellationsQuantity,
+  cancellationsAndNonPickupsQuantity: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsAndCancellationsQuantity,
+  returnsQuantity: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsQuantity,
   revenueBeforeSpp: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.revenueBeforeSpp,
   revenueWithoutSpp: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.revenueWithoutSpp,
   sppAndPromotions: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.sppAndPromotions,
@@ -127,7 +129,8 @@ export function buildWildberriesAccrualCells(
 
   return {
     salesQuantity: atoms.salesQuantity,
-    returnsAndCancellationsQuantity: atoms.returnsAndCancellationsQuantity,
+    cancellationsAndNonPickupsQuantity: atoms.returnsAndCancellationsQuantity,
+    returnsQuantity: atoms.returnsQuantity,
     revenueBeforeSpp,
     revenueWithoutSpp: atoms.revenueWithoutSpp,
     sppAndPromotions: calculateWildberriesSppAndPromotions(atoms),

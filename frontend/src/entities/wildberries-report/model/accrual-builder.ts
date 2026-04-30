@@ -5,7 +5,7 @@ import type { CsvTable } from '@/shared/lib/reporting'
 import { addToNumberMap, assertCsvColumns, createCsvTable, formatSharePercent, isArticleIncludedByPattern, normalizeLower, sortByAbsDesc, stripBom, sumNumberMap } from '@/shared/lib/reporting'
 import type { CogsByArticleMap, CogsMatchingMode } from '@/entities/wildberries-report/model/cogs-builder'
 import { resolveCogsLookupKey } from '@/entities/wildberries-report/model/cogs-builder'
-import { buildWildberriesNetEffectSumFormula, calculateWildberriesAcceptanceOperationsAmount, calculateWildberriesCogsFromFile, calculateWildberriesCogsMatchedRows, calculateWildberriesFinesAmount, calculateWildberriesLogisticsAmount, calculateWildberriesPaymentServicesAmount, calculateWildberriesPvzCompensationAmount, calculateWildberriesReturnsAndCancellationsQuantity, calculateWildberriesReturnsNetEffect, calculateWildberriesReturnsRevenueBeforeSpp, calculateWildberriesRevenueWithoutSpp, calculateWildberriesRowNetEffect, calculateWildberriesSalesAcceptanceOperationsAmount, calculateWildberriesSalesFinesAmount, calculateWildberriesSalesLogisticsAmount, calculateWildberriesSalesPayout, calculateWildberriesSalesQuantity, calculateWildberriesSalesRevenueBeforeSpp, calculateWildberriesSalesRevenueByRetailPrice, calculateWildberriesSalesStorageAmount, calculateWildberriesSalesWithholdingsAmount, calculateWildberriesStorageAmount, calculateWildberriesTransportReimbursementAmount, calculateWildberriesVvCorrectionAmount, calculateWildberriesWithholdingsAmount, isWildberriesSaleRow, WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
+import { buildWildberriesNetEffectSumFormula, calculateWildberriesAcceptanceOperationsAmount, calculateWildberriesCogsFromFile, calculateWildberriesCogsMatchedRows, calculateWildberriesFinesAmount, calculateWildberriesLogisticsAmount, calculateWildberriesPaymentServicesAmount, calculateWildberriesPvzCompensationAmount, calculateWildberriesReturnsAndCancellationsQuantity, calculateWildberriesReturnsNetEffect, calculateWildberriesReturnsQuantity, calculateWildberriesReturnsRevenueBeforeSpp, calculateWildberriesRevenueWithoutSpp, calculateWildberriesRowNetEffect, calculateWildberriesSalesAcceptanceOperationsAmount, calculateWildberriesSalesFinesAmount, calculateWildberriesSalesLogisticsAmount, calculateWildberriesSalesPayout, calculateWildberriesSalesQuantity, calculateWildberriesSalesRevenueBeforeSpp, calculateWildberriesSalesRevenueByRetailPrice, calculateWildberriesSalesStorageAmount, calculateWildberriesSalesWithholdingsAmount, calculateWildberriesStorageAmount, calculateWildberriesTransportReimbursementAmount, calculateWildberriesVvCorrectionAmount, calculateWildberriesWithholdingsAmount, isWildberriesSaleRow, WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
 import { buildWildberriesAccrualCells, getWildberriesMarginRateCellFormula, getWildberriesNetProfitCellFormula, getWildberriesTaxCellFormula, WILDBERRIES_ACCRUAL_CELL_FORMULAS, type WildberriesAccrualCells } from '@/entities/wildberries-report/model/metrics/cells'
 import type { WildberriesAccrualMetricAtoms, WildberriesAccrualRow as WbRow, WildberriesSalesScheme as SalesScheme } from '@/entities/wildberries-report/model/metrics/types'
 
@@ -362,6 +362,7 @@ function buildWildberriesAccrualMetricAtoms(
   return {
     salesQuantity: calculateWildberriesSalesQuantity(rows),
     returnsAndCancellationsQuantity: calculateWildberriesReturnsAndCancellationsQuantity(rows),
+    returnsQuantity: calculateWildberriesReturnsQuantity(rows),
     salesRevenueByRetailPrice: calculateWildberriesSalesRevenueByRetailPrice(rows),
     salesRevenueBeforeSpp: calculateWildberriesSalesRevenueBeforeSpp(rows),
     returnsRevenueBeforeSpp: calculateWildberriesReturnsRevenueBeforeSpp(rows),
@@ -703,10 +704,16 @@ function buildWildberriesAccrualReportGroups(
           formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.salesQuantity,
         },
         {
-          label: 'Отмены, возвраты, не выкупы',
-          value: cells.returnsAndCancellationsQuantity,
+          label: 'Отмены и не выкупы',
+          value: cells.cancellationsAndNonPickupsQuantity,
           type: 'number',
-          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsAndCancellationsQuantity,
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.cancellationsAndNonPickupsQuantity,
+        },
+        {
+          label: 'Возвраты',
+          value: cells.returnsQuantity,
+          type: 'number',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsQuantity,
         },
         {
           label: 'Выручка с учетом СПП',
@@ -725,12 +732,6 @@ function buildWildberriesAccrualReportGroups(
           value: cells.sppAndPromotions,
           type: 'currency',
           formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.sppAndPromotions,
-        },
-        {
-          label: 'Возвраты',
-          value: cells.returnsExpense,
-          type: 'currency',
-          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsExpense,
         },
         {
           label: 'Общие затраты по Маркетплейсу',
