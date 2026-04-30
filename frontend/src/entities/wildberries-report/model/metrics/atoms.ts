@@ -1,6 +1,13 @@
-import { WB_BASE_COLUMNS, WB_COGS_COLUMNS, WB_EXPENSE_COLUMNS, WB_LOYALTY_COLUMNS, WB_QUANTITY_COLUMNS, WB_REVENUE_COLUMNS } from '@/entities/wildberries-report/model/columns'
-import { normalizeLower } from '@/shared/lib/reporting'
-import type { WildberriesAccrualRow } from '@/entities/wildberries-report/model/metrics/types'
+import {
+  WB_BASE_COLUMNS,
+  WB_COGS_COLUMNS,
+  WB_EXPENSE_COLUMNS,
+  WB_LOYALTY_COLUMNS,
+  WB_QUANTITY_COLUMNS,
+  WB_REVENUE_COLUMNS
+} from '@/entities/wildberries-report/model/columns'
+import {normalizeLower} from '@/shared/lib/reporting'
+import type {WildberriesAccrualRow} from '@/entities/wildberries-report/model/metrics/types'
 
 const SALE_REASON = 'продажа'
 const RETURN_REASON = 'возврат'
@@ -394,6 +401,10 @@ export function calculateWildberriesCogsFromFile(
     rows,
     (row) => row.quantity * (resolveUnitCogs(row) ?? 0),
     (row) => isWildberriesSaleRow(row) && resolveUnitCogs(row) !== null,
+  ) - sumRows(
+    rows,
+    (row) => row.quantity * (resolveUnitCogs(row) ?? 0),
+    (row) => isWildberriesReturnRow(row) && resolveUnitCogs(row) !== null,
   )
 }
 
