@@ -44,6 +44,7 @@ export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   returnsRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
   revenueWithoutSpp: `SUM("${WB_REVENUE_COLUMNS.sellerRealized}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesPayout: `SUM("${WB_REVENUE_COLUMNS.payout}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
+  wbCommissionCalculated: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   returnsNetEffect: buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.reason}" = "Возврат"`]),
   logisticsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
   paymentServicesAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
@@ -276,6 +277,14 @@ export function calculateWildberriesRevenueWithoutSpp(rows: WildberriesAccrualRo
  */
 export function calculateWildberriesSalesPayout(rows: WildberriesAccrualRow[]): number {
   return sumRows(rows, (row) => row.payout, isWildberriesSaleRow)
+}
+
+/**
+ * Атом расчётной комиссии ВБ: сумма `Цена розничная с учетом согласованной скидки * Размер кВВ, % / 100` по строкам `Продажа`.
+ * Используется молекулой `Комиссия ВБ`.
+ */
+export function calculateWildberriesWbCommissionCalculated(rows: WildberriesAccrualRow[]): number {
+  return sumRows(rows, (row) => row.retailPriceWithDiscount * row.wbCommissionRate / 100, isWildberriesSaleRow)
 }
 
 /**

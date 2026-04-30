@@ -37,6 +37,7 @@ export const WB_REVENUE_COLUMNS = {
 } as const
 
 export const WB_EXPENSE_COLUMNS = {
+  wbCommissionRate: 'Размер кВВ, %',
   wbCommission: 'Вознаграждение Вайлдберриз (ВВ), без НДС',
   logisticsToBuyer: 'Услуги по доставке товара покупателю',
   paymentServices: 'Компенсация платёжных услуг/Комиссия за интеграцию платёжных сервисов',

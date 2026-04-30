@@ -16,6 +16,7 @@ export type WildberriesAccrualRow = {
   sellerRealized: number
   payout: number
   logisticsCost: number
+  wbCommissionRate: number
   wbCommission: number
   paymentServicesCommission: number
   pvzCompensation: number
@@ -41,6 +42,7 @@ export type WildberriesAccrualMetricAtoms = {
   returnsRevenueBeforeSpp: number
   revenueWithoutSpp: number
   salesPayout: number
+  wbCommissionCalculated: number
   returnsNetEffect: number
   logisticsAmount: number
   paymentServicesAmount: number

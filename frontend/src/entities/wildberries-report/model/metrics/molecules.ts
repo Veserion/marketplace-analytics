@@ -3,7 +3,7 @@ import type { WildberriesAccrualMetricAtoms } from '@/entities/wildberries-repor
 
 const revenueBeforeSppFormula = `(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesRevenueBeforeSpp}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsRevenueBeforeSpp})`
 const sppAndPromotionsFormula = `(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesRevenueBeforeSpp}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.revenueWithoutSpp})`
-const wbCommissionAmountFormula = `(${revenueBeforeSppFormula}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout})`
+const wbCommissionAmountFormula = WILDBERRIES_ACCRUAL_ATOM_FORMULAS.wbCommissionCalculated
 const marketplaceExpensesFormula = [
   `(${wbCommissionAmountFormula})`,
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.logisticsAmount,
@@ -64,11 +64,11 @@ export function calculateWildberriesReturnsExpense(atoms: WildberriesAccrualMetr
 }
 
 /**
- * Молекула `Комиссия ВБ`: выручка с СПП минус выплата за проданные товары.
+ * Молекула `Комиссия ВБ`: расчётная комиссия по формуле `Цена розничная с учетом согласованной скидки * Размер кВВ, % / 100`.
  * Используется в группе расходов и в `Общие затраты по Маркетплейсу`.
  */
 export function calculateWildberriesWbCommissionAmount(atoms: WildberriesAccrualMetricAtoms): number {
-  return calculateWildberriesRevenueBeforeSpp(atoms) - atoms.salesPayout
+  return atoms.wbCommissionCalculated
 }
 
 /**
@@ -91,26 +91,16 @@ export function calculateWildberriesMarketplaceExpenses(atoms: WildberriesAccrua
  * Молекула `Перевод в банк`: выплата по продажам минус атомы расходов строк продаж.
  * Используется cell `Перевод в банк`, чистой прибылью и fallback-базой схемы работы.
  */
-export function calculateWildberriesTransferToBank(atoms: WildberriesAccrualMetricAtoms): number {
-  console.log('salesPayout', atoms.salesPayout)
-  console.log('paymentServicesAmount', atoms.paymentServicesAmount)
-  console.log('logisticsAmount', atoms.logisticsAmount)
-  console.log('storageAmount', atoms.storageAmount)
-  console.log('acceptanceOperationsAmount', atoms.acceptanceOperationsAmount)
-  console.log('finesAmount', atoms.finesAmount)
-  console.log('withholdingsAmount', atoms.withholdingsAmount)
-  console.log('transportReimbursementAmount', atoms.transportReimbursementAmount)
-  console.log('pvzCompensationAmount', atoms.pvzCompensationAmount)
-  console.log('vvCorrectionAmount', atoms.vvCorrectionAmount)
+export function calculateWildberriesTransferToBank(
+  atoms: WildberriesAccrualMetricAtoms
+): number {
   return atoms.salesPayout
     - atoms.logisticsAmount
     - atoms.storageAmount
     - atoms.acceptanceOperationsAmount
     - atoms.finesAmount
     - atoms.withholdingsAmount
-    - atoms.transportReimbursementAmount
-    - atoms.pvzCompensationAmount
-    + atoms.vvCorrectionAmount
+    + atoms.vvCorrectionAmount;
 }
 
 /**
