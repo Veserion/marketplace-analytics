@@ -163,6 +163,10 @@ function buildWildberriesCostStructureModel(
   const returnsValue = Math.abs(getMetricValue(totalsReport, RETURNS_LABEL))
   const taxValue = Math.abs(getMetricValue(totalsReport, TAX_LABEL))
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
+  const returnsFormula = getMetric(totalsReport, RETURNS_LABEL)?.formula ?? RETURNS_LABEL
+  const taxFormula = getMetric(totalsReport, TAX_LABEL)?.formula ?? TAX_LABEL
+  const cogsFormula = getMetric(totalsReport, COGS_LABEL)?.formula ?? COGS_LABEL
+  const revenueBeforeSppFormula = getMetric(totalsReport, REVENUE_BEFORE_SPP_LABEL)?.formula ?? REVENUE_BEFORE_SPP_LABEL
 
   const groupedExpenseSegments = groupedReport.metrics
     .filter((metric) => metric.value !== null && metric.value < 0)
@@ -176,7 +180,7 @@ function buildWildberriesCostStructureModel(
       label: metric.label,
       value: Math.abs(metric.value || 0),
       color: WB_EXPENSE_PALETTE[index % WB_EXPENSE_PALETTE.length],
-      hint: `ABS(категории "${metric.label}") из блока "Общие затраты по Маркетплейсу".`,
+      hint: `ABS(${metric.formula})`,
     }))
 
   const topGroupedSegments = groupedExpenseSegments.slice(0, WB_MAX_GROUP_SEGMENTS)
@@ -189,7 +193,7 @@ function buildWildberriesCostStructureModel(
       label: WB_OTHER_EXPENSES_LABEL,
       value: groupedTailSum,
       color: WB_EXPENSE_PALETTE[WB_MAX_GROUP_SEGMENTS % WB_EXPENSE_PALETTE.length],
-      hint: `Сумма остальных отрицательных категорий из "Общие затраты по Маркетплейсу" вне топ-${WB_MAX_GROUP_SEGMENTS}.`,
+      hint: `Сумма ABS(formula) остальных отрицательных категорий из "Общие затраты по Маркетплейсу" вне топ-${WB_MAX_GROUP_SEGMENTS}; каждая категория использует свою полную formula из tooltip блока расходов.`,
     })
   }
 
@@ -200,7 +204,7 @@ function buildWildberriesCostStructureModel(
       label: RETURNS_LABEL,
       value: returnsValue,
       color: COST_STRUCTURE_COLORS.returns,
-      hint: 'ABS(метрики "Возвраты" из блока "Итоги периода"), учитывается как расход.',
+      hint: `ABS(${returnsFormula})`,
     })
   }
   if (taxValue > 0) {
@@ -209,7 +213,7 @@ function buildWildberriesCostStructureModel(
       label: TAX_LABEL,
       value: taxValue,
       color: COST_STRUCTURE_COLORS.tax,
-      hint: 'ABS(метрики "Налог" из блока "Итоги периода").',
+      hint: `ABS(${taxFormula})`,
     })
   }
   if (cogsValue > 0) {
@@ -218,7 +222,7 @@ function buildWildberriesCostStructureModel(
       label: COGS_LABEL,
       value: cogsValue,
       color: COST_STRUCTURE_COLORS.cogs,
-      hint: 'ABS(метрики "Себестоимость" из блока "Итоги периода").',
+      hint: `ABS(${cogsFormula})`,
     })
   }
 
@@ -231,7 +235,7 @@ function buildWildberriesCostStructureModel(
     label: NET_PROFIT_LABEL,
     value: netProfitValue,
     color: COST_STRUCTURE_COLORS.netProfit,
-    hint: 'MAX(0, Выручка с учетом СПП - сумма всех расходов в этом блоке).',
+    hint: `MAX(0, (${revenueBeforeSppFormula}) - сумма всех расходов в этом блоке; каждый расход раскрывается своей полной formula в tooltip).`,
   }
 
   return {

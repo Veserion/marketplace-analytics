@@ -5,45 +5,14 @@ import type { CsvTable } from '@/shared/lib/reporting'
 import { addToNumberMap, assertCsvColumns, createCsvTable, formatSharePercent, isArticleIncludedByPattern, normalizeLower, sortByAbsDesc, stripBom, sumNumberMap } from '@/shared/lib/reporting'
 import type { CogsByArticleMap, CogsMatchingMode } from '@/entities/wildberries-report/model/cogs-builder'
 import { resolveCogsLookupKey } from '@/entities/wildberries-report/model/cogs-builder'
-
-type WbRow = {
-  article: string
-  documentType: string
-  reason: string
-  salesDate: string
-  salesMethod: string
-  warehouse: string
-  basketId: string
-  srid: string
-  logisticsKind: string
-  quantity: number
-  returnCount: number
-  deliveryCount: number
-  retailPrice: number
-  retailPriceWithDiscount: number
-  sellerRealized: number
-  payout: number
-  logisticsCost: number
-  wbCommission: number
-  paymentServicesCommission: number
-  pvzCompensation: number
-  transportReimbursement: number
-  storageCost: number
-  withholdings: number
-  acceptanceOperations: number
-  fines: number
-  vvCorrection: number
-  loyaltyCompensation: number
-  loyaltyProgramCost: number
-  loyaltyPointsWithheld: number
-}
+import { buildWildberriesNetEffectSumFormula, calculateWildberriesAcceptanceOperationsAmount, calculateWildberriesCogsFromFile, calculateWildberriesCogsMatchedRows, calculateWildberriesFinesAmount, calculateWildberriesLogisticsAmount, calculateWildberriesPaymentServicesAmount, calculateWildberriesPvzCompensationAmount, calculateWildberriesReturnsAndCancellationsQuantity, calculateWildberriesReturnsNetEffect, calculateWildberriesReturnsRevenueBeforeSpp, calculateWildberriesRevenueWithoutSpp, calculateWildberriesRowNetEffect, calculateWildberriesSalesAcceptanceOperationsAmount, calculateWildberriesSalesFinesAmount, calculateWildberriesSalesLogisticsAmount, calculateWildberriesSalesPayout, calculateWildberriesSalesQuantity, calculateWildberriesSalesRevenueBeforeSpp, calculateWildberriesSalesRevenueByRetailPrice, calculateWildberriesSalesStorageAmount, calculateWildberriesSalesWithholdingsAmount, calculateWildberriesStorageAmount, calculateWildberriesTransportReimbursementAmount, calculateWildberriesVvCorrectionAmount, calculateWildberriesWithholdingsAmount, isWildberriesSaleRow, WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
+import { buildWildberriesAccrualCells, getWildberriesMarginRateCellFormula, getWildberriesNetProfitCellFormula, getWildberriesTaxCellFormula, WILDBERRIES_ACCRUAL_CELL_FORMULAS, type WildberriesAccrualCells } from '@/entities/wildberries-report/model/metrics/cells'
+import type { WildberriesAccrualMetricAtoms, WildberriesAccrualRow as WbRow, WildberriesSalesScheme as SalesScheme } from '@/entities/wildberries-report/model/metrics/types'
 
 type ClassifiedGroup = {
   label: string
   withSalesShare: boolean
 }
-
-type SalesScheme = 'FBS' | 'FBW' | 'Не указано'
 
 const SALES_SCHEME_ORDER: SalesScheme[] = ['FBS', 'FBW', 'Не указано']
 const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
@@ -56,52 +25,35 @@ const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 const WB_COMMISSION_LABEL = 'Комиссия ВБ'
 const PAYMENT_SERVICES_LABEL = 'Эквайринг'
 const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
-const MARKETPLACE_EXPENSES_FORMULA = [
-  `(SUM("${WB_REVENUE_COLUMNS.retailPrice}") - SUM("${WB_REVENUE_COLUMNS.payout}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.storage}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.fines}"))`,
-  `-SUM("${WB_EXPENSE_COLUMNS.vvCorrection}")`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.pvzCompensation}"))`,
-  `ABS(SUM("${WB_EXPENSE_COLUMNS.transportReimbursement}"))`,
-].join(' + ')
 
-function absValue(value: number): number {
-  return Math.abs(value)
-}
-
+/**
+ * Проверяет наличие ненулевой суммы.
+ * Используется презентационными группами WB, чтобы не показывать пустые расчетные строки.
+ */
 function hasNonZero(value: number): boolean {
   return Math.abs(value) > 0
 }
 
-function pickSignedAmount(
-  payout: number,
-  fallback: number,
-  expected: 'negative' | 'positive' | 'any',
-): number {
-  if (hasNonZero(payout)) return payout
-  if (!hasNonZero(fallback)) return 0
-
-  if (expected === 'negative') return fallback > 0 ? -fallback : fallback
-  if (expected === 'positive') return fallback < 0 ? -fallback : fallback
-  return fallback
-}
-
-function includesAny(value: string, needles: string[]): boolean {
-  return needles.some((needle) => value.includes(needle))
-}
-
+/**
+ * Создает карту схем продаж с нулевыми значениями для FBS/FBW/не указано.
+ * Используется при накоплении и масштабировании метрик группы `Схема работы`.
+ */
 function createSalesSchemeMap(): Map<SalesScheme, number> {
   return new Map(SALES_SCHEME_ORDER.map((scheme) => [scheme, 0] as const))
 }
 
+/**
+ * Суммирует значения карты схем продаж.
+ * Используется для выбора базы `Схема работы`: выручка по схеме или fallback от перевода в банк.
+ */
 function getSalesSchemeTotal(map: Map<SalesScheme, number>): number {
   return sumNumberMap(map)
 }
 
+/**
+ * Масштабирует распределение схем продаж до целевой суммы.
+ * Используется, когда нет надежной выручки по схемам и нужно разложить `Перевод в банк`.
+ */
 function scaleSalesSchemeMap(
   sourceMap: Map<SalesScheme, number>,
   targetTotal: number,
@@ -124,6 +76,10 @@ function scaleSalesSchemeMap(
   return scaledMap
 }
 
+/**
+ * Извлекает FBS/FBW из колонки `Способы продажи и тип товара`.
+ * Используется прямым определением схемы перед fallback-поиском по связанным строкам.
+ */
 function detectSalesSchemeByMethod(rawSalesMethod: string): SalesScheme | null {
   const normalized = normalizeLower(rawSalesMethod)
   if (!normalized) return null
@@ -132,6 +88,10 @@ function detectSalesSchemeByMethod(rawSalesMethod: string): SalesScheme | null {
   return null
 }
 
+/**
+ * Определяет схему продажи для строки: напрямую, через Srid/Id корзины или по складу.
+ * Используется при накоплении `salesRevenueByScheme` и `salesTransferByScheme`.
+ */
 function resolveSalesScheme(
   row: WbRow,
   bySrid: Map<string, SalesScheme>,
@@ -155,6 +115,10 @@ function resolveSalesScheme(
   return 'Не указано'
 }
 
+/**
+ * Преобразует дату WB из строки в timestamp для сортировки.
+ * Используется периодом отчета и группой `Динамика по датам начисления`.
+ */
 function toDateTimestamp(label: string): number | null {
   const normalized = normalize(label)
   if (!normalized) return null
@@ -179,82 +143,10 @@ function toDateTimestamp(label: string): number | null {
   return null
 }
 
-function getRowAmount(row: WbRow): number {
-  const reason = normalizeLower(row.reason)
-  const payout = row.payout
-
-  if (reason === 'продажа' || reason === 'возврат') {
-    return payout
-  }
-
-  if (reason === 'компенсация скидки по программе лояльности') {
-    const loyaltyAmount = absValue(row.loyaltyCompensation) - absValue(row.loyaltyProgramCost) - absValue(row.loyaltyPointsWithheld)
-    return hasNonZero(loyaltyAmount) ? loyaltyAmount : payout
-  }
-
-  if (includesAny(reason, ['логистика', 'коррекция логистики'])) {
-    return pickSignedAmount(payout, absValue(row.logisticsCost), 'negative')
-  }
-
-  if (reason === 'возмещение за выдачу и возврат товаров на пвз') {
-    return pickSignedAmount(payout, absValue(row.pvzCompensation), 'negative')
-  }
-
-  if (reason === 'возмещение издержек по перевозке/по складским операциям с товаром') {
-    return pickSignedAmount(payout, absValue(row.transportReimbursement), 'negative')
-  }
-
-  if (reason === 'хранение') {
-    return pickSignedAmount(payout, absValue(row.storageCost), 'negative')
-  }
-
-  if (reason === 'обработка товара') {
-    return pickSignedAmount(payout, absValue(row.withholdings) + absValue(row.acceptanceOperations), 'negative')
-  }
-
-  if (includesAny(reason, ['удержан', 'услуга платной доставки', 'бронирование товара через самовывоз', 'разовое изменение срока перечисления'])) {
-    return pickSignedAmount(payout, absValue(row.withholdings), 'negative')
-  }
-
-  if (reason === 'штраф') {
-    return pickSignedAmount(payout, absValue(row.fines), 'negative')
-  }
-
-  if (includesAny(reason, ['компенсация ущерба', 'добровольная компенсация при возврате'])) {
-    return pickSignedAmount(payout, 0, 'positive')
-  }
-
-  if (includesAny(reason, ['коррекция продаж', 'коррекция эквайринга'])) {
-    return pickSignedAmount(payout, row.vvCorrection, 'any')
-  }
-
-  if (reason === 'стоимость участия в программе лояльности') {
-    return pickSignedAmount(payout, absValue(row.loyaltyProgramCost), 'negative')
-  }
-
-  if (reason === 'сумма удержанная за начисленные баллы программы лояльности') {
-    return pickSignedAmount(payout, absValue(row.loyaltyPointsWithheld), 'negative')
-  }
-
-  if (hasNonZero(payout)) return payout
-
-  const fallbackKnownAmount =
-    row.vvCorrection
-    + absValue(row.loyaltyCompensation)
-    - absValue(row.loyaltyProgramCost)
-    - absValue(row.loyaltyPointsWithheld)
-    - absValue(row.logisticsCost)
-    - absValue(row.paymentServicesCommission)
-    - absValue(row.pvzCompensation)
-    - absValue(row.transportReimbursement)
-    - absValue(row.storageCost)
-    - absValue(row.withholdings)
-    - absValue(row.acceptanceOperations)
-    - absValue(row.fines)
-  const fallback = fallbackKnownAmount
-  return fallback !== 0 ? fallback : 0
-}
-
+/**
+ * Классифицирует `Обоснование для оплаты` в человекочитаемую группу расходов.
+ * Используется группой отчета `Общие затраты по Маркетплейсу`.
+ */
 function classifyGroup(rawLabel: string): ClassifiedGroup {
   const label = normalize(rawLabel) || 'Без обоснования'
   const normalized = normalizeLower(label)
@@ -309,6 +201,10 @@ function classifyGroup(rawLabel: string): ClassifiedGroup {
   return { label, withSalesShare: true }
 }
 
+/**
+ * Собирает подпись периода по минимальной и максимальной дате продаж.
+ * Используется в группе `Итоги периода`.
+ */
 function buildPeriodLabel(sumByDate: Map<string, number>): string | undefined {
   const timestamps = Array.from(sumByDate.keys())
     .map((label) => toDateTimestamp(label))
@@ -323,6 +219,10 @@ function buildPeriodLabel(sumByDate: Map<string, number>): string | undefined {
   return from === to ? from : `${from} - ${to}`
 }
 
+/**
+ * Превращает пары `label/value` в стандартные `AccrualMetric`.
+ * Используется для структуры списаний, где метрики строятся однотипно.
+ */
 function toMetrics(
   entries: [string, number][],
   formulaBuilder: (label: string) => string,
@@ -336,8 +236,26 @@ function toMetrics(
   }))
 }
 
+/**
+ * Формирует полное условие по колонке `Обоснование для оплаты` для tooltip-формул.
+ * Используется группой расходов и структурами расчета.
+ */
+function buildReasonFilterFormula(sourceLabels: string[]): string {
+  if (sourceLabels.length === 1) return `"${WB_BASE_COLUMNS.reason}" = "${sourceLabels[0]}"`
+  return `"${WB_BASE_COLUMNS.reason}" IN (${sourceLabels.map((item) => `"${item}"`).join(', ')})`
+}
+
+/**
+ * Формирует условие подтипа структуры по колонкам логистики/документа.
+ * Используется блоком `Сруктура расчета`.
+ */
+function buildBreakdownTypeFilterFormula(label: string): string {
+  return `COALESCE(NULLIF("${WB_BASE_COLUMNS.logisticsKind}", ""), NULLIF("${WB_BASE_COLUMNS.documentType}", ""), "Без подтипа") = "${label}"`
+}
+
 type WildberriesAccrualAggregate = {
   rowCount: number
+  metricAtoms: WildberriesAccrualMetricAtoms
   sumByGroup: Map<string, number>
   sumByDate: Map<string, number>
   sumByDateAndReason: Map<string, Map<string, number>>
@@ -345,31 +263,12 @@ type WildberriesAccrualAggregate = {
   groupTypeBreakdown: Map<string, Map<string, number>>
   salesRevenueByScheme: Map<SalesScheme, number>
   salesTransferByScheme: Map<SalesScheme, number>
-  wbCommissionAmount: number
-  logisticsAmount: number
-  paymentServicesAmount: number
-  storageAmount: number
-  withholdingsAmount: number
-  acceptanceOperationsAmount: number
-  finesAmount: number
-  vvCorrectionAmount: number
-  pvzCompensationAmount: number
-  transportReimbursementAmount: number
-  salesQuantity: number
-  returnsAndCancellationsQuantity: number
-  returnsAmount: number
-  revenueBeforeSpp: number
-  revenueWithoutSpp: number
-  payoutForSoldItems: number
-  logisticsForSoldItems: number
-  storageForSoldItems: number
-  withholdingsForSoldItems: number
-  acceptanceOperationsForSoldItems: number
-  finesForSoldItems: number
-  cogsFromFile: number
-  cogsMatchedRows: number
 }
 
+/**
+ * Валидирует обязательные колонки WB CSV и нормализует строки в доменную модель `WbRow`.
+ * Используется публичным builder-ом перед расчетом атомов и группировок.
+ */
 function parseWildberriesRowsFromTable(
   table: CsvTable,
   articlePattern: string,
@@ -445,6 +344,53 @@ function parseWildberriesRowsFromTable(
     }))
 }
 
+/**
+ * Собирает объект атомов через чистые atom-функции.
+ * Используется builder-ом как слой оркестрации перед molecules/cells.
+ */
+function buildWildberriesAccrualMetricAtoms(
+  rows: WbRow[],
+  cogsByArticleMap: CogsByArticleMap | null,
+  cogsMatchingMode: CogsMatchingMode,
+): WildberriesAccrualMetricAtoms {
+  const resolveUnitCogs = (row: WbRow): number | null => {
+    if (!cogsByArticleMap || cogsByArticleMap.size === 0) return null
+    const articleKey = resolveCogsLookupKey(row.article, cogsMatchingMode)
+    return articleKey ? cogsByArticleMap.get(articleKey) ?? null : null
+  }
+
+  return {
+    salesQuantity: calculateWildberriesSalesQuantity(rows),
+    returnsAndCancellationsQuantity: calculateWildberriesReturnsAndCancellationsQuantity(rows),
+    salesRevenueByRetailPrice: calculateWildberriesSalesRevenueByRetailPrice(rows),
+    salesRevenueBeforeSpp: calculateWildberriesSalesRevenueBeforeSpp(rows),
+    returnsRevenueBeforeSpp: calculateWildberriesReturnsRevenueBeforeSpp(rows),
+    revenueWithoutSpp: calculateWildberriesRevenueWithoutSpp(rows),
+    salesPayout: calculateWildberriesSalesPayout(rows),
+    returnsNetEffect: calculateWildberriesReturnsNetEffect(rows),
+    logisticsAmount: calculateWildberriesLogisticsAmount(rows),
+    paymentServicesAmount: calculateWildberriesPaymentServicesAmount(rows),
+    storageAmount: calculateWildberriesStorageAmount(rows),
+    withholdingsAmount: calculateWildberriesWithholdingsAmount(rows),
+    acceptanceOperationsAmount: calculateWildberriesAcceptanceOperationsAmount(rows),
+    finesAmount: calculateWildberriesFinesAmount(rows),
+    vvCorrectionAmount: calculateWildberriesVvCorrectionAmount(rows),
+    pvzCompensationAmount: calculateWildberriesPvzCompensationAmount(rows),
+    transportReimbursementAmount: calculateWildberriesTransportReimbursementAmount(rows),
+    salesLogisticsAmount: calculateWildberriesSalesLogisticsAmount(rows),
+    salesStorageAmount: calculateWildberriesSalesStorageAmount(rows),
+    salesWithholdingsAmount: calculateWildberriesSalesWithholdingsAmount(rows),
+    salesAcceptanceOperationsAmount: calculateWildberriesSalesAcceptanceOperationsAmount(rows),
+    salesFinesAmount: calculateWildberriesSalesFinesAmount(rows),
+    cogsFromFile: calculateWildberriesCogsFromFile(rows, resolveUnitCogs),
+    cogsMatchedRows: calculateWildberriesCogsMatchedRows(rows, resolveUnitCogs),
+  }
+}
+
+/**
+ * Строит lookup-и FBS/FBW по `Srid` и `Id корзины заказа`.
+ * Используется в `resolveSalesScheme`, чтобы строки без прямого признака схемы наследовали схему связанной продажи.
+ */
 function buildSalesSchemeLookups(rows: WbRow[]): {
   schemeBySrid: Map<string, SalesScheme>
   schemeByBasketId: Map<string, SalesScheme>
@@ -460,9 +406,17 @@ function buildSalesSchemeLookups(rows: WbRow[]): {
   return { schemeBySrid, schemeByBasketId }
 }
 
-function createWildberriesAccrualAggregate(rowCount: number): WildberriesAccrualAggregate {
+/**
+ * Создает пустой агрегат WB accrual: атомы метрик, группировки, даты и схемы продаж.
+ * Используется перед единым проходом по нормализованным строкам отчета.
+ */
+function createWildberriesAccrualAggregate(
+  rowCount: number,
+  metricAtoms: WildberriesAccrualMetricAtoms,
+): WildberriesAccrualAggregate {
   return {
     rowCount,
+    metricAtoms,
     sumByGroup: new Map<string, number>(),
     sumByDate: new Map<string, number>(),
     sumByDateAndReason: new Map<string, Map<string, number>>(),
@@ -470,88 +424,36 @@ function createWildberriesAccrualAggregate(rowCount: number): WildberriesAccrual
     groupTypeBreakdown: new Map<string, Map<string, number>>(),
     salesRevenueByScheme: createSalesSchemeMap(),
     salesTransferByScheme: createSalesSchemeMap(),
-    wbCommissionAmount: 0,
-    logisticsAmount: 0,
-    paymentServicesAmount: 0,
-    storageAmount: 0,
-    withholdingsAmount: 0,
-    acceptanceOperationsAmount: 0,
-    finesAmount: 0,
-    vvCorrectionAmount: 0,
-    pvzCompensationAmount: 0,
-    transportReimbursementAmount: 0,
-    salesQuantity: 0,
-    returnsAndCancellationsQuantity: 0,
-    returnsAmount: 0,
-    revenueBeforeSpp: 0,
-    revenueWithoutSpp: 0,
-    payoutForSoldItems: 0,
-    logisticsForSoldItems: 0,
-    storageForSoldItems: 0,
-    withholdingsForSoldItems: 0,
-    acceptanceOperationsForSoldItems: 0,
-    finesForSoldItems: 0,
-    cogsFromFile: 0,
-    cogsMatchedRows: 0,
   }
 }
 
+/**
+ * Делает основной проход по строкам WB: накапливает atoms, `net effect`, даты, структуру и схемы.
+ * Используется как расчетное ядро перед сборкой cells и отчетных групп.
+ */
 function aggregateWildberriesAccrualRows(
   rows: WbRow[],
   cogsByArticleMap: CogsByArticleMap | null,
   cogsMatchingMode: CogsMatchingMode,
 ): WildberriesAccrualAggregate {
-  const aggregate = createWildberriesAccrualAggregate(rows.length)
+  const metricAtoms = buildWildberriesAccrualMetricAtoms(rows, cogsByArticleMap, cogsMatchingMode)
+  const aggregate = createWildberriesAccrualAggregate(rows.length, metricAtoms)
   const { schemeBySrid, schemeByBasketId } = buildSalesSchemeLookups(rows)
 
   for (const row of rows) {
     const reason = row.reason || 'Без обоснования'
-    const amount = getRowAmount(row)
-    const reasonLower = normalizeLower(reason)
+    const amount = calculateWildberriesRowNetEffect(row)
 
-    if (reasonLower === 'продажа') {
-      aggregate.salesQuantity += row.quantity
+    if (isWildberriesSaleRow(row)) {
       const saleRevenue = row.retailPrice
-      aggregate.revenueBeforeSpp += saleRevenue
-      aggregate.revenueWithoutSpp += row.sellerRealized
-      aggregate.payoutForSoldItems += row.payout
-      aggregate.logisticsForSoldItems += absValue(row.logisticsCost)
-      aggregate.storageForSoldItems += absValue(row.storageCost)
-      aggregate.withholdingsForSoldItems += absValue(row.withholdings)
-      aggregate.acceptanceOperationsForSoldItems += absValue(row.acceptanceOperations)
-      aggregate.finesForSoldItems += absValue(row.fines)
 
       const saleDate = row.salesDate || 'Без даты'
       addToNumberMap(aggregate.salesDateRangeMap, saleDate, 0)
       const salesScheme = resolveSalesScheme(row, schemeBySrid, schemeByBasketId)
       addToNumberMap(aggregate.salesRevenueByScheme, salesScheme, saleRevenue)
       addToNumberMap(aggregate.salesTransferByScheme, salesScheme, row.payout)
-
-      if (cogsByArticleMap && cogsByArticleMap.size > 0) {
-        const articleKey = resolveCogsLookupKey(row.article, cogsMatchingMode)
-        const unitCogs = cogsByArticleMap.get(articleKey)
-        if (articleKey && unitCogs !== undefined) {
-          aggregate.cogsFromFile += row.quantity * unitCogs
-          aggregate.cogsMatchedRows += 1
-        }
-      }
     }
 
-    aggregate.logisticsAmount += absValue(row.logisticsCost)
-    aggregate.paymentServicesAmount += absValue(row.paymentServicesCommission)
-    aggregate.storageAmount += absValue(row.storageCost)
-    aggregate.withholdingsAmount += absValue(row.withholdings)
-    aggregate.acceptanceOperationsAmount += absValue(row.acceptanceOperations)
-    aggregate.finesAmount += absValue(row.fines)
-    aggregate.vvCorrectionAmount += -row.vvCorrection
-    aggregate.pvzCompensationAmount += absValue(row.pvzCompensation)
-    aggregate.transportReimbursementAmount += absValue(row.transportReimbursement)
-
-    if (reasonLower === 'возврат') {
-      aggregate.returnsAmount += amount
-    }
-
-    aggregate.returnsAndCancellationsQuantity += row.returnCount
     addToNumberMap(aggregate.sumByGroup, reason, amount)
 
     const date = row.salesDate || 'Без даты'
@@ -568,37 +470,18 @@ function aggregateWildberriesAccrualRows(
     addToNumberMap(aggregate.groupTypeBreakdown.get(reason)!, breakdownType, amount)
   }
 
-  aggregate.wbCommissionAmount = aggregate.revenueBeforeSpp - aggregate.payoutForSoldItems
   return aggregate
 }
 
-function getWildberriesMarketplaceExpenses(aggregate: WildberriesAccrualAggregate): number {
-  return aggregate.wbCommissionAmount
-    + aggregate.logisticsAmount
-    + aggregate.paymentServicesAmount
-    + aggregate.storageAmount
-    + aggregate.withholdingsAmount
-    + aggregate.acceptanceOperationsAmount
-    + aggregate.finesAmount
-    + aggregate.vvCorrectionAmount
-    + aggregate.pvzCompensationAmount
-    + aggregate.transportReimbursementAmount
-}
-
-function getWildberriesTransferToBank(aggregate: WildberriesAccrualAggregate): number {
-  return aggregate.payoutForSoldItems
-    - aggregate.logisticsForSoldItems
-    - aggregate.storageForSoldItems
-    - aggregate.acceptanceOperationsForSoldItems
-    - aggregate.withholdingsForSoldItems
-    - aggregate.finesForSoldItems
-}
-
+/**
+ * Собирает группу `Общие затраты по Маркетплейсу` из `net effect` и расчетных expense cells.
+ * Используется презентационным слоем WB accrual после построения итоговых cells.
+ */
 function buildWildberriesGroupedExpenseMetrics(
   aggregate: WildberriesAccrualAggregate,
-  marketplaceExpenses: number,
-  salesBase: number | null,
+  cells: WildberriesAccrualCells,
 ): AccrualMetric[] {
+  const atoms = aggregate.metricAtoms
   const groupedByLabel = new Map<string, { value: number, withSalesShare: boolean, sourceLabels: Set<string> }>()
   for (const [rawLabel, value] of sortByAbsDesc(Array.from(aggregate.sumByGroup.entries()))) {
     const group = classifyGroup(rawLabel)
@@ -612,23 +495,23 @@ function buildWildberriesGroupedExpenseMetrics(
     current.sourceLabels.add(rawLabel)
     groupedByLabel.set(group.label, current)
   }
-  if (hasNonZero(aggregate.wbCommissionAmount)) {
+  if (hasNonZero(cells.wbCommissionAmount)) {
     groupedByLabel.set(WB_COMMISSION_LABEL, {
-      value: -aggregate.wbCommissionAmount,
+      value: -cells.wbCommissionAmount,
       withSalesShare: true,
       sourceLabels: new Set<string>(),
     })
   }
-  if (hasNonZero(aggregate.paymentServicesAmount)) {
+  if (hasNonZero(atoms.paymentServicesAmount)) {
     groupedByLabel.set(PAYMENT_SERVICES_LABEL, {
-      value: -aggregate.paymentServicesAmount,
+      value: -atoms.paymentServicesAmount,
       withSalesShare: true,
       sourceLabels: new Set<string>(),
     })
   }
-  if (hasNonZero(aggregate.acceptanceOperationsAmount)) {
+  if (hasNonZero(atoms.acceptanceOperationsAmount)) {
     groupedByLabel.set(ACCEPTANCE_OPERATIONS_LABEL, {
-      value: -aggregate.acceptanceOperationsAmount,
+      value: -atoms.acceptanceOperationsAmount,
       withSalesShare: true,
       sourceLabels: new Set<string>(),
     })
@@ -645,8 +528,8 @@ function buildWildberriesGroupedExpenseMetrics(
           label,
           value,
           type: 'currency',
-          formula: `SUM("${WB_REVENUE_COLUMNS.retailPrice}") - SUM("${WB_REVENUE_COLUMNS.payout}")`,
-          shareText: formatSharePercent(value, salesBase),
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.wbCommissionAmount,
+          shareText: formatSharePercent(value, cells.salesBase),
         }
       }
       if (label === PAYMENT_SERVICES_LABEL) {
@@ -654,8 +537,8 @@ function buildWildberriesGroupedExpenseMetrics(
           label,
           value,
           type: 'currency',
-          formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
-          shareText: formatSharePercent(value, salesBase),
+          formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.paymentServicesAmount})`,
+          shareText: formatSharePercent(value, cells.salesBase),
         }
       }
       if (label === ACCEPTANCE_OPERATIONS_LABEL) {
@@ -663,35 +546,37 @@ function buildWildberriesGroupedExpenseMetrics(
           label,
           value,
           type: 'currency',
-          formula: `-ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}"))`,
-          shareText: formatSharePercent(value, salesBase),
+          formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount})`,
+          shareText: formatSharePercent(value, cells.salesBase),
         }
       }
 
       const sourceLabels = Array.from(data.sourceLabels)
-      const formula = sourceLabels.length === 1
-        ? `SUM(net effect), фильтр: "Обоснование для оплаты" = "${sourceLabels[0]}"`
-        : `SUM(net effect), фильтр: "Обоснование для оплаты" IN (${sourceLabels.map((item) => `"${item}"`).join(', ')})`
+      const formula = buildWildberriesNetEffectSumFormula([buildReasonFilterFormula(sourceLabels)])
 
       return {
         label,
         value,
         type: 'currency',
         formula,
-        shareText: data.withSalesShare ? formatSharePercent(value, salesBase) : null,
+        shareText: data.withSalesShare ? formatSharePercent(value, cells.salesBase) : null,
       }
     })
 
   groupMetrics.push({
     label: 'Итог',
-    value: -Math.abs(marketplaceExpenses),
+    value: -Math.abs(cells.marketplaceExpenses),
     type: 'currency',
-    formula: MARKETPLACE_EXPENSES_FORMULA,
-    shareText: formatSharePercent(marketplaceExpenses, salesBase),
+    formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.marketplaceExpenses,
+    shareText: formatSharePercent(cells.marketplaceExpenses, cells.salesBase),
   })
   return groupMetrics
 }
 
+/**
+ * Собирает группу `Схема работы` по FBS/FBW.
+ * Используется в отчете для разложения продаж или transfer fallback по модели выполнения.
+ */
 function buildWildberriesSchemeMetrics(
   aggregate: WildberriesAccrualAggregate,
   transferToBank: number,
@@ -717,11 +602,15 @@ function buildWildberriesSchemeMetrics(
       value,
       type: 'currency',
       formula: useRevenueAsSchemeBase
-        ? `SUM("Цена розничная"), фильтр: "Обоснование для оплаты" = "Продажа", модель ${scheme}. Модель определяется по "Способы продажи и тип товара" из связанных строк (Srid/Id корзины заказа).`
-        : `SUM(поступления из строк "Продажа"), модель ${scheme}. Модель определяется по "Способы продажи и тип товара" из связанных строк (Srid/Id корзины заказа). Значения приведены пропорционально к "Перевод в банк".`,
+        ? `${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesRevenueByRetailPrice}, фильтр модели ${scheme}: "${WB_BASE_COLUMNS.salesMethod}" содержит FBS/FBW или связанная строка по "${WB_BASE_COLUMNS.srid}" / "${WB_BASE_COLUMNS.basketId}" содержит модель; fallback FBS если "${WB_BASE_COLUMNS.warehouse}" содержит "склад поставщика".`
+        : `${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout}, фильтр модели ${scheme}: "${WB_BASE_COLUMNS.salesMethod}" содержит FBS/FBW или связанная строка по "${WB_BASE_COLUMNS.srid}" / "${WB_BASE_COLUMNS.basketId}" содержит модель; fallback FBS если "${WB_BASE_COLUMNS.warehouse}" содержит "склад поставщика". Значение масштабируется пропорционально к формуле "Перевод в банк": ${WILDBERRIES_ACCRUAL_CELL_FORMULAS.transferToBank}.`,
     }))
 }
 
+/**
+ * Собирает группы `Структура: ...` с топ-подтипами списаний внутри каждого основания оплаты.
+ * Используется для детализации крупных групп расходов и корректировок.
+ */
 function buildWildberriesStructureSummaries(groupTypeBreakdown: Map<string, Map<string, number>>): AccrualGroup[] {
   return Array.from(groupTypeBreakdown.entries())
     .map(([group, types]) => {
@@ -731,7 +620,10 @@ function buildWildberriesStructureSummaries(groupTypeBreakdown: Map<string, Map<
         title: `Структура: ${group}`,
         metrics: toMetrics(
           topTypes,
-          (label) => `SUM(net effect), фильтр: "Обоснование для оплаты" = "${group}" и подтип = "${label}"`,
+          (label) => buildWildberriesNetEffectSumFormula([
+            buildReasonFilterFormula([group]),
+            buildBreakdownTypeFilterFormula(label),
+          ]),
         ),
         total: groupTotal,
       }
@@ -740,6 +632,10 @@ function buildWildberriesStructureSummaries(groupTypeBreakdown: Map<string, Map<
     .map(({ title, metrics }) => ({ title, metrics }))
 }
 
+/**
+ * Собирает метрики динамики по датам на базе `SUM(net effect)`.
+ * Используется группой `Динамика по датам начисления`.
+ */
 function buildWildberriesDateMetrics(aggregate: WildberriesAccrualAggregate): AccrualMetric[] {
   const rubleIntegerFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 })
   return Array.from(aggregate.sumByDate.entries())
@@ -775,27 +671,22 @@ function buildWildberriesDateMetrics(aggregate: WildberriesAccrualAggregate): Ac
         type: 'currency' as const,
         shareText: accrualTypeLabel,
         formula: value < 0 && topNegativeReason
-          ? `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}". Справа показано крупнейшее списание по "Обоснование для оплаты": "${topNegativeReason}".`
-          : `SUM(net effect), фильтр: "Дата продажи" = "${dateLabel}"`,
+          ? `${buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.salesDate}" = "${dateLabel}"`])}. Справа показано крупнейшее списание по "${WB_BASE_COLUMNS.reason}": "${topNegativeReason}".`
+          : buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.salesDate}" = "${dateLabel}"`]),
       }
     })
 }
 
+/**
+ * Собирает финальный набор групп WB accrual из агрегата, atoms/molecules/cells и презентационных секций.
+ * Используется публичной функцией `buildWildberriesAccrualReports`.
+ */
 function buildWildberriesAccrualReportGroups(
   aggregate: WildberriesAccrualAggregate,
   vatRatePercent: number,
   taxRatePercent: number,
 ): AccrualGroup[] {
-  const sppAndPromotions = aggregate.revenueBeforeSpp - aggregate.revenueWithoutSpp
-  const returnsExpense = aggregate.returnsAmount === 0 ? 0 : -Math.abs(aggregate.returnsAmount)
-  const marketplaceExpenses = getWildberriesMarketplaceExpenses(aggregate)
-  const transferToBank = getWildberriesTransferToBank(aggregate)
-  const totalRate = (vatRatePercent + taxRatePercent) / 100
-  const taxAmount = aggregate.revenueBeforeSpp !== 0 ? aggregate.revenueBeforeSpp * totalRate : 0
-  const cogs: number | null = aggregate.cogsMatchedRows > 0 ? aggregate.cogsFromFile : null
-  const netProfit = transferToBank - taxAmount - (cogs ?? 0)
-  const marginRate = aggregate.revenueBeforeSpp !== 0 ? (netProfit / aggregate.revenueBeforeSpp) * 100 : null
-  const salesBase = aggregate.revenueBeforeSpp > 0 ? aggregate.revenueBeforeSpp : null
+  const cells = buildWildberriesAccrualCells(aggregate.metricAtoms, vatRatePercent, taxRatePercent)
 
   return [
     {
@@ -807,98 +698,89 @@ function buildWildberriesAccrualReportGroups(
       metrics: [
         {
           label: 'Количество продаж',
-          value: aggregate.salesQuantity,
+          value: cells.salesQuantity,
           type: 'number',
-          formula: 'SUM("Кол-во"), фильтр: "Обоснование для оплаты" = "Продажа"',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.salesQuantity,
         },
         {
           label: 'Отмены, возвраты, не выкупы',
-          value: aggregate.returnsAndCancellationsQuantity,
+          value: cells.returnsAndCancellationsQuantity,
           type: 'number',
-          formula: 'SUM("Количество возврата")',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsAndCancellationsQuantity,
         },
         {
           label: 'Выручка с учетом СПП',
-          value: aggregate.revenueBeforeSpp,
+          value: cells.revenueBeforeSpp,
           type: 'currency',
-          formula: 'SUM("Цена розничная"), фильтр: "Обоснование для оплаты" = "Продажа"',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.revenueBeforeSpp,
         },
         {
           label: 'Выручка без СПП',
-          value: aggregate.revenueWithoutSpp,
+          value: cells.revenueWithoutSpp,
           type: 'currency',
-          formula: 'SUM("Вайлдберриз реализовал Товар (Пр)"), фильтр: "Обоснование для оплаты" = "Продажа"',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.revenueWithoutSpp,
         },
         {
           label: 'СПП и акции',
-          value: sppAndPromotions,
+          value: cells.sppAndPromotions,
           type: 'currency',
-          formula: 'Выручка с учетом СПП - Выручка без СПП',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.sppAndPromotions,
         },
         {
           label: 'Возвраты',
-          value: returnsExpense,
+          value: cells.returnsExpense,
           type: 'currency',
-          formula: '-ABS(SUM(net effect), фильтр: "Обоснование для оплаты" = "Возврат")',
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsExpense,
         },
         {
           label: 'Общие затраты по Маркетплейсу',
-          value: marketplaceExpenses,
+          value: cells.marketplaceExpenses,
           type: 'currency',
-          formula: MARKETPLACE_EXPENSES_FORMULA,
-          shareText: formatSharePercent(marketplaceExpenses, salesBase),
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.marketplaceExpenses,
+          shareText: formatSharePercent(cells.marketplaceExpenses, cells.salesBase),
         },
         {
           label: 'Перевод в банк',
-          value: transferToBank,
+          value: cells.transferToBank,
           type: 'currency',
-          formula: [
-            'SUM("К перечислению за товар"), фильтр: "Обоснование для оплаты" = "Продажа"',
-            `- ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
-            `- ABS(SUM("${WB_EXPENSE_COLUMNS.storage}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
-            `- ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
-            `- ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
-            `- ABS(SUM("${WB_EXPENSE_COLUMNS.fines}")), фильтр: "Обоснование для оплаты" = "Продажа"`,
-          ].join(' '),
+          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.transferToBank,
         },
         {
           label: 'Себестоимость',
-          value: cogs,
+          value: cells.cogs,
           type: 'currency',
-          formula: cogs !== null
-            ? 'SUM(Кол-во продаж * Себестоимость из загруженного CSV себестоимости)'
-            : 'Нет данных: загрузите CSV с себестоимостью товаров',
-          shareText: cogs !== null ? formatSharePercent(cogs, salesBase) : null,
+          formula: cells.cogs !== null
+            ? WILDBERRIES_ACCRUAL_CELL_FORMULAS.cogsWithData
+            : WILDBERRIES_ACCRUAL_CELL_FORMULAS.cogsWithoutData,
+          shareText: cells.cogs !== null ? formatSharePercent(cells.cogs, cells.salesBase) : null,
         },
         {
           label: 'Налог',
-          value: taxAmount,
+          value: cells.taxAmount,
           type: 'currency',
-          formula: `(${taxRatePercent}% + ${vatRatePercent}%) * Выручка с учетом СПП`,
+          formula: getWildberriesTaxCellFormula(vatRatePercent, taxRatePercent),
         },
         {
           label: 'Маржинальность',
-          value: marginRate,
+          value: cells.marginRate,
           type: 'percent',
-          formula: 'Чистая прибыль / Выручка с учетом СПП * 100%',
+          formula: getWildberriesMarginRateCellFormula(cells.cogs !== null, vatRatePercent, taxRatePercent),
         },
         {
           label: 'Чистая прибыль',
-          value: netProfit,
+          value: cells.netProfit,
           type: 'currency',
-          formula: cogs !== null
-            ? 'Перевод в банк - Налог - Себестоимость'
-            : 'Перевод в банк - Налог',
+          formula: getWildberriesNetProfitCellFormula(cells.cogs !== null, vatRatePercent, taxRatePercent),
         },
       ],
     },
     {
       title: GROUPED_EXPENSES_REPORT_TITLE,
-      metrics: buildWildberriesGroupedExpenseMetrics(aggregate, marketplaceExpenses, salesBase),
+      metrics: buildWildberriesGroupedExpenseMetrics(aggregate, cells),
     },
     {
       title: 'Схема работы',
-      metrics: buildWildberriesSchemeMetrics(aggregate, transferToBank),
+      metrics: buildWildberriesSchemeMetrics(aggregate, cells.transferToBank),
     },
     {
       title: 'Динамика по датам начисления',
@@ -908,6 +790,10 @@ function buildWildberriesAccrualReportGroups(
   ]
 }
 
+/**
+ * Публичная точка построения WB accrual-отчета из CSV.
+ * Используется UI/фичами импорта: парсит CSV, строит агрегат и возвращает готовые `AccrualGroup[]`.
+ */
 export function buildWildberriesAccrualReports(
   rawCsv: string,
   vatRatePercent = 5,

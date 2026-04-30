@@ -31,7 +31,7 @@ export const WB_QUANTITY_COLUMNS = {
 
 export const WB_REVENUE_COLUMNS = {
   retailPrice: 'Цена розничная',
-  retailPriceWithDiscount: 'Цена розничная с учетом согласованной скидки',
+  retailPriceWithDiscount: 'Цена розничная',
   sellerRealized: 'Вайлдберриз реализовал Товар (Пр)',
   payout: 'К перечислению Продавцу за реализованный Товар',
 } as const
