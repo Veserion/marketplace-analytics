@@ -2,7 +2,7 @@ import { WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report
 import type { WildberriesAccrualMetricAtoms } from '@/entities/wildberries-report/model/metrics/types'
 
 const revenueBeforeSppFormula = `(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesRevenueBeforeSpp}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsRevenueBeforeSpp})`
-const sppAndPromotionsFormula = `(${revenueBeforeSppFormula}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.revenueWithoutSpp})`
+const sppAndPromotionsFormula = `(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesRevenueBeforeSpp}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.revenueWithoutSpp})`
 const wbCommissionAmountFormula = `(${revenueBeforeSppFormula}) - (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout})`
 const marketplaceExpensesFormula = [
   `(${wbCommissionAmountFormula})`,
@@ -44,11 +44,11 @@ export function calculateWildberriesRevenueBeforeSpp(atoms: WildberriesAccrualMe
 }
 
 /**
- * Молекула `СПП и акции`: выручка с СПП минус атом `Выручка без СПП`.
+ * Молекула `СПП и акции`: выручка с СПП (только продажи) минус атом `Выручка без СПП`.
  * Используется cell `СПП и акции`.
  */
 export function calculateWildberriesSppAndPromotions(atoms: WildberriesAccrualMetricAtoms): number {
-  return calculateWildberriesRevenueBeforeSpp(atoms) - atoms.revenueWithoutSpp
+  return atoms.salesRevenueBeforeSpp - atoms.revenueWithoutSpp
 }
 
 /**
