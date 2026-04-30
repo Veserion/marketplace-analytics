@@ -52,5 +52,5 @@ export const WB_EXPENSE_COLUMNS = {
 export const WB_LOYALTY_COLUMNS = {
   loyaltyCompensation: 'Компенсация скидки по программе лояльности',
   loyaltyProgramCost: 'Стоимость участия в программе лояльности',
-  loyaltyPointsWithheld: 'Сумма удержанная за начисленные баллы программы лояльности',
+  loyaltyPointsWithheld: 'Сумма баллов, удержанных по программе лояльности',
 } as const

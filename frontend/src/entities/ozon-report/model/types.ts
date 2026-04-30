@@ -1,6 +1,9 @@
+import type { ValueType } from '@/shared/lib/report-types'
+
+export type { AccrualGroup, AccrualMetric, ValueType } from '@/shared/lib/report-types'
+
 export type Marketplace = 'wildberries' | 'ozon'
 export type OzonCalculationType = 'unitEconomics' | 'accrualReport'
-export type ValueType = 'number' | 'currency' | 'percent'
 
 export type MetricKey =
   | 'sales'
@@ -45,21 +48,6 @@ export type ReportGroup = {
   metrics: ReportMetric[]
   availabilityGroups?: AvailabilityGroups
   productMargins?: ProductMarginItem[]
-}
-
-export type AccrualMetric = {
-  label: string
-  value: number | null
-  type: ValueType
-  formula: string
-  shareText?: string | null
-}
-
-export type AccrualGroup = {
-  title: string
-  rowCount?: number
-  periodLabel?: string
-  metrics: AccrualMetric[]
 }
 
 export type AvailabilityGroups = {

@@ -1,4 +1,4 @@
-import type { ValueType } from '@/entities/ozon-report/model/types'
+import type { ValueType } from '@/shared/lib/report-types'
 
 export function parseCsv(content: string, delimiter = ';'): string[][] {
   const rows: string[][] = []
