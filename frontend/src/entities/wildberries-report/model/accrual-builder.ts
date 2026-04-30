@@ -732,6 +732,7 @@ function buildWildberriesAccrualReportGroups(
           value: cells.sppAndPromotions,
           type: 'currency',
           formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.sppAndPromotions,
+          shareText: formatSharePercent(cells.sppAndPromotions, cells.revenueBeforeSpp),
         },
         {
           label: 'Общие затраты по Маркетплейсу',

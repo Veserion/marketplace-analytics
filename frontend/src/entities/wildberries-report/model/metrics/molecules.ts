@@ -18,11 +18,15 @@ const marketplaceExpensesFormula = [
 ].join(' + ')
 const transferToBankFormula = [
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesLogisticsAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesStorageAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesAcceptanceOperationsAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesWithholdingsAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesFinesAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.paymentServicesAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.logisticsAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.storageAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.finesAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.withholdingsAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.transportReimbursementAmount})`,
+  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.pvzCompensationAmount})`,
+  `+ (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.vvCorrectionAmount})`,
 ].join(' ')
 
 export const WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS = {
@@ -74,7 +78,6 @@ export function calculateWildberriesWbCommissionAmount(atoms: WildberriesAccrual
 export function calculateWildberriesMarketplaceExpenses(atoms: WildberriesAccrualMetricAtoms): number {
   return calculateWildberriesWbCommissionAmount(atoms)
     + atoms.logisticsAmount
-    + atoms.paymentServicesAmount
     + atoms.storageAmount
     + atoms.withholdingsAmount
     + atoms.acceptanceOperationsAmount
@@ -89,12 +92,25 @@ export function calculateWildberriesMarketplaceExpenses(atoms: WildberriesAccrua
  * Используется cell `Перевод в банк`, чистой прибылью и fallback-базой схемы работы.
  */
 export function calculateWildberriesTransferToBank(atoms: WildberriesAccrualMetricAtoms): number {
+  console.log('salesPayout', atoms.salesPayout)
+  console.log('paymentServicesAmount', atoms.paymentServicesAmount)
+  console.log('logisticsAmount', atoms.logisticsAmount)
+  console.log('storageAmount', atoms.storageAmount)
+  console.log('acceptanceOperationsAmount', atoms.acceptanceOperationsAmount)
+  console.log('finesAmount', atoms.finesAmount)
+  console.log('withholdingsAmount', atoms.withholdingsAmount)
+  console.log('transportReimbursementAmount', atoms.transportReimbursementAmount)
+  console.log('pvzCompensationAmount', atoms.pvzCompensationAmount)
+  console.log('vvCorrectionAmount', atoms.vvCorrectionAmount)
   return atoms.salesPayout
-    - atoms.salesLogisticsAmount
-    - atoms.salesStorageAmount
-    - atoms.salesAcceptanceOperationsAmount
-    - atoms.salesWithholdingsAmount
-    - atoms.salesFinesAmount
+    - atoms.logisticsAmount
+    - atoms.storageAmount
+    - atoms.acceptanceOperationsAmount
+    - atoms.finesAmount
+    - atoms.withholdingsAmount
+    - atoms.transportReimbursementAmount
+    - atoms.pvzCompensationAmount
+    + atoms.vvCorrectionAmount
 }
 
 /**
