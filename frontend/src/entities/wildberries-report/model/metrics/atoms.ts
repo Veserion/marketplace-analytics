@@ -43,7 +43,7 @@ export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   salesRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   returnsRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
   revenueWithoutSpp: `SUM("${WB_REVENUE_COLUMNS.sellerRealized}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
-  salesPayout: `SUM("${WB_REVENUE_COLUMNS.payout}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
+  salesPayout: `SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа") - SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат") + SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" ≠ "Продажа" и "${WB_BASE_COLUMNS.reason}" ≠ "Возврат" и значение > 0)`,
   wbCommissionCalculated: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   returnsNetEffect: buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.reason}" = "Возврат"`]),
   logisticsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
@@ -272,11 +272,19 @@ export function calculateWildberriesRevenueWithoutSpp(rows: WildberriesAccrualRo
 }
 
 /**
- * Атом выплаты за продажи: сумма `К перечислению Продавцу за реализованный Товар` по строкам `Продажа`.
+ * Атом выплаты: сумма `К перечислению Продавцу за реализованный Товар` по продажам
+ * минус сумма по возвратам плюс прочие положительные начисления в этом же столбце.
  * Используется молекулами `Комиссия ВБ` и `Перевод в банк`.
  */
 export function calculateWildberriesSalesPayout(rows: WildberriesAccrualRow[]): number {
-  return sumRows(rows, (row) => row.payout, isWildberriesSaleRow)
+  const salesPayout = sumRows(rows, (row) => row.payout, isWildberriesSaleRow)
+  const returnsPayout = sumRows(rows, (row) => row.payout, isWildberriesReturnRow)
+  const otherPositivePayout = sumRows(
+    rows,
+    (row) => row.payout,
+    (row) => !isWildberriesSaleRow(row) && !isWildberriesReturnRow(row) && row.payout > 0,
+  )
+  return salesPayout - returnsPayout + otherPositivePayout
 }
 
 /**
