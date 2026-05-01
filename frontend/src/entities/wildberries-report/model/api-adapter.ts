@@ -1,9 +1,11 @@
 import type { WildberriesAccrualRow } from './metrics/types'
-import { normalize } from '@/shared/lib/csv'
+import { normalize, parseNumber } from '@/shared/lib/csv'
 
 /**
  * Сырая строка отчёта Wildberries, полученная по API.
  * Поля могут быть null — адаптер применяет fallback-значения при маппинге.
+ *
+ * Числовые поля API приходят как строки (например "47.43"), адаптер преобразует их в числа.
  *
  * Таблица сопоставления CSV ↔ API: wb-csv-to-api-fields.md
  */
@@ -22,63 +24,63 @@ export type WbApiReportRow = {
   orderDt: string | null
   saleDt: string | null
   quantity: number | null
-  retailPrice: number | null
-  retailAmount: number | null
+  retailPrice: string | null
+  retailAmount: string | null
   productDiscountForReport: number | null
   sellerPromo: number | null
   salePercent: number | null
-  retailPriceWithDisc: number | null
+  retailPriceWithDisc: string | null
   supRatingUp: number | null
   isKgvpV2: number | null
   spp: number | null
   commissionPercent: number | null
   kvwBase: number | null
   kvw: number | null
-  ppvzSalesCommission: number | null
-  ppvzReward: number | null
-  acquiringFee: number | null
+  ppvzSalesCommission: string | null
+  ppvzReward: string | null
+  acquiringFee: string | null
   acquiringPercent: number | null
   paymentProcessing: string | null
-  vw: number | null
-  vwNds: number | null
-  forPay: number | null
+  vw: string | null
+  vwNds: string | null
+  forPay: string | null
   deliveryAmount: number | null
   returnAmount: number | null
-  deliveryService: number | null
+  deliveryService: string | null
   fixTariffDateFrom: string | null
   fixTariffDateTo: string | null
   dlvPrc: number | null
-  penalty: number | null
-  additionalPayment: number | null
+  penalty: string | null
+  additionalPayment: string | null
   bonusTypeName: string | null
   stickerId: string | null
   acquiringBank: string | null
-  ppvzOfficeId: string | null
+  ppvzOfficeId: number | null
   ppvzOfficeName: string | null
-  ppvzSupplierInn: string | null
   ppvzSupplierName: string | null
+  ppvzSupplierInn: string | null
   officeName: string | null
   country: string | null
   giBoxTypeName: string | null
   declarationNumber: string | null
   orderId: number | null
   kiz: string | null
-  shkId: string | null
-  srid: number | null
-  rebillLogisticCost: number | null
+  shkId: number | null
+  srid: string | null
+  rebillLogisticCost: string | null
   rebillLogisticOrg: string | null
-  paidStorage: number | null
-  deduction: number | null
-  paidAcceptance: number | null
+  paidStorage: string | null
+  deduction: string | null
+  paidAcceptance: string | null
   isB2b: boolean | null
   trbxId: string | null
-  installmentCofinancingAmount: number | null
+  installmentCofinancingAmount: string | null
   wibesDiscountPercent: number | null
   cashbackDiscount: number | null
-  cashbackCommissionChange: number | null
-  cashbackAmount: number | null
+  cashbackCommissionChange: string | null
+  cashbackAmount: string | null
   orderUid: string | null
-  paymentSchedule: number | null
+  paymentSchedule: string | null
   sellerPromoId: number | null
   sellerPromoDiscount: number | null
   deliveryMethod: string | null
@@ -86,7 +88,7 @@ export type WbApiReportRow = {
   loyaltyDiscount: number | null
   uuidPromocode: string | null
   salePricePromocodeDiscountPrc: number | null
-  articleSubstitution: number | null
+  articleSubstitution: string | null
   salePriceAffiliatedDiscountPrc: number | null
   salePriceWholesaleDiscountPrc: number | null
 }
@@ -113,6 +115,9 @@ function formatApiDateToCsvStyle(raw: string | null): string {
  *
  * Применяет те же fallback-значения (0 для чисел, '' для строк),
  * что и CSV-парсер в parseWildberriesRowsFromTable.
+ *
+ * Числовые поля API приходят как строки (например "47.43"), поэтому
+ * используется parseNumber для преобразования в числа.
  */
 export function mapWbApiRowToAccrualRow(api: WbApiReportRow): WildberriesAccrualRow {
   return {
@@ -123,29 +128,29 @@ export function mapWbApiRowToAccrualRow(api: WbApiReportRow): WildberriesAccrual
     salesMethod: normalize(api.deliveryMethod ?? ''),
     warehouse: normalize(api.officeName ?? ''),
     basketId: normalize(api.orderUid ?? ''),
-    srid: api.srid != null ? String(api.srid) : '',
+    srid: api.srid ?? '',
     logisticsKind: normalize(api.bonusTypeName ?? ''),
     quantity: api.quantity ?? 0,
     returnCount: api.returnAmount ?? 0,
     deliveryCount: api.deliveryAmount ?? 0,
-    retailPrice: api.retailPrice ?? 0,
-    retailPriceWithDiscount: api.retailPriceWithDisc ?? 0,
-    sellerRealized: api.retailAmount ?? 0,
-    payout: api.forPay ?? 0,
-    logisticsCost: api.deliveryService ?? 0,
+    retailPrice: parseNumber(api.retailPrice) ?? 0,
+    retailPriceWithDiscount: parseNumber(api.retailPriceWithDisc) ?? 0,
+    sellerRealized: parseNumber(api.retailAmount) ?? 0,
+    payout: parseNumber(api.forPay) ?? 0,
+    logisticsCost: parseNumber(api.deliveryService) ?? 0,
     wbCommissionRate: api.commissionPercent ?? 0,
-    wbCommission: api.vw ?? 0,
-    paymentServicesCommission: api.acquiringFee ?? 0,
-    pvzCompensation: api.ppvzReward ?? 0,
-    transportReimbursement: api.rebillLogisticCost ?? 0,
-    storageCost: api.paidStorage ?? 0,
-    withholdings: api.deduction ?? 0,
-    acceptanceOperations: api.paidAcceptance ?? 0,
-    fines: api.penalty ?? 0,
-    vvCorrection: api.additionalPayment ?? 0,
+    wbCommission: parseNumber(api.vw) ?? 0,
+    paymentServicesCommission: parseNumber(api.acquiringFee) ?? 0,
+    pvzCompensation: parseNumber(api.ppvzReward) ?? 0,
+    transportReimbursement: parseNumber(api.rebillLogisticCost) ?? 0,
+    storageCost: parseNumber(api.paidStorage) ?? 0,
+    withholdings: parseNumber(api.deduction) ?? 0,
+    acceptanceOperations: parseNumber(api.paidAcceptance) ?? 0,
+    fines: parseNumber(api.penalty) ?? 0,
+    vvCorrection: parseNumber(api.additionalPayment) ?? 0,
     loyaltyCompensation: api.cashbackDiscount ?? 0,
-    loyaltyProgramCost: api.cashbackCommissionChange ?? 0,
-    loyaltyPointsWithheld: api.cashbackAmount ?? 0,
+    loyaltyProgramCost: parseNumber(api.cashbackCommissionChange) ?? 0,
+    loyaltyPointsWithheld: parseNumber(api.cashbackAmount) ?? 0,
   }
 }
 
@@ -154,4 +159,108 @@ export function mapWbApiRowToAccrualRow(api: WbApiReportRow): WildberriesAccrual
  */
 export function mapWbApiRowsToAccrualRows(apiRows: WbApiReportRow[]): WildberriesAccrualRow[] {
   return apiRows.map(mapWbApiRowToAccrualRow)
+}
+
+/**
+ * Конвертирует массив WildberriesAccrualRow в CSV формат.
+ * Используется для интеграции API данных в существующий флоу обработки CSV.
+ */
+export function accrualRowsToCsv(rows: WildberriesAccrualRow[]): string {
+  if (rows.length === 0) return ''
+
+  // Заголовок WB CSV
+  const header = [
+    'Артикул',
+    'Тип документа',
+    'Обоснование для оплаты',
+    'Дата продажи',
+    'Способ продажи и тип товара',
+    'Склад',
+    'ID корзины заказа',
+    'Srid',
+    'Вид логистики',
+    'Количество',
+    'Возвраты',
+    'Доставка',
+    'Цена розничная',
+    'Цена розничная с учетом скидки',
+    'Реализовано продавцу',
+    'К перечислению',
+    'Логистика до покупателя',
+    'Комиссия ВБ, %',
+    'Комиссия ВБ',
+    'Эквайринг',
+    'Компенсация ПВЗ',
+    'Транспортная компенсация',
+    'Хранение ФБО',
+    'Удержания',
+    'Операции на приемке',
+    'Штрафы',
+    'Корректировка ВВ',
+    'Компенсация лояльности',
+    'Стоимость программы лояльности',
+    'Списание лояльных баллов',
+  ]
+
+  // Функция экранирования CSV значений
+  const escapeCsvValue = (value: string | number): string => {
+    const str = String(value)
+    if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return str
+  }
+
+  // Конвертация строк
+  const dataRows = rows.map((row) => [
+    escapeCsvValue(row.article),
+    escapeCsvValue(row.documentType),
+    escapeCsvValue(row.reason),
+    escapeCsvValue(row.salesDate),
+    escapeCsvValue(row.salesMethod),
+    escapeCsvValue(row.warehouse),
+    escapeCsvValue(row.basketId),
+    escapeCsvValue(row.srid),
+    escapeCsvValue(row.logisticsKind),
+    escapeCsvValue(row.quantity),
+    escapeCsvValue(row.returnCount),
+    escapeCsvValue(row.deliveryCount),
+    escapeCsvValue(row.retailPrice),
+    escapeCsvValue(row.retailPriceWithDiscount),
+    escapeCsvValue(row.sellerRealized),
+    escapeCsvValue(row.payout),
+    escapeCsvValue(row.logisticsCost),
+    escapeCsvValue(row.wbCommissionRate),
+    escapeCsvValue(row.wbCommission),
+    escapeCsvValue(row.paymentServicesCommission),
+    escapeCsvValue(row.pvzCompensation),
+    escapeCsvValue(row.transportReimbursement),
+    escapeCsvValue(row.storageCost),
+    escapeCsvValue(row.withholdings),
+    escapeCsvValue(row.acceptanceOperations),
+    escapeCsvValue(row.fines),
+    escapeCsvValue(row.vvCorrection),
+    escapeCsvValue(row.loyaltyCompensation),
+    escapeCsvValue(row.loyaltyProgramCost),
+    escapeCsvValue(row.loyaltyPointsWithheld),
+  ])
+
+  // Специальный заголовок WB CSV (первые две строки)
+  const wbHeader1 = ['№', 'Артикул поставщика', 'Бренд', 'Предмет', 'Код товара', 'Размер', 'Баркод']
+  const wbHeader2 = [
+    'Число',
+    'Артикул поставщика',
+    'Бренд',
+    'Предмет',
+    'Код товара',
+    'Размер',
+    'Баркод',
+    ...header.slice(1),
+  ]
+
+  return [
+    wbHeader1.join(';'),
+    wbHeader2.join(';'),
+    ...dataRows.map((row) => row.join(';')),
+  ].join('\n')
 }

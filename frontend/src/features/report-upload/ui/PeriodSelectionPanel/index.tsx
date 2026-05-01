@@ -30,13 +30,14 @@ const MAX_PERIOD_DAYS = 31
 
 function getPresetRange(preset: PeriodPreset): [Dayjs, Dayjs] | null {
   const today = dayjs()
+  const yesterday = today.subtract(1, 'day')
   switch (preset) {
     case '7d':
-      return [today.subtract(6, 'day'), today]
+      return [yesterday.subtract(6, 'day'), yesterday]
     case '14d':
-      return [today.subtract(13, 'day'), today]
+      return [yesterday.subtract(13, 'day'), yesterday]
     case '30d':
-      return [today.subtract(29, 'day'), today]
+      return [yesterday.subtract(29, 'day'), yesterday]
     case 'currentMonth':
       return [today.startOf('month'), today]
     case 'lastMonth': {
@@ -55,6 +56,7 @@ type PeriodSelectionPanelProps = {
   fetchedPeriodStart?: string | null
   fetchedPeriodEnd?: string | null
   fetchedRowCount?: number | null
+  fetchError?: string
   onFetchReport?: (dateFrom: string, dateTo: string) => void
   onReset?: () => void
 }
@@ -65,6 +67,7 @@ export function PeriodSelectionPanel({
   fetchedPeriodStart,
   fetchedPeriodEnd,
   fetchedRowCount,
+  fetchError,
   onFetchReport,
   onReset,
 }: PeriodSelectionPanelProps) {
@@ -214,8 +217,8 @@ export function PeriodSelectionPanel({
         Будет получен отчёт WB за выбранный период.
       </Typography>
 
-      {validationError && (
-        <Alert type="error" showIcon message={validationError} className={cn(`${BLOCK_NAME}__error`)} />
+      {(validationError || fetchError) && (
+        <Alert type="error" showIcon message={validationError || fetchError} className={cn(`${BLOCK_NAME}__error`)} />
       )}
 
       <Button

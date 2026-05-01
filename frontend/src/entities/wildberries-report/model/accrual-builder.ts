@@ -811,3 +811,34 @@ export function buildWildberriesAccrualReports(
 
   return buildWildberriesAccrualReportGroups(aggregate, vatRatePercent, taxRatePercent)
 }
+
+/**
+ * Публичная точка построения WB accrual-отчета из массива строк (из API).
+ * Используется для данных, полученных через API и адаптированных через mapWbApiRowsToAccrualRows.
+ */
+export function buildWildberriesAccrualReportsFromRows(
+  rows: WbRow[],
+  vatRatePercent = 5,
+  taxRatePercent = 6,
+  articlePattern = '*',
+  cogsByArticleMap: CogsByArticleMap | null = null,
+  cogsMatchingMode: CogsMatchingMode = 'full',
+  excludePattern = false,
+  priceMin: number | null = null,
+  priceMax: number | null = null,
+): AccrualGroup[] {
+  // Фильтрация по паттерну артикула и цене
+  const filteredRows = rows.filter((row) => {
+    const article = row.article
+    const isArticleMatch = isArticleIncludedByPattern(article, articlePattern, excludePattern)
+    if (!isArticleMatch) return false
+
+    if (priceMin === null && priceMax === null) return true
+    if (priceMin !== null && row.retailPriceWithDiscount < priceMin) return false
+    if (priceMax !== null && row.retailPriceWithDiscount > priceMax) return false
+    return true
+  })
+
+  const aggregate = aggregateWildberriesAccrualRows(filteredRows, cogsByArticleMap, cogsMatchingMode)
+  return buildWildberriesAccrualReportGroups(aggregate, vatRatePercent, taxRatePercent)
+}

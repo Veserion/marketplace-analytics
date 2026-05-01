@@ -34,6 +34,12 @@ export function WildberriesPage() {
     isUploadAccordionOpen,
     setIsUploadAccordionOpen,
     isMarketplaceConnected,
+    isApiReportFetching,
+    apiReportData,
+    apiReportPeriod,
+    apiReportError,
+    onFetchApiReport,
+    onResetApiReport,
     missingCogsArticles,
     onCogsFileDelete,
     onCogsFileUpload,
@@ -105,7 +111,16 @@ export function WildberriesPage() {
       />
 
       {isMarketplaceConnected('wildberries') && (
-        <PeriodSelectionPanel />
+        <PeriodSelectionPanel
+          isFetching={isApiReportFetching}
+          hasFetchedReport={apiReportData !== null}
+          fetchedPeriodStart={apiReportPeriod?.dateFrom ?? null}
+          fetchedPeriodEnd={apiReportPeriod?.dateTo ?? null}
+          fetchedRowCount={apiReportData?.length ?? null}
+          fetchError={apiReportError}
+          onFetchReport={onFetchApiReport}
+          onReset={onResetApiReport}
+        />
       )}
 
       <UiAccordion title={(
@@ -117,17 +132,26 @@ export function WildberriesPage() {
         onToggle={setIsUploadAccordionOpen}
         defaultOpen={isUploadAccordionOpen ?? true}
         contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
-        <UiCard padding="sm">
-          <WbWeeklyReportManager
-            weeklyReports={weeklyReports}
-            isProcessing={isProcessing}
-            error={error}
-            hasResults={hasResults}
-            onAddReport={addWeeklyReport}
-            onRemoveReport={removeWeeklyReport}
-            onDownloadPdf={downloadPdf}
-          />
-        </UiCard>
+        {!apiReportData && (
+          <UiCard padding="sm">
+            <WbWeeklyReportManager
+              weeklyReports={weeklyReports}
+              isProcessing={isProcessing}
+              error={error}
+              hasResults={hasResults}
+              onAddReport={addWeeklyReport}
+              onRemoveReport={removeWeeklyReport}
+              onDownloadPdf={downloadPdf}
+            />
+          </UiCard>
+        )}
+        {apiReportData && (
+          <UiCard padding="sm">
+            <Typography variant="body3" color="muted">
+              Отчёт получен через API. Файловая загрузка отключена.
+            </Typography>
+          </UiCard>
+        )}
 
         <UiCard padding="sm">
           <UiFlex direction='column' gap={'10px'}>

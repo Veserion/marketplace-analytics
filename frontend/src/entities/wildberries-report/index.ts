@@ -1,5 +1,6 @@
 export {
   buildWildberriesAccrualReports,
+  buildWildberriesAccrualReportsFromRows,
   buildWildberriesCogsMap,
   buildWildberriesTopProducts,
   extractWildberriesCogsCsv,
