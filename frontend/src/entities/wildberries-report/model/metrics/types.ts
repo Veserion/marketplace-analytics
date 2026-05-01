@@ -33,6 +33,18 @@ export type WildberriesAccrualRow = {
 
 export type WildberriesSalesScheme = 'FBS' | 'FBW' | 'Не указано'
 
+export type WbUploadedReport = {
+  id: string
+  slot: 'wildberriesWeekly1' | 'wildberriesWeekly2' | 'wildberriesWeekly3' | 'wildberriesWeekly4'
+  fileName: string
+  csvText: string
+  periodStart: string | null
+  periodEnd: string | null
+  uploadedAt: number
+  status: 'ready' | 'error'
+  errorMessage?: string
+}
+
 export type WildberriesAccrualMetricAtoms = {
   salesQuantity: number
   returnsAndCancellationsQuantity: number

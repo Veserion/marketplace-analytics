@@ -7,6 +7,7 @@ import { useOzonAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsP
 import { UiPanel } from '@/shared/ui-kit/panel'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
+import {UiFlex} from "@/shared/ui-kit";
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AnalyticsPage'
@@ -99,24 +100,23 @@ export function AnalyticsPage() {
         onSecondaryFileDelete={onCogsFileDelete}
         onDownloadPdf={downloadPdf}
       />
+        {unitReports && isOzonUnitEconomics && (
+          <Suspense fallback={null}>
+            {createElement(lazyUnitEconomicsResults, {
+              reports: unitReports,
+            })}
+          </Suspense>
+        )}
 
-      {unitReports && isOzonUnitEconomics && (
-        <Suspense fallback={null}>
-          {createElement(lazyUnitEconomicsResults, {
-            reports: unitReports,
-          })}
-        </Suspense>
-      )}
-
-      {accrualReports && !isOzonUnitEconomics && (
-        <Suspense fallback={null}>
-          {createElement(lazyAccrualResults, {
-            reports: accrualReports,
-            showAccrualOverview: true,
-            cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
-          })}
-        </Suspense>
-      )}
+        {accrualReports && !isOzonUnitEconomics && (
+          <Suspense fallback={null}>
+            {createElement(lazyAccrualResults, {
+              reports: accrualReports,
+              showAccrualOverview: true,
+              cogsMissingValueText: 'Нет данных: загрузите CSV с себестоимостью товаров',
+            })}
+          </Suspense>
+        )}
     </main>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
@@ -8,10 +8,17 @@ import {
   buildWildberriesTopProducts,
   type CogsMatchingMode,
   extractWildberriesCogsCsv,
+  extractWildberriesPeriodFromCsv,
   getWildberriesMissingCogsArticles,
+  MAX_WEEKLY_REPORTS,
+  type WbUploadedReport,
+  WB_WEEKLY_SLOTS,
+  type WbWeeklySlot,
   type WildberriesTopProductItem,
+  validateWildberriesWeeklyColumns,
 } from '@/entities/wildberries-report'
 import { formatValue, normalize, parseCsv } from '@/shared/lib/csv'
+import type { CsvStorageMode } from '@/shared/lib/indexed-db'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
@@ -32,7 +39,6 @@ const STRUCTURE_PREFIX = 'Структура: '
 const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
 const COGS_FILE_ALIAS = 'Себестоимость'
 const WB_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей Ozon'
-const FOREIGN_REPORT_LABEL = 'Отчет по продажам в других странах'
 
 function stripBom(value: string): string {
   return value.startsWith('\uFEFF') ? value.slice(1) : value
@@ -51,31 +57,29 @@ function parseCsvRows(csvSource: string): string[][] {
   return parseCsv(stripBom(csvSource))
 }
 
-function mergeWildberriesReports(
-  primaryCsvSource: string | null,
-  foreignCsvSource: string | null,
-): string | null {
-  if (!primaryCsvSource && !foreignCsvSource) return null
-  if (!primaryCsvSource) return foreignCsvSource
-  if (!foreignCsvSource) return primaryCsvSource
+function mergeWeeklyCsvs(csvTexts: string[]): string | null {
+  if (csvTexts.length === 0) return null
+  if (csvTexts.length === 1) return csvTexts[0]
 
-  const primaryRows = parseCsvRows(primaryCsvSource)
-  const foreignRows = parseCsvRows(foreignCsvSource)
-  if (primaryRows.length === 0 || foreignRows.length === 0) {
-    throw new Error('Не удалось объединить отчеты Wildberries: один из файлов пустой.')
+  const allRowSets = csvTexts.map(parseCsvRows)
+  const [firstRows, ...rest] = allRowSets
+  if (!firstRows || firstRows.length === 0) return null
+
+  const header = firstRows[0]
+  const normalizedHeader = header.map((cell) => normalize(cell))
+
+  const combinedDataRows = [...firstRows.slice(1)]
+
+  for (const rows of rest) {
+    if (rows.length === 0) continue
+    const thisHeader = rows[0].map((cell) => normalize(cell))
+    const sameHeader = normalizedHeader.length === thisHeader.length
+      && normalizedHeader.every((cell, index) => cell === thisHeader[index])
+    if (!sameHeader) continue
+    combinedDataRows.push(...rows.slice(1))
   }
 
-  const primaryHeader = primaryRows[0] ?? []
-  const foreignHeader = foreignRows[0] ?? []
-  const normalizedPrimaryHeader = primaryHeader.map((cell) => normalize(cell))
-  const normalizedForeignHeader = foreignHeader.map((cell) => normalize(cell))
-  const sameHeader = normalizedPrimaryHeader.length === normalizedForeignHeader.length
-    && normalizedPrimaryHeader.every((cell, index) => cell === normalizedForeignHeader[index])
-  if (!sameHeader) {
-    throw new Error('Не удалось объединить отчеты Wildberries: набор колонок в файлах не совпадает.')
-  }
-
-  return rowsToCsv([primaryHeader, ...primaryRows.slice(1), ...foreignRows.slice(1)])
+  return rowsToCsv([header, ...combinedDataRows])
 }
 
 function readStoredRate(key: string, fallback: number): number {
@@ -154,11 +158,28 @@ function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
   return sections
 }
 
+function findNextFreeSlot(reports: WbUploadedReport[]): WbWeeklySlot | null {
+  const usedSlots = new Set(reports.map((r) => r.slot))
+  return WB_WEEKLY_SLOTS.find((slot) => !usedSlots.has(slot)) ?? null
+}
+
+function findDuplicateByPeriod(reports: WbUploadedReport[], periodStart: string | null, periodEnd: string | null): WbUploadedReport | null {
+  if (!periodStart || !periodEnd) return null
+  return reports.find((r) => r.periodStart === periodStart && r.periodEnd === periodEnd) ?? null
+}
+
+function sortReportsByPeriod(reports: WbUploadedReport[]): WbUploadedReport[] {
+  return [...reports].sort((a, b) => {
+    const aEnd = a.periodEnd ?? ''
+    const bEnd = b.periodEnd ?? ''
+    if (aEnd > bEnd) return -1
+    if (aEnd < bEnd) return 1
+    return 0
+  })
+}
+
 export function useWildberriesAnalyticsPage() {
-  const [primaryCsvSource, setPrimaryCsvSource] = useState<string | null>(null)
-  const [fileName, setFileName] = useState('')
-  const [foreignCsvSource, setForeignCsvSource] = useState<string | null>(null)
-  const [foreignFileName, setForeignFileName] = useState('')
+  const [weeklyReports, setWeeklyReports] = useState<WbUploadedReport[]>([])
   const [cogsCsvSource, setCogsCsvSource] = useState<string | null>(null)
   const [cogsFileName, setCogsFileName] = useState('')
   const [cogsFallbackNote, setCogsFallbackNote] = useState('')
@@ -171,21 +192,16 @@ export function useWildberriesAnalyticsPage() {
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
 
-  const mergedCsvBuild = useMemo(() => {
+  const csvSource = useMemo(() => {
+    const readyTexts = weeklyReports
+      .filter((r) => r.status === 'ready')
+      .map((r) => r.csvText)
     try {
-      return {
-        csvSource: mergeWildberriesReports(primaryCsvSource, foreignCsvSource),
-        error: '',
-      }
-    } catch (err) {
-      return {
-        csvSource: null,
-        error: err instanceof Error ? err.message : 'Не удалось объединить отчеты Wildberries.',
-      }
+      return mergeWeeklyCsvs(readyTexts)
+    } catch {
+      return null
     }
-  }, [primaryCsvSource, foreignCsvSource])
-
-  const csvSource = mergedCsvBuild.csvSource
+  }, [weeklyReports])
 
   const cogsByArticleMap = useMemo(() => {
     if (!cogsCsvSource) return null
@@ -242,14 +258,7 @@ export function useWildberriesAnalyticsPage() {
   }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent, isArticlePatternExclude])
 
   const reports = reportBuild.reports
-  const periodLabel = reports?.find((report) => report.title === 'Итоги периода')?.periodLabel ?? ''
-  const uploadStatusText = useMemo(() => {
-    const loadedCount = Number(Boolean(fileName)) + Number(Boolean(foreignFileName))
-    if (!loadedCount || !periodLabel) return ''
-    const reportLabel = loadedCount > 1 ? 'Загружены отчеты' : 'Загружен отчет'
-    return `${reportLabel} ${periodLabel}`
-  }, [fileName, foreignFileName, periodLabel])
-  const error = uploadError || mergedCsvBuild.error || reportBuild.error
+  const error = uploadError || reportBuild.error
   const hasResults = Boolean(reports)
 
   const onVatRateChange = (value: number): void => {
@@ -260,62 +269,91 @@ export function useWildberriesAnalyticsPage() {
     setTaxRatePercent(Number.isFinite(value) ? value : 0)
   }
 
-  const onFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
+  const addWeeklyReport = useCallback(async (file: File, replaceId?: string): Promise<{ duplicate?: WbUploadedReport; added: boolean }> => {
     setUploadError('')
-    setPrimaryCsvSource(null)
-    setFileName(file.name)
     setIsProcessing(true)
 
     try {
       const text = await readUploadFileAsCsv(file)
-      setPrimaryCsvSource(text)
+
+      const missingColumns = validateWildberriesWeeklyColumns(text)
+      if (missingColumns.length > 0) {
+        setUploadError(`В файле не найдены обязательные колонки отчёта: ${missingColumns.join(', ')}.`)
+        return { added: false }
+      }
+
+      const { periodStart, periodEnd } = extractWildberriesPeriodFromCsv(text)
+
+      if (!replaceId) {
+        const duplicate = findDuplicateByPeriod(weeklyReports, periodStart, periodEnd)
+        if (duplicate) {
+          return { duplicate, added: false }
+        }
+
+        if (weeklyReports.length >= MAX_WEEKLY_REPORTS) {
+          setUploadError(`Можно загрузить максимум ${MAX_WEEKLY_REPORTS} отчётов. Удалите один из загруженных отчётов.`)
+          return { added: false }
+        }
+      }
+
+      const slot = replaceId
+        ? (weeklyReports.find((r) => r.id === replaceId)?.slot ?? findNextFreeSlot(weeklyReports))
+        : findNextFreeSlot(weeklyReports)
+
+      if (!slot) {
+        setUploadError('Нет свободных слотов для загрузки отчёта.')
+        return { added: false }
+      }
+
+      const newReport: WbUploadedReport = {
+        id: replaceId ?? `${slot}-${Date.now()}`,
+        slot,
+        fileName: file.name,
+        csvText: text,
+        periodStart,
+        periodEnd,
+        uploadedAt: Date.now(),
+        status: 'ready',
+      }
+
+      setWeeklyReports((prev) => {
+        const withoutOld = replaceId ? prev.filter((r) => r.id !== replaceId) : prev
+        return sortReportsByPeriod([...withoutOld, newReport])
+      })
+
       try {
         await saveCsvRecord({
-          mode: 'wildberriesAccrualReport',
+          mode: slot as CsvStorageMode,
           csvText: text,
           fileName: file.name,
           updatedAt: Date.now(),
         })
       } catch {
-        // Ignore persistence errors to keep file upload flow functional.
+        // Ignore persistence errors.
       }
+
+      return { added: true }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
+      return { added: false }
     } finally {
       setIsProcessing(false)
     }
-  }
+  }, [weeklyReports])
 
-  const onForeignFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    setUploadError('')
-    setForeignFileName(file.name)
-    setIsProcessing(true)
+  const removeWeeklyReport = useCallback(async (reportId: string): Promise<void> => {
+    const report = weeklyReports.find((r) => r.id === reportId)
+    if (!report) return
 
     try {
-      const text = await readUploadFileAsCsv(file)
-      setForeignCsvSource(text)
-      try {
-        await saveCsvRecord({
-          mode: 'wildberriesForeignAccrualReport',
-          csvText: text,
-          fileName: file.name,
-          updatedAt: Date.now(),
-        })
-      } catch {
-        // Ignore persistence errors to keep file upload flow functional.
-      }
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Не удалось обработать файл.')
-    } finally {
-      setIsProcessing(false)
+      await deleteCsvRecord(report.slot as CsvStorageMode)
+    } catch {
+      // Ignore persistence errors.
     }
-  }
+
+    setWeeklyReports((prev) => prev.filter((r) => r.id !== reportId))
+    setUploadError('')
+  }, [weeklyReports])
 
   const onCogsFileUpload = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0]
@@ -357,27 +395,6 @@ export function useWildberriesAnalyticsPage() {
     }
   }
 
-  const onPrimaryFileDelete = async (): Promise<void> => {
-    try {
-      await deleteCsvRecord('wildberriesAccrualReport')
-    } catch {
-      // Ignore persistence errors.
-    }
-    setPrimaryCsvSource(null)
-    setFileName('')
-    setUploadError('')
-  }
-
-  const onForeignFileDelete = async (): Promise<void> => {
-    try {
-      await deleteCsvRecord('wildberriesForeignAccrualReport')
-    } catch {
-      // Ignore persistence errors.
-    }
-    setForeignCsvSource(null)
-    setForeignFileName('')
-  }
-
   const onCogsFileDelete = async (): Promise<void> => {
     try {
       await deleteCsvRecord('wildberriesCogs')
@@ -392,17 +409,35 @@ export function useWildberriesAnalyticsPage() {
   useEffect(() => {
     let isCancelled = false
     Promise.all([
-      getCsvRecord('wildberriesAccrualReport'),
-      getCsvRecord('wildberriesForeignAccrualReport'),
+      ...WB_WEEKLY_SLOTS.map((slot) => getCsvRecord(slot)),
       getCsvRecord('wildberriesCogs'),
       getCsvRecord('ozonCogs'),
     ])
-      .then(([mainRecord, foreignRecord, wbCogsRecord, ozonCogsRecord]) => {
+      .then(([slot1, slot2, slot3, slot4, wbCogsRecord, ozonCogsRecord]) => {
         if (isCancelled) return
-        setPrimaryCsvSource(mainRecord?.csvText ?? null)
-        setFileName(mainRecord?.fileName ?? '')
-        setForeignCsvSource(foreignRecord?.csvText ?? null)
-        setForeignFileName(foreignRecord?.fileName ?? '')
+
+        const slotRecords = [slot1, slot2, slot3, slot4]
+        const loadedReports: WbUploadedReport[] = []
+
+        for (let i = 0; i < slotRecords.length; i++) {
+          const record = slotRecords[i]
+          if (!record) continue
+          const slot = WB_WEEKLY_SLOTS[i]
+          const { periodStart, periodEnd } = extractWildberriesPeriodFromCsv(record.csvText)
+          loadedReports.push({
+            id: `${slot}-${record.updatedAt}`,
+            slot,
+            fileName: record.fileName,
+            csvText: record.csvText,
+            periodStart,
+            periodEnd,
+            uploadedAt: record.updatedAt,
+            status: 'ready',
+          })
+        }
+
+        setWeeklyReports(sortReportsByPeriod(loadedReports))
+
         if (wbCogsRecord?.csvText) {
           setCogsCsvSource(wbCogsRecord.csvText)
           setCogsFileName(COGS_FILE_ALIAS)
@@ -442,7 +477,11 @@ export function useWildberriesAnalyticsPage() {
 
   const downloadPdf = async (): Promise<void> => {
     if (!reports) return
-    const pdfSource = [fileName, foreignFileName].filter(Boolean).join(' + ')
+    const reportCount = weeklyReports.filter((r) => r.status === 'ready').length
+    const periodLabel = reports.find((r) => r.title === 'Итоги периода')?.periodLabel ?? ''
+    const pdfSource = reportCount > 1 && periodLabel
+      ? `${reportCount} отчётов, период ${periodLabel}`
+      : weeklyReports.map((r) => r.fileName).filter(Boolean).join(' + ')
 
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true })
     await configurePdfFont(doc)
@@ -458,36 +497,31 @@ export function useWildberriesAnalyticsPage() {
   }
 
   return {
+    addWeeklyReport,
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
     cogsMatchingMode,
     downloadPdf,
     error,
-    fileName,
-    foreignFileName,
-    foreignReportLabel: FOREIGN_REPORT_LABEL,
-    uploadStatusText,
     hasResults,
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
-    onCogsFileUpload,
     onCogsFileDelete,
-    onForeignFileUpload,
-    onForeignFileDelete,
-    onFileUpload,
-    onPrimaryFileDelete,
-    setIsArticlePatternExclude,
-    setCogsMatchingMode,
+    onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    removeWeeklyReport,
     reports,
     setArticlePattern,
+    setIsArticlePatternExclude,
     setIsExtraParamsOpen,
+    setCogsMatchingMode,
     taxRatePercent,
     topProducts,
     vatRatePercent,
+    weeklyReports,
   }
 }

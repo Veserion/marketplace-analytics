@@ -5,6 +5,14 @@ export type CsvStorageMode =
   | 'wildberriesAccrualReport'
   | 'wildberriesForeignAccrualReport'
   | 'wildberriesCogs'
+  | 'wildberriesWeekly1'
+  | 'wildberriesWeekly2'
+  | 'wildberriesWeekly3'
+  | 'wildberriesWeekly4'
+  | 'wildberriesWeekly5'
+  | 'wildberriesWeekly6'
+  | 'wildberriesWeekly7'
+  | 'wildberriesWeekly8'
 
 export type CsvStorageRecord = {
   mode: CsvStorageMode

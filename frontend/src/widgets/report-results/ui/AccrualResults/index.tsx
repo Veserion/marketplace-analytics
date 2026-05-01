@@ -220,6 +220,7 @@ function getOverviewColor(index: number): string {
 }
 
 function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
+  console.log('reports', reports)
   const totalsReport = reports.find((report) => report.title === 'Итоги периода')
   const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
   if (!totalsReport || !groupedReport) return null
@@ -351,7 +352,7 @@ export function AccrualResults({
             <Typography
               variant="h2"
               color="primary"
-              className={getValueClassName(overviewModel.salesTotalValue)}
+              className={getValueClassName(Math.abs(overviewModel.salesTotalValue))}
             >
               {formatOverviewCurrency(overviewModel.salesTotalValue)}
             </Typography>

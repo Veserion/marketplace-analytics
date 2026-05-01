@@ -1,50 +1,67 @@
 import classNames from 'classnames/bind'
-import { createElement, lazy, Suspense } from 'react'
-import { ReportUploadPanel } from '@/features/report-upload'
-import { UnitExtraParamsPanel } from '@/features/unit-extra-params'
-import { useWildberriesAnalyticsPage } from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
-import { Typography } from '@/shared/ui-kit/typography'
+import {createElement, lazy, Suspense, useRef, useState} from 'react'
+import {DeleteOutlined, ExclamationCircleFilled} from '@ant-design/icons'
+import Button from 'antd/es/button'
+import Popconfirm from 'antd/es/popconfirm'
+import {WbWeeklyReportManager} from '@/features/report-upload'
+import {UnitExtraParamsPanel} from '@/features/unit-extra-params'
+import {useWildberriesAnalyticsPage} from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
+import {UiCard} from '@/shared/ui-kit/card'
+import {UiFlex} from '@/shared/ui-kit/flex'
+import {InfoTooltip} from '@/shared/ui-kit/tooltip'
+import {UiPanel} from '@/shared/ui-kit/panel'
+import {Typography} from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'WildberriesPage'
-const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({ default: module.AccrualResults })))
-const lazyWildberriesTopProductsPanel = lazy(async () => import('@/widgets/report-results/ui/WildberriesTopProductsPanel').then((module) => ({ default: module.WildberriesTopProductsPanel })))
+const lazyAccrualResults = lazy(async () => import('@/widgets/report-results/ui/AccrualResults').then((module) => ({default: module.AccrualResults})))
+const lazyWildberriesTopProductsPanel = lazy(async () => import('@/widgets/report-results/ui/WildberriesTopProductsPanel').then((module) => ({default: module.WildberriesTopProductsPanel})))
 
 export function WildberriesPage() {
   const {
+    addWeeklyReport,
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
     cogsMatchingMode,
     downloadPdf,
     error,
-    fileName,
-    foreignFileName,
-    foreignReportLabel,
-    uploadStatusText,
     hasResults,
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
     missingCogsArticles,
-    onCogsFileUpload,
     onCogsFileDelete,
-    onForeignFileUpload,
-    onForeignFileDelete,
-    onFileUpload,
-    onPrimaryFileDelete,
-    setIsArticlePatternExclude,
-    setCogsMatchingMode,
+    onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    removeWeeklyReport,
     reports,
     setArticlePattern,
+    setIsArticlePatternExclude,
     setIsExtraParamsOpen,
+    setCogsMatchingMode,
     taxRatePercent,
     topProducts,
     vatRatePercent,
+    weeklyReports,
   } = useWildberriesAnalyticsPage()
+
+  const cogsFileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isMissingCopied, setIsMissingCopied] = useState(false)
+
+  const hasMissingArticles = missingCogsArticles.length > 0
+
+  const copyMissingArticles = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(missingCogsArticles.join(', '))
+      setIsMissingCopied(true)
+      window.setTimeout(() => setIsMissingCopied(false), 1200)
+    } catch {
+      setIsMissingCopied(false)
+    }
+  }
 
   return (
     <main className={cn(BLOCK_NAME)}>
@@ -76,30 +93,103 @@ export function WildberriesPage() {
         onTaxRateChange={onTaxRateChange}
       />
 
-      <ReportUploadPanel
-        isProcessing={isProcessing}
-        hasResults={hasResults}
-        fileName={fileName}
-        primaryFileLabel="Еженедельный детализированный отчет"
-        primaryUploadStatusText={uploadStatusText}
-        additionalPrimaryFileName={foreignFileName}
-        additionalPrimaryFileLabel={foreignReportLabel}
-        secondaryFileName={cogsFileName}
-        secondaryFileLabel="Себестоимость товаров"
-        secondaryFileHint='Добавьте файл себестоимости, чтобы получить точный отчет. Обязательные колонки: "Артикул" и "Себестоимость".'
-        secondaryUsageNote={cogsFallbackNote}
-        secondaryMissingArticles={missingCogsArticles}
-        secondaryAlertText="Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным."
-        error={error}
-        showWildberriesWarning={false}
-        onFileUpload={onFileUpload}
-        onAdditionalPrimaryFileUpload={onForeignFileUpload}
-        onAdditionalPrimaryFileDelete={onForeignFileDelete}
-        onSecondaryFileUpload={onCogsFileUpload}
-        onSecondaryFileDelete={onCogsFileDelete}
-        onPrimaryFileDelete={onPrimaryFileDelete}
-        onDownloadPdf={downloadPdf}
-      />
+      <UiPanel title="Загрузка файла">
+        <UiCard padding="sm">
+          <WbWeeklyReportManager
+            weeklyReports={weeklyReports}
+            isProcessing={isProcessing}
+            error={error}
+            hasResults={hasResults}
+            onAddReport={addWeeklyReport}
+            onRemoveReport={removeWeeklyReport}
+            onDownloadPdf={downloadPdf}
+          />
+        </UiCard>
+
+        <UiCard padding="sm">
+          <UiFlex direction='column' gap={'10px'}>
+            <div className={cn(`${BLOCK_NAME}__cogs-title-row`)}>
+              <Typography variant="body2" semiBold color="accent">
+                Себестоимость товаров
+              </Typography>
+              {cogsFallbackNote && (
+                <InfoTooltip
+                  ariaLabel="Информация о применяемом файле себестоимости"
+                  content={cogsFallbackNote}
+                  icon={(
+                    <span aria-hidden="true">
+                    <ExclamationCircleFilled/>
+                  </span>
+                  )}
+                />
+              )}
+            </div>
+            <Typography variant="body3" color="muted" semiBold>
+              Добавьте файл себестоимости, чтобы получить точный отчет. Обязательные
+              колонки: &quot;Артикул&quot; и &quot;Себестоимость&quot;.
+            </Typography>
+            <input
+              ref={cogsFileInputRef}
+              style={{display: 'none'}}
+              type="file"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={onCogsFileUpload}
+              disabled={isProcessing}
+            />
+            <UiFlex align="center" gap={8}>
+              <Button
+                type="default"
+                onClick={() => cogsFileInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                {cogsFileName ? 'Загрузить свежий файл' : 'Выбрать файл'}
+              </Button>
+              {cogsFileName && (
+                <Popconfirm
+                  title="Удалить файл?"
+                  description="Отчет пропадет из локального хранилища."
+                  okText="Удалить"
+                  cancelText="Отмена"
+                  onConfirm={onCogsFileDelete}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined/>}
+                    disabled={isProcessing}
+                  />
+                </Popconfirm>
+              )}
+            </UiFlex>
+            <Typography
+              variant="body3"
+              color={cogsFileName ? 'accent' : 'muted'}
+              semiBold={Boolean(cogsFileName)}
+            >
+              {cogsFileName ? `Загружен: ${cogsFileName}` : 'Файл не выбран'}
+            </Typography>
+            {hasMissingArticles && (
+              <div className={cn(`${BLOCK_NAME}__cogs-alert`)}>
+                <Typography variant="body2" color="negative">
+                  Таблица себестоимости неполная: отсутствуют артикулы из основного отчета. Расчет будет неполным.
+                </Typography>
+                <UiFlex align="center" gap={8}>
+                  <Button onClick={() => void copyMissingArticles()}>
+                    Скопировать артикулы
+                  </Button>
+                  {isMissingCopied && (
+                    <Typography as="span" variant="caption" color="negative" semiBold>
+                      Скопировано
+                    </Typography>
+                  )}
+                </UiFlex>
+                <code className={cn(`${BLOCK_NAME}__missing-list`)}>
+                  {missingCogsArticles.join(', ')}
+                </code>
+              </div>
+            )}
+          </UiFlex>
+        </UiCard>
+      </UiPanel>
 
       {reports && (
         <Suspense fallback={null}>
@@ -114,7 +204,7 @@ export function WildberriesPage() {
 
       {topProducts.length > 0 && (
         <Suspense fallback={null}>
-          {createElement(lazyWildberriesTopProductsPanel, { items: topProducts })}
+          {createElement(lazyWildberriesTopProductsPanel, {items: topProducts})}
         </Suspense>
       )}
     </main>

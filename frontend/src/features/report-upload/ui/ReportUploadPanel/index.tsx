@@ -99,14 +99,16 @@ export function ReportUploadPanel({
             {primaryFileLabel}
           </Typography>
         )}
-        <input
-          ref={primaryFileInputRef}
-          className={cn(`${BLOCK_NAME}__hidden-file-input`)}
-          type="file"
-          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-          onChange={onFileUpload}
-          disabled={isProcessing}
-        />
+        {primaryUploadButtonText && (
+          <input
+            ref={primaryFileInputRef}
+            className={cn(`${BLOCK_NAME}__hidden-file-input`)}
+            type="file"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            onChange={onFileUpload}
+            disabled={isProcessing}
+          />
+        )}
         {onAdditionalPrimaryFileUpload && (
           <input
             ref={additionalPrimaryFileInputRef}
@@ -118,6 +120,7 @@ export function ReportUploadPanel({
           />
         )}
         <UiFlex wrap="wrap" align="center" justify="between" gap={10}>
+        {primaryUploadButtonText && (
           <UiFlex wrap="wrap" align="center" gap={24}>
             <UiFlex align="center" gap={8}>
               <Button
@@ -181,6 +184,8 @@ export function ReportUploadPanel({
               </UiFlex>
             )}
           </UiFlex>
+        )}
+          <div />
           <Button
             onClick={onDownloadPdf}
             disabled={isProcessing || !hasResults}
@@ -188,7 +193,7 @@ export function ReportUploadPanel({
             Скачать метрики в PDF
           </Button>
         </UiFlex>
-        {primaryUploadStatusText ? (
+        {primaryUploadButtonText && primaryUploadStatusText ? (
           <Typography
             variant="body3"
             color="accent"
@@ -225,90 +230,90 @@ export function ReportUploadPanel({
 
       {onSecondaryFileUpload && (
         <UiCard className={cn(`${BLOCK_NAME}__upload-card`)} padding="sm">
-          <div className={cn(`${BLOCK_NAME}__title-row`)}>
-            <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
-              {secondaryFileLabel}
-            </Typography>
-            {secondaryUsageNote && (
-              <InfoTooltip
-                ariaLabel="Информация о применяемом файле себестоимости"
-                content={secondaryUsageNote}
-                icon={(
-                  <span className={cn(`${BLOCK_NAME}__usage-tooltip-trigger`)} aria-hidden="true">
+            <div className={cn(`${BLOCK_NAME}__title-row`)}>
+              <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
+                {secondaryFileLabel}
+              </Typography>
+              {secondaryUsageNote && (
+                <InfoTooltip
+                  ariaLabel="Информация о применяемом файле себестоимости"
+                  content={secondaryUsageNote}
+                  icon={(
+                    <span className={cn(`${BLOCK_NAME}__usage-tooltip-trigger`)} aria-hidden="true">
                     <ExclamationCircleFilled />
                   </span>
-                )}
-              />
-            )}
-          </div>
-          {secondaryFileHint && (
-            <Typography variant="body3" color="muted" semiBold className={cn(`${BLOCK_NAME}__secondary-note`)}>
-              {secondaryFileHint}
-            </Typography>
-          )}
-          <input
-            ref={secondaryFileInputRef}
-            className={cn(`${BLOCK_NAME}__hidden-file-input`)}
-            type="file"
-            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            onChange={onSecondaryFileUpload}
-            disabled={isProcessing}
-          />
-          <UiFlex align="center" gap={8}>
-            <Button
-              type="default"
-              onClick={() => secondaryFileInputRef.current?.click()}
-              disabled={isProcessing}
-            >
-              {secondaryFileName ? 'Загрузить свежий файл' : 'Выбрать файл'}
-            </Button>
-            {secondaryFileName && onSecondaryFileDelete && (
-              <Popconfirm
-                title="Удалить файл?"
-                description="Отчет пропадет из локального хранилища."
-                okText="Удалить"
-                cancelText="Отмена"
-                onConfirm={onSecondaryFileDelete}
-              >
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  disabled={isProcessing}
+                  )}
                 />
-              </Popconfirm>
-            )}
-          </UiFlex>
-          <Typography
-            variant="body3"
-            color={secondaryFileName ? 'accent' : 'muted'}
-            semiBold={Boolean(secondaryFileName)}
-            className={cn(`${BLOCK_NAME}__file-meta`)}
-          >
-            {secondaryFileName ? `Загружен: ${secondaryFileName}` : 'Файл не выбран'}
-          </Typography>
-          {hasMissingArticles && (
-            <div className={cn(`${BLOCK_NAME}__secondary-alert`)}>
-              <Typography variant="body2" color="negative" className={cn(`${BLOCK_NAME}__secondary-alert-text`)}>
-                {secondaryAlertText || 'Таблица себестоимости неполная: не найдены артикулы из основного отчета.'}
-              </Typography>
-              <UiFlex align="center" gap={8}>
-                <Button
-                  className={cn(`${BLOCK_NAME}__copy-missing-button`)}
-                  onClick={() => void copyMissingArticles()}
-                >
-                  Скопировать артикулы
-                </Button>
-                {isMissingCopied && (
-                  <Typography as="span" variant="caption" color="negative" semiBold>
-                    Скопировано
-                  </Typography>
-                )}
-              </UiFlex>
-              <code className={cn(`${BLOCK_NAME}__missing-list`)}>
-                {secondaryMissingArticles.join(', ')}
-              </code>
+              )}
             </div>
-          )}
+            {secondaryFileHint && (
+              <Typography variant="body3" color="muted" semiBold className={cn(`${BLOCK_NAME}__secondary-note`)}>
+                {secondaryFileHint}
+              </Typography>
+            )}
+            <input
+              ref={secondaryFileInputRef}
+              className={cn(`${BLOCK_NAME}__hidden-file-input`)}
+              type="file"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={onSecondaryFileUpload}
+              disabled={isProcessing}
+            />
+            <UiFlex align="center" gap={8}>
+              <Button
+                type="default"
+                onClick={() => secondaryFileInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                {secondaryFileName ? 'Загрузить свежий файл' : 'Выбрать файл'}
+              </Button>
+              {secondaryFileName && onSecondaryFileDelete && (
+                <Popconfirm
+                  title="Удалить файл?"
+                  description="Отчет пропадет из локального хранилища."
+                  okText="Удалить"
+                  cancelText="Отмена"
+                  onConfirm={onSecondaryFileDelete}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={isProcessing}
+                  />
+                </Popconfirm>
+              )}
+            </UiFlex>
+            <Typography
+              variant="body3"
+              color={secondaryFileName ? 'accent' : 'muted'}
+              semiBold={Boolean(secondaryFileName)}
+              className={cn(`${BLOCK_NAME}__file-meta`)}
+            >
+              {secondaryFileName ? `Загружен: ${secondaryFileName}` : 'Файл не выбран'}
+            </Typography>
+            {hasMissingArticles && (
+              <div className={cn(`${BLOCK_NAME}__secondary-alert`)}>
+                <Typography variant="body2" color="negative" className={cn(`${BLOCK_NAME}__secondary-alert-text`)}>
+                  {secondaryAlertText || 'Таблица себестоимости неполная: не найдены артикулы из основного отчета.'}
+                </Typography>
+                <UiFlex align="center" gap={8}>
+                  <Button
+                    className={cn(`${BLOCK_NAME}__copy-missing-button`)}
+                    onClick={() => void copyMissingArticles()}
+                  >
+                    Скопировать артикулы
+                  </Button>
+                  {isMissingCopied && (
+                    <Typography as="span" variant="caption" color="negative" semiBold>
+                      Скопировано
+                    </Typography>
+                  )}
+                </UiFlex>
+                <code className={cn(`${BLOCK_NAME}__missing-list`)}>
+                  {secondaryMissingArticles.join(', ')}
+                </code>
+              </div>
+            )}
         </UiCard>
       )}
 

@@ -38,3 +38,27 @@
   line-height: 1.34;
   opacity: 0.92;
 }
+
+.WildberriesPage__cogs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.WildberriesPage__cogs-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.WildberriesPage__missing-list {
+  display: block;
+  padding: 8px;
+  background: var(--color-bg-secondary, #fafafa);
+  border-radius: 6px;
+  font-size: 12px;
+  word-break: break-all;
+  max-height: 120px;
+  overflow-y: auto;
+}
