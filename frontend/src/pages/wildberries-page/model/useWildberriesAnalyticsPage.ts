@@ -21,6 +21,7 @@ import { formatValue, normalize, parseCsv } from '@/shared/lib/csv'
 import type { CsvStorageMode } from '@/shared/lib/indexed-db'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
@@ -193,6 +194,7 @@ export function useWildberriesAnalyticsPage() {
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
   const [priceMin, setPriceMin] = useState<number | null>(null)
   const [priceMax, setPriceMax] = useState<number | null>(null)
+  const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const csvSource = useMemo(() => {
     const readyTexts = weeklyReports
@@ -264,6 +266,12 @@ export function useWildberriesAnalyticsPage() {
   const reports = reportBuild.reports
   const error = uploadError || reportBuild.error
   const hasResults = Boolean(reports)
+  const isWildberriesConnected = isMarketplaceConnected('wildberries')
+  const [isUploadAccordionOpen, setIsUploadAccordionOpen] = useState(false)
+
+  useEffect(() => {
+    setIsUploadAccordionOpen(!isWildberriesConnected || !hasResults)
+  }, [isWildberriesConnected, hasResults])
 
   const onVatRateChange = (value: number): void => {
     setVatRatePercent(Number.isFinite(value) ? value : 0)
@@ -515,6 +523,9 @@ export function useWildberriesAnalyticsPage() {
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
     missingCogsArticles,
     onCogsFileDelete,
     onCogsFileUpload,

@@ -3,7 +3,7 @@ import {createElement, lazy, Suspense, useRef, useState} from 'react'
 import {DeleteOutlined, ExclamationCircleFilled} from '@ant-design/icons'
 import Button from 'antd/es/button'
 import Popconfirm from 'antd/es/popconfirm'
-import {WbWeeklyReportManager} from '@/features/report-upload'
+import {WbWeeklyReportManager, PeriodSelectionPanel} from '@/features/report-upload'
 import {UnitExtraParamsPanel} from '@/features/unit-extra-params'
 import {useWildberriesAnalyticsPage} from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
 import {UiCard} from '@/shared/ui-kit/card'
@@ -31,6 +31,9 @@ export function WildberriesPage() {
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
     missingCogsArticles,
     onCogsFileDelete,
     onCogsFileUpload,
@@ -101,12 +104,19 @@ export function WildberriesPage() {
         onTaxRateChange={onTaxRateChange}
       />
 
+      {isMarketplaceConnected('wildberries') && (
+        <PeriodSelectionPanel />
+      )}
+
       <UiAccordion title={(
           <Typography as="span" variant="h3" color="accent">
-            Загрузка файла
+            Загрузка файлов
           </Typography>
         )}
-        defaultOpen contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
+        isOpen={isUploadAccordionOpen}
+        onToggle={setIsUploadAccordionOpen}
+        defaultOpen={isUploadAccordionOpen ?? true}
+        contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
         <UiCard padding="sm">
           <WbWeeklyReportManager
             weeklyReports={weeklyReports}

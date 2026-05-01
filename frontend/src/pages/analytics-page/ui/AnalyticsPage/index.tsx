@@ -1,7 +1,7 @@
 import classNames from 'classnames/bind'
 import { createElement, lazy, Suspense } from 'react'
 import { OzonCalculationTabs } from '@/features/ozon-calculation-switcher'
-import { ReportUploadPanel } from '@/features/report-upload'
+import { ReportUploadPanel, PeriodSelectionPanel } from '@/features/report-upload'
 import { UnitExtraParamsPanel } from '@/features/unit-extra-params/ui/UnitExtraParamsPanel'
 import { useOzonAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsPage'
 import { UiPanel } from '@/shared/ui-kit/panel'
@@ -29,6 +29,9 @@ export function AnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
     onCogsFileUpload,
     onCogsFileDelete,
     onFileUpload,
@@ -91,6 +94,10 @@ export function AnalyticsPage() {
         onTaxRateChange={onTaxRateChange}
       />
 
+      {isMarketplaceConnected('ozon') && (
+        <PeriodSelectionPanel />
+      )}
+
       <ReportUploadPanel
         isProcessing={isProcessing}
         hasResults={hasResults}
@@ -101,6 +108,8 @@ export function AnalyticsPage() {
         secondaryUsageNote={cogsFallbackNote}
         error={error}
         showWildberriesWarning={false}
+        isAccordionOpen={isUploadAccordionOpen}
+        onAccordionToggle={setIsUploadAccordionOpen}
         onFileUpload={onFileUpload}
         onSecondaryFileUpload={onCogsFileUpload}
         onPrimaryFileDelete={onPrimaryFileDelete}

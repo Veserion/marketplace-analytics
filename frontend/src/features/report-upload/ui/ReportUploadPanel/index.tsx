@@ -36,6 +36,8 @@ type ReportUploadPanelProps = {
   secondaryAlertText?: string
   error: string
   showWildberriesWarning: boolean
+  isAccordionOpen?: boolean
+  onAccordionToggle?: (nextOpen: boolean) => void
   onFileUpload: (event: ChangeEvent<HTMLInputElement>) => void
   onAdditionalPrimaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
   onSecondaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
@@ -66,6 +68,8 @@ export function ReportUploadPanel({
                                     secondaryAlertText = '',
                                     error,
                                     showWildberriesWarning,
+                                    isAccordionOpen,
+                                    onAccordionToggle,
                                     onFileUpload,
                                     onAdditionalPrimaryFileUpload,
                                     onSecondaryFileUpload,
@@ -94,10 +98,13 @@ export function ReportUploadPanel({
   return (
     <UiAccordion className={cn(BLOCK_NAME)} title={(
       <Typography as="span" variant="h3" color="accent">
-        Загрузка файла
+        Загрузка файлов
       </Typography>
     )}
-                 defaultOpen contentInnerClassName={cn(`${BLOCK_NAME}__content`)}>
+                 isOpen={isAccordionOpen}
+                 onToggle={onAccordionToggle}
+                 defaultOpen={isAccordionOpen ?? true}
+                 contentInnerClassName={cn(`${BLOCK_NAME}__content`)}>
       <UiCard className={cn(`${BLOCK_NAME}__upload-card`)} padding="sm">
         {primaryFileLabel && (
           <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>

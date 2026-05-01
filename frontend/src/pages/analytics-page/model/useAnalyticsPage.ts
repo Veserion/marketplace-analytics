@@ -17,6 +17,7 @@ import type {
 import { formatValue } from '@/shared/lib/csv'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
@@ -218,6 +219,7 @@ export function useOzonAnalyticsPage() {
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
   const [priceMin, setPriceMin] = useState<number | null>(null)
   const [priceMax, setPriceMax] = useState<number | null>(null)
+  const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
   const unitReportBuild = useMemo(() => {
@@ -283,6 +285,12 @@ export function useOzonAnalyticsPage() {
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
   const hasResults = isOzonUnitEconomics ? Boolean(unitReports) : Boolean(accrualReports)
+  const isOzonConnected = isMarketplaceConnected('ozon')
+  const [isUploadAccordionOpen, setIsUploadAccordionOpen] = useState(false)
+
+  useEffect(() => {
+    setIsUploadAccordionOpen(!isOzonConnected || !hasResults)
+  }, [isOzonConnected, hasResults])
 
   const onSwitchOzonCalculation = (calcType: OzonCalculationType): void => {
     setOzonCalculationType(calcType)
@@ -491,6 +499,9 @@ export function useOzonAnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
     onFileUpload,
     onCogsFileUpload,
     onPrimaryFileDelete,

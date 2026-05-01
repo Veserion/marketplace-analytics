@@ -1,0 +1,74 @@
+.PeriodSelectionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.PeriodSelectionPanel__title {
+  margin: 0;
+}
+
+.PeriodSelectionPanel__description {
+  margin: 0;
+}
+
+.PeriodSelectionPanel__presets {
+  margin: 2px 0;
+}
+
+.PeriodSelectionPanel__preset {
+  border: 1px solid var(--color-border-base);
+  border-radius: 20px;
+  background: var(--color-bg-surface-soft);
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.PeriodSelectionPanel__preset:hover {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-muted);
+}
+
+.PeriodSelectionPanel__preset--active {
+  background: var(--color-text-accent);
+  border-color: var(--color-text-accent);
+  color: #fff;
+}
+
+.PeriodSelectionPanel__preset--active:hover {
+  opacity: 0.9;
+}
+
+.PeriodSelectionPanel__picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.PeriodSelectionPanel__range-picker {
+  flex: 1;
+  min-width: 220px;
+}
+
+.PeriodSelectionPanel__hint {
+  margin: 0;
+}
+
+.PeriodSelectionPanel__error {
+  border-radius: 8px;
+}
+
+.PeriodSelectionPanel__fetch-button {
+  margin-top: 2px;
+}
+
+.PeriodSelectionPanel__success-alert {
+  border-radius: 8px;
+}
