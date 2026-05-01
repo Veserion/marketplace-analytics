@@ -30,7 +30,9 @@ export function AnalyticsPage() {
     isProcessing,
     isUnitArticlePatternExclude,
     onCogsFileUpload,
+    onCogsFileDelete,
     onFileUpload,
+    onPrimaryFileDelete,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,
@@ -93,6 +95,8 @@ export function AnalyticsPage() {
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
         onSecondaryFileUpload={onCogsFileUpload}
+        onPrimaryFileDelete={onPrimaryFileDelete}
+        onSecondaryFileDelete={onCogsFileDelete}
         onDownloadPdf={downloadPdf}
       />
 

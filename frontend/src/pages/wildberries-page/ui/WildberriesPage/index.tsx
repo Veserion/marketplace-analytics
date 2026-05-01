@@ -29,8 +29,11 @@ export function WildberriesPage() {
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
+    onCogsFileDelete,
     onForeignFileUpload,
+    onForeignFileDelete,
     onFileUpload,
+    onPrimaryFileDelete,
     setIsArticlePatternExclude,
     setCogsMatchingMode,
     onTaxRateChange,
@@ -91,7 +94,10 @@ export function WildberriesPage() {
         showWildberriesWarning={false}
         onFileUpload={onFileUpload}
         onAdditionalPrimaryFileUpload={onForeignFileUpload}
+        onAdditionalPrimaryFileDelete={onForeignFileDelete}
         onSecondaryFileUpload={onCogsFileUpload}
+        onSecondaryFileDelete={onCogsFileDelete}
+        onPrimaryFileDelete={onPrimaryFileDelete}
         onDownloadPdf={downloadPdf}
       />
 

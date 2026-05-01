@@ -15,7 +15,7 @@ import type {
   ReportGroup,
 } from '@/entities/ozon-report'
 import { formatValue } from '@/shared/lib/csv'
-import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
+import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
@@ -367,6 +367,33 @@ export function useOzonAnalyticsPage() {
     }
   }
 
+  const onPrimaryFileDelete = async (): Promise<void> => {
+    const mode = ozonCalculationType
+    try {
+      await deleteCsvRecord(mode)
+    } catch {
+      // Ignore persistence errors.
+    }
+    if (mode === 'unitEconomics') {
+      setUnitCsvSource(null)
+    } else {
+      setAccrualCsvSource(null)
+    }
+    setFileName('')
+    setUploadError('')
+  }
+
+  const onCogsFileDelete = async (): Promise<void> => {
+    try {
+      await deleteCsvRecord('ozonCogs')
+    } catch {
+      // Ignore persistence errors.
+    }
+    setCogsCsvSource(null)
+    setCogsFileName('')
+    setCogsFallbackNote('')
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(VAT_RATE_STORAGE_KEY, String(vatRatePercent))
@@ -458,6 +485,8 @@ export function useOzonAnalyticsPage() {
     isUnitArticlePatternExclude,
     onFileUpload,
     onCogsFileUpload,
+    onPrimaryFileDelete,
+    onCogsFileDelete,
     onSwitchOzonCalculation,
     onTaxRateChange,
     onVatRateChange,

@@ -12,7 +12,7 @@ import {
   type WildberriesTopProductItem,
 } from '@/entities/wildberries-report'
 import { formatValue, normalize, parseCsv } from '@/shared/lib/csv'
-import { getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
+import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
@@ -357,6 +357,38 @@ export function useWildberriesAnalyticsPage() {
     }
   }
 
+  const onPrimaryFileDelete = async (): Promise<void> => {
+    try {
+      await deleteCsvRecord('wildberriesAccrualReport')
+    } catch {
+      // Ignore persistence errors.
+    }
+    setPrimaryCsvSource(null)
+    setFileName('')
+    setUploadError('')
+  }
+
+  const onForeignFileDelete = async (): Promise<void> => {
+    try {
+      await deleteCsvRecord('wildberriesForeignAccrualReport')
+    } catch {
+      // Ignore persistence errors.
+    }
+    setForeignCsvSource(null)
+    setForeignFileName('')
+  }
+
+  const onCogsFileDelete = async (): Promise<void> => {
+    try {
+      await deleteCsvRecord('wildberriesCogs')
+    } catch {
+      // Ignore persistence errors.
+    }
+    setCogsCsvSource(null)
+    setCogsFileName('')
+    setCogsFallbackNote('')
+  }
+
   useEffect(() => {
     let isCancelled = false
     Promise.all([
@@ -442,8 +474,11 @@ export function useWildberriesAnalyticsPage() {
     isProcessing,
     missingCogsArticles,
     onCogsFileUpload,
+    onCogsFileDelete,
     onForeignFileUpload,
+    onForeignFileDelete,
     onFileUpload,
+    onPrimaryFileDelete,
     setIsArticlePatternExclude,
     setCogsMatchingMode,
     onTaxRateChange,

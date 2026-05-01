@@ -175,7 +175,7 @@ export function WildberriesTopProductsPanel({ items }: WildberriesTopProductsPan
     <section className={cn(BLOCK_NAME)}>
       <UiAccordion
         contentInnerClassName={cn(`${BLOCK_NAME}__content`)}
-        title={<Typography variant='h3' color='accent'>Все товары по количеству продаж</Typography>}
+        title={<Typography variant='h3' color='accent'>Потоварный АБС анализ за период</Typography>}
       >
           <Typography variant='body3' color='muted'>
             Сортировка по умолчанию: от большего количества продаж к меньшему.

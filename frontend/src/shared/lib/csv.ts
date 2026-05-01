@@ -66,6 +66,6 @@ export function formatValue(value: number | null, type: ValueType): string {
   if (value === null) return 'n/a'
   if (type === 'percent') return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)}%`
   if (type === 'currency') return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)} ₽`
-  if (type === 'count') return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)} шт.`
+  if (type === 'count') return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)}`
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)
 }

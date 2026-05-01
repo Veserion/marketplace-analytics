@@ -46,15 +46,26 @@ const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
   MARKETPLACE_EXPENSES_LABEL,
 ])
 const OVERVIEW_COLORS = [
-  'var(--color-accent, #12305d)',
-  'var(--color-positive, #1f8b4c)',
-  '#58b8cf',
-  '#e6b766',
-  '#9f91d8',
-  '#ee8f68',
-  '#d96b9f',
+  'var(--color-company',
+  '#fcca09',
+  '#f55da2',
+  '#8c7ed8',
+  '#a66401',
+  '#f67b48',
+  '#028d30',
   '#7f93ae',
 ]
+
+const COST_STRUCTURE_COLORS = {
+  commission: '#005bff',
+  promotion: '#e85a9b',
+  logistic: '#fcca09',
+  returns: '#fd743d',
+  tax: '#a66401',
+  cogs: '#8c7ed8',
+  netProfit: '#028d30',
+}
+
 const DYNAMICS_REPORT_TITLE = 'Динамика по датам начисления'
 const compactRubleFormatter = new Intl.NumberFormat('ru-RU', {
   notation: 'compact',

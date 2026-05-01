@@ -1,7 +1,8 @@
 import classNames from 'classnames/bind'
-import { ExclamationCircleFilled } from '@ant-design/icons'
+import { DeleteOutlined, ExclamationCircleFilled } from '@ant-design/icons'
 import Alert from 'antd/es/alert'
 import Button from 'antd/es/button'
+import Popconfirm from 'antd/es/popconfirm'
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { UiCard } from '@/shared/ui-kit/card'
@@ -38,6 +39,9 @@ type ReportUploadPanelProps = {
   onFileUpload: (event: ChangeEvent<HTMLInputElement>) => void
   onAdditionalPrimaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
   onSecondaryFileUpload?: (event: ChangeEvent<HTMLInputElement>) => void
+  onPrimaryFileDelete?: () => void
+  onAdditionalPrimaryFileDelete?: () => void
+  onSecondaryFileDelete?: () => void
   onDownloadPdf: () => void
 }
 
@@ -65,6 +69,9 @@ export function ReportUploadPanel({
   onFileUpload,
   onAdditionalPrimaryFileUpload,
   onSecondaryFileUpload,
+  onPrimaryFileDelete,
+  onAdditionalPrimaryFileDelete,
+  onSecondaryFileDelete,
   onDownloadPdf,
 }: ReportUploadPanelProps) {
   const [isMissingCopied, setIsMissingCopied] = useState(false)
@@ -119,6 +126,21 @@ export function ReportUploadPanel({
             >
               {fileName ? primaryRefreshButtonText : primaryUploadButtonText}
             </Button>
+            {fileName && onPrimaryFileDelete && (
+              <Popconfirm
+                title="Удалить файл?"
+                description="Отчет пропадет из локального хранилища."
+                okText="Удалить"
+                cancelText="Отмена"
+                onConfirm={onPrimaryFileDelete}
+              >
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={isProcessing}
+                />
+              </Popconfirm>
+            )}
             {onAdditionalPrimaryFileUpload && (
               <UiFlex align="center" gap={6}>
                 <Button
@@ -130,6 +152,21 @@ export function ReportUploadPanel({
                     ? additionalPrimaryRefreshButtonText
                     : additionalPrimaryUploadButtonText}
                 </Button>
+                {additionalPrimaryFileName && onAdditionalPrimaryFileDelete && (
+                  <Popconfirm
+                    title="Удалить файл?"
+                    description="Отчет пропадет из локального хранилища."
+                    okText="Удалить"
+                    cancelText="Отмена"
+                    onConfirm={onAdditionalPrimaryFileDelete}
+                  >
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={isProcessing}
+                    />
+                  </Popconfirm>
+                )}
                 <InfoTooltip
                   ariaLabel="Информация об отчете по другим странам"
                   content={additionalPrimaryTooltipText}
@@ -223,6 +260,21 @@ export function ReportUploadPanel({
             >
               {secondaryFileName ? 'Загрузить свежий файл' : 'Выбрать файл'}
             </Button>
+            {secondaryFileName && onSecondaryFileDelete && (
+              <Popconfirm
+                title="Удалить файл?"
+                description="Отчет пропадет из локального хранилища."
+                okText="Удалить"
+                cancelText="Отмена"
+                onConfirm={onSecondaryFileDelete}
+              >
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={isProcessing}
+                />
+              </Popconfirm>
+            )}
           </UiFlex>
           <Typography
             variant="body3"

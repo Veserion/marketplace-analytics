@@ -36,6 +36,7 @@
   --color-text-subtle: #6b7f9f;
   --color-text-placeholder: #7a8ba3;
   --color-text-accent: #12305d;
+  --color-company-primary: #005bff;
   --color-text-accent-strong: #194483;
   --color-text-accent-deep: #102a52;
   --color-text-link: #335b90;
@@ -81,6 +82,7 @@
   --color-page-gradient-end: #e8eff8;
 
   --color-accent: var(--color-text-accent);
+  --color-company: var(--color-company-primary);
   --color-positive: var(--color-text-positive);
   --color-negative: var(--color-text-negative);
   --color-warning: var(--color-text-warning);
@@ -138,6 +140,7 @@ body[data-theme='purple'] {
   --color-text-subtle: #7e6897;
   --color-text-placeholder: #8a759f;
   --color-text-accent: #6b4c8e;
+  --color-company-primary: #a73afd;
   --color-text-accent-strong: #6b3d97;
   --color-text-accent-deep: #56307b;
   --color-text-link: #6b4c8e;

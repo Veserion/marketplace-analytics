@@ -30,12 +30,13 @@ const GROUPED_TOTAL_LABEL = 'Итог'
 const GROUPED_SUBTOTAL_LABELS = new Set(['Итого расходов', 'Итого компенсаций', 'Итого с учётом компенсаций'])
 const WB_OTHER_EXPENSES_LABEL = 'Прочие расходы WB'
 const COST_STRUCTURE_COLORS = {
-  commission: '#2d79d5',
+  commission: '#005bff',
   promotion: '#e85a9b',
-  returns: '#f08359',
-  tax: '#d9b15e',
+  logistic: '#fcca09',
+  returns: '#fd743d',
+  tax: '#a66401',
   cogs: '#8c7ed8',
-  netProfit: '#2e9b6e',
+  netProfit: '#028d30',
 }
 const WB_EXPENSE_PALETTE = ['#2d79d5', '#8c7ed8', '#e85a9b', '#5fa9d7', '#d9b15e', '#f08359']
 const WB_MAX_GROUP_SEGMENTS = 5
@@ -93,12 +94,13 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
   const commissionComponents = [
     COMMISSION_OZON_SOURCE_LABEL,
     FBO_SERVICES_LABEL,
-    LOGISTICS_LABEL,
     PARTNER_SERVICES_LABEL,
     OTHER_SERVICES_LABEL,
   ]
   const groupedValue = (label: string): number => getMetricValue(groupedReport, label)
+  console.log('commissionComponents', commissionComponents)
   const commissionValue = commissionComponents.reduce((acc, label) => acc + Math.abs(groupedValue(label)), 0)
+  const logisticValue = Math.abs(groupedValue(LOGISTICS_LABEL))
   const promotionValue = Math.abs(groupedValue(PROMOTION_LABEL))
   const taxValue = Math.abs(getMetricValue(totalsReport, TAX_LABEL))
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
@@ -110,6 +112,13 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
       label: COMMISSION_OZON_DISPLAY_LABEL,
       value: commissionValue,
       color: COST_STRUCTURE_COLORS.commission,
+      hint: 'ABS(Комиссия Ozon) + ABS(Услуги ФБО) + ABS(Логистика) + ABS(Услуги партнеров) + ABS(Другие услуги и штрафы) из блока "Общие затраты по Маркетплейсу".',
+    },
+    {
+      key: 'commission',
+      label: LOGISTICS_LABEL,
+      value: logisticValue,
+      color: COST_STRUCTURE_COLORS.logistic,
       hint: 'ABS(Комиссия Ozon) + ABS(Услуги ФБО) + ABS(Логистика) + ABS(Услуги партнеров) + ABS(Другие услуги и штрафы) из блока "Общие затраты по Маркетплейсу".',
     },
     {
