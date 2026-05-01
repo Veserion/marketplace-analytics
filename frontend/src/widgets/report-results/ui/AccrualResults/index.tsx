@@ -220,31 +220,30 @@ function getOverviewColor(index: number): string {
 }
 
 function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
-  console.log('reports', reports)
   const totalsReport = reports.find((report) => report.title === 'Итоги периода')
   const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
   if (!totalsReport || !groupedReport) return null
 
+  const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
-
-  const salesTotalValue = (transferTotal?.value ?? 0) + (accrualTotal?.value ?? 0)
 
   const groupedRevenueAdjustments = groupedReport.metrics
     .filter((metric) =>
       POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
 
-  const adjustmentSum = groupedRevenueAdjustments.reduce((acc, metric) => acc + (metric.value || 0), 0)
   const sppAndPromotionsValue = sppAndPromotions?.value || 0
-  const revenueWithoutSppValue = salesTotalValue - sppAndPromotionsValue - adjustmentSum
+  const revenueWithoutSppValue = revenueWithoutSpp?.value || 0
+  const adjustmentSum = groupedRevenueAdjustments.reduce((acc, metric) => acc + (metric.value || 0), 0)
+  const salesTotalValue = revenueWithoutSppValue + sppAndPromotionsValue + adjustmentSum
 
   const baseSalesItems: OverviewItem[] = [
     {
       label: REVENUE_WITHOUT_SPP_LABEL,
       value: revenueWithoutSppValue,
-      formula: `${TRANSFER_TO_BANK_LABEL} + ${MARKETPLACE_EXPENSES_LABEL} - ${SPP_AND_PROMOTIONS_LABEL} - ${Array.from(POSITIVE_REVENUE_ADJUSTMENT_LABELS).join(' - ')}`,
+      formula: revenueWithoutSpp?.formula ?? REVENUE_WITHOUT_SPP_LABEL,
       color: getOverviewColor(0),
     },
     {
