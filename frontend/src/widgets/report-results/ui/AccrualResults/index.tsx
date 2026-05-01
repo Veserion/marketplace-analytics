@@ -56,15 +56,15 @@ const OVERVIEW_COLORS = [
   '#7f93ae',
 ]
 
-const COST_STRUCTURE_COLORS = {
-  commission: '#005bff',
-  promotion: '#e85a9b',
-  logistic: '#fcca09',
-  returns: '#fd743d',
-  tax: '#a66401',
-  cogs: '#8c7ed8',
-  netProfit: '#028d30',
-}
+// const COST_STRUCTURE_COLORS = {
+//   commission: '#005bff',
+//   promotion: '#e85a9b',
+//   logistic: '#fcca09',
+//   returns: '#fd743d',
+//   tax: '#a66401',
+//   cogs: '#8c7ed8',
+//   netProfit: '#028d30',
+// }
 
 const DYNAMICS_REPORT_TITLE = 'Динамика по датам начисления'
 const compactRubleFormatter = new Intl.NumberFormat('ru-RU', {
