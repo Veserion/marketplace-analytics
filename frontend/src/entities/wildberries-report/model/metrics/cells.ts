@@ -74,8 +74,9 @@ export function calculateWildberriesMarginRateCell(
  * Cell-расчет базы продаж для процентов расходов.
  * Используется `shareText` в итогах и группах расходов.
  */
-export function calculateWildberriesSalesBaseCell(revenueBeforeSpp: number): number | null {
-  return revenueBeforeSpp > 0 ? revenueBeforeSpp : null
+export function calculateWildberriesSalesBaseCell(transferToBank: number, marketplaceExpenses: number): number | null {
+  const base = transferToBank + marketplaceExpenses
+  return base > 0 ? base : null
 }
 
 /**
@@ -139,6 +140,6 @@ export function buildWildberriesAccrualCells(
     taxAmount,
     marginRate: calculateWildberriesMarginRateCell(netProfit, revenueBeforeSpp),
     netProfit,
-    salesBase: calculateWildberriesSalesBaseCell(revenueBeforeSpp),
+    salesBase: calculateWildberriesSalesBaseCell(transferToBank, calculateWildberriesMarketplaceExpenses(atoms)),
   }
 }

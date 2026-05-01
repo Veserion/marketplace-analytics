@@ -12,7 +12,6 @@ const marketplaceExpensesFormula = [
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.withholdingsAmount,
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount,
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.finesAmount,
-  WILDBERRIES_ACCRUAL_ATOM_FORMULAS.vvCorrectionAmount,
 ].join(' + ')
 const transferToBankFormula = [
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout,
@@ -69,7 +68,6 @@ export function calculateWildberriesMarketplaceExpenses(atoms: WildberriesAccrua
     + atoms.withholdingsAmount
     + atoms.acceptanceOperationsAmount
     + atoms.finesAmount
-    + atoms.vvCorrectionAmount
 }
 
 /**

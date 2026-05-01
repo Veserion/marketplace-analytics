@@ -212,24 +212,35 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
   if (!totalsReport || !groupedReport) return null
 
-  const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
+
+  const salesTotalValue = (transferTotal?.value ?? 0) + (accrualTotal?.value ?? 0)
 
   const groupedRevenueAdjustments = groupedReport.metrics
     .filter((metric) =>
       POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
 
-  const baseSalesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions]
-    .filter((metric): metric is AccrualGroup['metrics'][number] => Boolean(metric && metric.value !== null))
-    .map((metric, index) => ({
-      label: metric.label,
-      value: metric.value || 0,
-      formula: metric.formula,
-      color: getOverviewColor(index),
-    }))
+  const adjustmentSum = groupedRevenueAdjustments.reduce((acc, metric) => acc + (metric.value || 0), 0)
+  const sppAndPromotionsValue = sppAndPromotions?.value || 0
+  const revenueWithoutSppValue = salesTotalValue - sppAndPromotionsValue - adjustmentSum
+
+  const baseSalesItems: OverviewItem[] = [
+    {
+      label: REVENUE_WITHOUT_SPP_LABEL,
+      value: revenueWithoutSppValue,
+      formula: `${TRANSFER_TO_BANK_LABEL} + ${MARKETPLACE_EXPENSES_LABEL} - ${SPP_AND_PROMOTIONS_LABEL} - ${Array.from(POSITIVE_REVENUE_ADJUSTMENT_LABELS).join(' - ')}`,
+      color: getOverviewColor(0),
+    },
+    {
+      label: SPP_AND_PROMOTIONS_LABEL,
+      value: sppAndPromotionsValue,
+      formula: sppAndPromotions?.formula ?? SPP_AND_PROMOTIONS_LABEL,
+      color: getOverviewColor(1),
+    },
+  ]
 
   const salesItems: OverviewItem[] = [
     ...baseSalesItems,
@@ -240,7 +251,6 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       color: getOverviewColor(baseSalesItems.length + index),
     })),
   ]
-  const salesTotalValue = salesItems.reduce((acc, item) => acc + item.value, 0)
 
   const groupedItems = groupedReport.metrics
     .filter((metric) =>

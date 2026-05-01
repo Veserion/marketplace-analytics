@@ -9,6 +9,9 @@ import styles from './index.module.scss'
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualCostStructure'
 const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
+const SALES_AND_RETURNS_AND_COMPENSATIONS_LABEL = 'Продажи, возвраты и компенсации'
+const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
+const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const RETURNS_LABEL = 'Возвраты'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -157,16 +160,18 @@ function buildWildberriesCostStructureModel(
   totalsReport: AccrualGroup,
   groupedReport: AccrualGroup,
 ): CostStructureModel | null {
-  const baseValue = Math.max(getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL), 0)
+  const transferToBankValue = getMetricValue(totalsReport, TRANSFER_TO_BANK_LABEL)
+  const marketplaceExpensesValue = Math.abs(getMetricValue(totalsReport, MARKETPLACE_EXPENSES_LABEL))
+  const baseValue = Math.max(transferToBankValue + marketplaceExpensesValue, 0)
   if (baseValue <= 0) return null
 
-  const returnsValue = Math.abs(getMetricValue(totalsReport, RETURNS_LABEL))
+  const returnsMetric = getMetric(totalsReport, RETURNS_LABEL)
+  const isReturnsCount = returnsMetric?.type === 'count'
   const taxValue = Math.abs(getMetricValue(totalsReport, TAX_LABEL))
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
-  const returnsFormula = getMetric(totalsReport, RETURNS_LABEL)?.formula ?? RETURNS_LABEL
   const taxFormula = getMetric(totalsReport, TAX_LABEL)?.formula ?? TAX_LABEL
   const cogsFormula = getMetric(totalsReport, COGS_LABEL)?.formula ?? COGS_LABEL
-  const revenueBeforeSppFormula = getMetric(totalsReport, REVENUE_BEFORE_SPP_LABEL)?.formula ?? REVENUE_BEFORE_SPP_LABEL
+  const netProfitValue = Math.max(getMetricValue(totalsReport, NET_PROFIT_LABEL), 0)
 
   const groupedExpenseSegments = groupedReport.metrics
     .filter((metric) => metric.value !== null && metric.value < 0)
@@ -198,14 +203,18 @@ function buildWildberriesCostStructureModel(
   }
 
   const addonSegments: CostStructureSegment[] = []
-  if (returnsValue > 0) {
-    addonSegments.push({
-      key: 'wb-returns',
-      label: RETURNS_LABEL,
-      value: returnsValue,
-      color: COST_STRUCTURE_COLORS.returns,
-      hint: `ABS(${returnsFormula})`,
-    })
+  if (!isReturnsCount) {
+    const returnsValue = Math.abs(returnsMetric?.value ?? 0)
+    if (returnsValue > 0) {
+      const returnsFormula = returnsMetric?.formula ?? RETURNS_LABEL
+      addonSegments.push({
+        key: 'wb-returns',
+        label: RETURNS_LABEL,
+        value: returnsValue,
+        color: COST_STRUCTURE_COLORS.returns,
+        hint: `ABS(${returnsFormula})`,
+      })
+    }
   }
   if (taxValue > 0) {
     addonSegments.push({
@@ -227,15 +236,13 @@ function buildWildberriesCostStructureModel(
   }
 
   const expenseSegments = [...topGroupedSegments, ...addonSegments].sort((a, b) => b.value - a.value)
-  const totalExpenses = expenseSegments.reduce((acc, segment) => acc + segment.value, 0)
-  const netProfitValue = Math.max(baseValue - totalExpenses, 0)
 
   const netProfitSegment: CostStructureSegment = {
     key: 'wb-net-profit',
     label: NET_PROFIT_LABEL,
     value: netProfitValue,
     color: COST_STRUCTURE_COLORS.netProfit,
-    hint: `MAX(0, (${revenueBeforeSppFormula}) - сумма всех расходов в этом блоке; каждый расход раскрывается своей полной formula в tooltip).`,
+    hint: 'transferToBank - costOfGoods - taxAmount',
   }
 
   return {
@@ -277,7 +284,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
       <header className={cn(`${BLOCK_NAME}__header`)}>
         <Typography variant="h3" color="accent">Структура затрат и прибыли</Typography>
         <Typography variant="body2" color="muted">
-          100% = {formatOverviewCurrency(costStructureModel.baseValue)} ({REVENUE_BEFORE_SPP_LABEL})
+          100% = {formatOverviewCurrency(costStructureModel.baseValue)} ({SALES_AND_RETURNS_AND_COMPENSATIONS_LABEL})
         </Typography>
       </header>
       <div className={cn(`${BLOCK_NAME}__layout`)}>
