@@ -7,7 +7,6 @@ import { useOzonAnalyticsPage } from '@/pages/analytics-page/model/useAnalyticsP
 import { UiPanel } from '@/shared/ui-kit/panel'
 import { Typography } from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
-import {UiFlex} from "@/shared/ui-kit";
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AnalyticsPage'

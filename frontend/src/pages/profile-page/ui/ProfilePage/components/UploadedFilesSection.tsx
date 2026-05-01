@@ -50,6 +50,46 @@ const CSV_RECORD_META: Record<CsvStorageMode, CsvRecordMeta> = {
     marketplace: 'Wildberries',
     kind: 'Справочник',
   },
+  wildberriesWeekly1: {
+    title: 'Wildberries: еженедельный отчёт (слот 1)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly2: {
+    title: 'Wildberries: еженедельный отчёт (слот 2)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly3: {
+    title: 'Wildberries: еженедельный отчёт (слот 3)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly4: {
+    title: 'Wildberries: еженедельный отчёт (слот 4)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly5: {
+    title: 'Wildberries: еженедельный отчёт (слот 5)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly6: {
+    title: 'Wildberries: еженедельный отчёт (слот 6)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly7: {
+    title: 'Wildberries: еженедельный отчёт (слот 7)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
+  wildberriesWeekly8: {
+    title: 'Wildberries: еженедельный отчёт (слот 8)',
+    marketplace: 'Wildberries',
+    kind: 'Еженедельный отчёт',
+  },
 }
 
 function formatDate(timestamp: number): string {

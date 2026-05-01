@@ -1,3 +1,5 @@
+import type { WbWeeklySlot } from '../weekly-report-utils'
+
 export type WildberriesAccrualRow = {
   article: string
   documentType: string
@@ -35,7 +37,7 @@ export type WildberriesSalesScheme = 'FBS' | 'FBW' | 'Не указано'
 
 export type WbUploadedReport = {
   id: string
-  slot: 'wildberriesWeekly1' | 'wildberriesWeekly2' | 'wildberriesWeekly3' | 'wildberriesWeekly4'
+  slot: WbWeeklySlot
   fileName: string
   csvText: string
   periodStart: string | null
