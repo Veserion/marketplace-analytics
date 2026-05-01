@@ -154,11 +154,10 @@ function classifyGroup(rawLabel: string): ClassifiedGroup {
   if (normalized === 'продажа' || normalized === 'возврат') {
     return { label: 'Продажи и возвраты', withSalesShare: false }
   }
-  if (
-    normalized.includes('логист')
-    || normalized.includes('пвз')
-    || normalized.includes('перевоз')
-  ) {
+  if (normalized.includes('пвз') || normalized.includes('перевоз')) {
+    return { label: 'Продажи и возвраты', withSalesShare: false }
+  }
+  if (normalized.includes('логист')) {
     return { label: 'Логистика', withSalesShare: true }
   }
   if (normalized.includes('хранен')) {
@@ -715,7 +714,7 @@ function buildWildberriesAccrualReportGroups(
         {
           label: 'Возвраты',
           value: cells.returnsQuantity,
-          type: 'number',
+          type: 'count',
           formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.returnsQuantity,
         },
         {

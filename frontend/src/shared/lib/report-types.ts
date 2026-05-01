@@ -1,4 +1,4 @@
-export type ValueType = 'number' | 'currency' | 'percent'
+export type ValueType = 'number' | 'currency' | 'percent' | 'count'
 
 export type AccrualMetric = {
   label: string

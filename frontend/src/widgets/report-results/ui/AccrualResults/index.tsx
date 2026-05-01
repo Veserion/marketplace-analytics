@@ -163,6 +163,7 @@ function toMetricRow(
     && metric.label !== CANCELLATIONS_AND_RETURNS_LABEL
     && metric.label !== CANCELLATIONS_AND_NON_PICKUPS_LABEL
     && metric.type !== 'number'
+    && metric.type !== 'count'
     && FORCED_NEGATIVE_DISPLAY_LABELS.has(metric.label)
   const normalizedValue = shouldForceNegativeInTotals && metric.value !== null
     ? -Math.abs(metric.value)
@@ -212,7 +213,6 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   if (!totalsReport || !groupedReport) return null
 
   const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
-  const returns = getMetric(totalsReport, RETURNS_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
@@ -222,7 +222,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
 
-  const baseSalesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions, returns]
+  const baseSalesItems: OverviewItem[] = [revenueWithoutSpp, sppAndPromotions]
     .filter((metric): metric is AccrualGroup['metrics'][number] => Boolean(metric && metric.value !== null))
     .map((metric, index) => ({
       label: metric.label,

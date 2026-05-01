@@ -13,26 +13,20 @@ const marketplaceExpensesFormula = [
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount,
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.finesAmount,
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.vvCorrectionAmount,
-  WILDBERRIES_ACCRUAL_ATOM_FORMULAS.pvzCompensationAmount,
-  WILDBERRIES_ACCRUAL_ATOM_FORMULAS.transportReimbursementAmount,
 ].join(' + ')
 const transferToBankFormula = [
   WILDBERRIES_ACCRUAL_ATOM_FORMULAS.salesPayout,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.paymentServicesAmount})`,
   `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.logisticsAmount})`,
   `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.storageAmount})`,
   `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount})`,
   `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.finesAmount})`,
   `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.withholdingsAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.transportReimbursementAmount})`,
-  `- (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.pvzCompensationAmount})`,
   `+ (${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.vvCorrectionAmount})`,
 ].join(' ')
 
 export const WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS = {
   revenueBeforeSpp: revenueBeforeSppFormula,
   sppAndPromotions: sppAndPromotionsFormula,
-  returnsExpense: `-ABS(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.returnsNetEffect})`,
   wbCommissionAmount: wbCommissionAmountFormula,
   marketplaceExpenses: marketplaceExpensesFormula,
   transferToBank: transferToBankFormula,
@@ -56,14 +50,6 @@ export function calculateWildberriesSppAndPromotions(atoms: WildberriesAccrualMe
 }
 
 /**
- * Молекула `Возвраты`: возвратный `net effect` как отрицательная расходная строка.
- * Используется cell `Возвраты`.
- */
-export function calculateWildberriesReturnsExpense(atoms: WildberriesAccrualMetricAtoms): number {
-  return atoms.returnsNetEffect === 0 ? 0 : -Math.abs(atoms.returnsNetEffect)
-}
-
-/**
  * Молекула `Комиссия ВБ`: расчётная комиссия по формуле `Цена розничная с учетом согласованной скидки * Размер кВВ, % / 100`.
  * Используется в группе расходов и в `Общие затраты по Маркетплейсу`.
  */
@@ -78,13 +64,12 @@ export function calculateWildberriesWbCommissionAmount(atoms: WildberriesAccrual
 export function calculateWildberriesMarketplaceExpenses(atoms: WildberriesAccrualMetricAtoms): number {
   return calculateWildberriesWbCommissionAmount(atoms)
     + atoms.logisticsAmount
+    + atoms.paymentServicesAmount
     + atoms.storageAmount
     + atoms.withholdingsAmount
     + atoms.acceptanceOperationsAmount
     + atoms.finesAmount
     + atoms.vvCorrectionAmount
-    + atoms.pvzCompensationAmount
-    + atoms.transportReimbursementAmount
 }
 
 /**
@@ -100,7 +85,7 @@ export function calculateWildberriesTransferToBank(
     - atoms.acceptanceOperationsAmount
     - atoms.finesAmount
     - atoms.withholdingsAmount
-    + atoms.vvCorrectionAmount;
+    + atoms.vvCorrectionAmount
 }
 
 /**

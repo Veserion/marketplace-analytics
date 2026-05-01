@@ -1,5 +1,5 @@
 import { WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
-import { calculateWildberriesCogs, calculateWildberriesMarketplaceExpenses, calculateWildberriesReturnsExpense, calculateWildberriesRevenueBeforeSpp, calculateWildberriesSppAndPromotions, calculateWildberriesTransferToBank, calculateWildberriesWbCommissionAmount, WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS } from '@/entities/wildberries-report/model/metrics/molecules'
+import { calculateWildberriesCogs, calculateWildberriesMarketplaceExpenses, calculateWildberriesRevenueBeforeSpp, calculateWildberriesSppAndPromotions, calculateWildberriesTransferToBank, calculateWildberriesWbCommissionAmount, WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS } from '@/entities/wildberries-report/model/metrics/molecules'
 import type { WildberriesAccrualMetricAtoms } from '@/entities/wildberries-report/model/metrics/types'
 
 export type WildberriesAccrualCells = {
@@ -9,7 +9,6 @@ export type WildberriesAccrualCells = {
   revenueBeforeSpp: number
   revenueWithoutSpp: number
   sppAndPromotions: number
-  returnsExpense: number
   wbCommissionAmount: number
   marketplaceExpenses: number
   transferToBank: number
@@ -27,7 +26,6 @@ export const WILDBERRIES_ACCRUAL_CELL_FORMULAS = {
   revenueBeforeSpp: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.revenueBeforeSpp,
   revenueWithoutSpp: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.revenueWithoutSpp,
   sppAndPromotions: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.sppAndPromotions,
-  returnsExpense: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.returnsExpense,
   wbCommissionAmount: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.wbCommissionAmount,
   marketplaceExpenses: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.marketplaceExpenses,
   transferToBank: WILDBERRIES_ACCRUAL_MOLECULE_FORMULAS.transferToBank,
@@ -134,7 +132,6 @@ export function buildWildberriesAccrualCells(
     revenueBeforeSpp,
     revenueWithoutSpp: atoms.revenueWithoutSpp,
     sppAndPromotions: calculateWildberriesSppAndPromotions(atoms),
-    returnsExpense: calculateWildberriesReturnsExpense(atoms),
     wbCommissionAmount: calculateWildberriesWbCommissionAmount(atoms),
     marketplaceExpenses: calculateWildberriesMarketplaceExpenses(atoms),
     transferToBank,

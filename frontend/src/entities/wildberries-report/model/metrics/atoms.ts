@@ -44,10 +44,10 @@ export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   returnsRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
   revenueWithoutSpp: `SUM("${WB_REVENUE_COLUMNS.sellerRealized}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesPayout: `SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа") - SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат") + SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" ≠ "Продажа" и "${WB_BASE_COLUMNS.reason}" ≠ "Возврат" и значение > 0)`,
-  wbCommissionCalculated: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
+  wbCommissionCalculated: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100, фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа") - SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100, фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат")`,
   returnsNetEffect: buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.reason}" = "Возврат"`]),
   logisticsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}"))`,
-  paymentServicesAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}"))`,
+  paymentServicesAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа")) - ABS(SUM("${WB_EXPENSE_COLUMNS.paymentServices}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"))`,
   storageAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.storage}"))`,
   withholdingsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}"))`,
   acceptanceOperationsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.acceptanceOperations}"))`,
@@ -288,11 +288,14 @@ export function calculateWildberriesSalesPayout(rows: WildberriesAccrualRow[]): 
 }
 
 /**
- * Атом расчётной комиссии ВБ: сумма `Цена розничная с учетом согласованной скидки * Размер кВВ, % / 100` по строкам `Продажа`.
+ * Атом расчётной комиссии ВБ: комиссия по продажам минус комиссия по возвратам.
+ * Формула: `Цена розничная с учетом согласованной скидки * Размер кВВ, % / 100`.
  * Используется молекулой `Комиссия ВБ`.
  */
 export function calculateWildberriesWbCommissionCalculated(rows: WildberriesAccrualRow[]): number {
-  return sumRows(rows, (row) => row.retailPriceWithDiscount * row.wbCommissionRate / 100, isWildberriesSaleRow)
+  const salesCommission = sumRows(rows, (row) => row.retailPriceWithDiscount * row.wbCommissionRate / 100, isWildberriesSaleRow)
+  const returnsCommission = sumRows(rows, (row) => row.retailPriceWithDiscount * row.wbCommissionRate / 100, isWildberriesReturnRow)
+  return salesCommission - returnsCommission
 }
 
 /**
@@ -304,19 +307,23 @@ export function calculateWildberriesReturnsNetEffect(rows: WildberriesAccrualRow
 }
 
 /**
- * Атом общей логистики: модуль суммы `Услуги по доставке товара покупателю`.
- * Используется молекулой `Общие затраты по Маркетплейсу`.
+ * Атом логистики: модуль суммы `Услуги по доставке товара покупателю`.
+ * Логистика начисляется на отдельных строках с reason "Логистика" / "Коррекция логистики",
+ * а не на строках продаж/возвратов.
+ * Используется молекулами `Общие затраты по Маркетплейсу` и `Перевод в банк`.
  */
 export function calculateWildberriesLogisticsAmount(rows: WildberriesAccrualRow[]): number {
   return absValue(sumRows(rows, (row) => row.logisticsCost))
 }
 
 /**
- * Атом эквайринга: модуль суммы `Компенсация платёжных услуг/Комиссия за интеграцию платёжных сервисов`.
- * Используется молекулой `Общие затраты по Маркетплейсу`.
+ * Атом эквайринга: эквайринг по продажам минус эквайринг по возвратам.
+ * Используется молекулами `Общие затраты по Маркетплейсу` и `Перевод в банк`.
  */
 export function calculateWildberriesPaymentServicesAmount(rows: WildberriesAccrualRow[]): number {
-  return absValue(sumRows(rows, (row) => row.paymentServicesCommission))
+  const salesPaymentServices = absValue(sumRows(rows, (row) => row.paymentServicesCommission, isWildberriesSaleRow))
+  const returnsPaymentServices = absValue(sumRows(rows, (row) => row.paymentServicesCommission, isWildberriesReturnRow))
+  return salesPaymentServices - returnsPaymentServices
 }
 
 /**
