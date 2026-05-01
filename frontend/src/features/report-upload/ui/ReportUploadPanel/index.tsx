@@ -119,30 +119,32 @@ export function ReportUploadPanel({
         )}
         <UiFlex wrap="wrap" align="center" justify="between" gap={10}>
           <UiFlex wrap="wrap" align="center" gap={24}>
-            <Button
-              type="primary"
-              onClick={() => primaryFileInputRef.current?.click()}
-              disabled={isProcessing}
-            >
-              {fileName ? primaryRefreshButtonText : primaryUploadButtonText}
-            </Button>
-            {fileName && onPrimaryFileDelete && (
-              <Popconfirm
-                title="Удалить файл?"
-                description="Отчет пропадет из локального хранилища."
-                okText="Удалить"
-                cancelText="Отмена"
-                onConfirm={onPrimaryFileDelete}
+            <UiFlex align="center" gap={8}>
+              <Button
+                type="primary"
+                onClick={() => primaryFileInputRef.current?.click()}
+                disabled={isProcessing}
               >
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  disabled={isProcessing}
-                />
-              </Popconfirm>
-            )}
+                {fileName ? primaryRefreshButtonText : primaryUploadButtonText}
+              </Button>
+              {fileName && onPrimaryFileDelete && (
+                <Popconfirm
+                  title="Удалить файл?"
+                  description="Отчет пропадет из локального хранилища."
+                  okText="Удалить"
+                  cancelText="Отмена"
+                  onConfirm={onPrimaryFileDelete}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={isProcessing}
+                  />
+                </Popconfirm>
+              )}
+            </UiFlex>
             {onAdditionalPrimaryFileUpload && (
-              <UiFlex align="center" gap={6}>
+              <UiFlex align="center" gap={8}>
                 <Button
                   type={additionalPrimaryFileName ? 'default' : 'dashed'}
                   onClick={() => additionalPrimaryFileInputRef.current?.click()}
@@ -252,7 +254,7 @@ export function ReportUploadPanel({
             onChange={onSecondaryFileUpload}
             disabled={isProcessing}
           />
-          <UiFlex wrap="wrap" align="center" gap={10}>
+          <UiFlex align="center" gap={8}>
             <Button
               type="default"
               onClick={() => secondaryFileInputRef.current?.click()}
