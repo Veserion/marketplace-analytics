@@ -1,6 +1,6 @@
 import classNames from 'classnames/bind'
 import {createElement, lazy, Suspense, useRef, useState} from 'react'
-import {DeleteOutlined, ExclamationCircleFilled} from '@ant-design/icons'
+import {CheckCircleFilled, DeleteOutlined, ExclamationCircleFilled} from '@ant-design/icons'
 import Button from 'antd/es/button'
 import Popconfirm from 'antd/es/popconfirm'
 import {WbWeeklyReportManager, PeriodSelectionPanel} from '@/features/report-upload'
@@ -146,10 +146,18 @@ export function WildberriesPage() {
           </UiCard>
         )}
         {apiReportData && (
-          <UiCard padding="sm">
-            <Typography variant="body3" color="muted">
-              Отчёт получен через API. Файловая загрузка отключена.
-            </Typography>
+          <UiCard padding="sm" style={{ backgroundColor: '#f6ffed' }}>
+            <UiFlex direction="column" gap="8px">
+              <UiFlex align="center" gap="8px">
+                <CheckCircleFilled style={{ color: '#52c41a', fontSize: '16px' }} />
+                <Typography variant="body2" semiBold color="accent">
+                  Отчёт получен через API
+                </Typography>
+              </UiFlex>
+              <Typography variant="body3" color="muted">
+                Файловая загрузка отключена. Данные загружены за период с {apiReportPeriod?.dateFrom} по {apiReportPeriod?.dateTo} ({apiReportData?.length} записей).
+              </Typography>
+            </UiFlex>
           </UiCard>
         )}
 
