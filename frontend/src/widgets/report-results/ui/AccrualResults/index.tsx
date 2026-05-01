@@ -36,6 +36,7 @@ const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
 const GROUPED_TOTAL_LABEL = 'Итог'
+const GROUPED_SUBTOTAL_LABELS = new Set(['Итого расходов', 'Итого компенсаций', 'Итого с учётом компенсаций'])
 const POSITIVE_REVENUE_ADJUSTMENT_LABELS = new Set(['Добровольная компенсация', 'Компенсация скидки'])
 const MAX_OVERVIEW_ITEMS = 8
 const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
@@ -257,6 +258,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       metric.label !== SALES_GROUP_LABEL
       && metric.label !== RETURNS_LABEL
       && metric.label !== GROUPED_TOTAL_LABEL
+      && !GROUPED_SUBTOTAL_LABELS.has(metric.label)
       && !POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
     .map((metric, index) => ({

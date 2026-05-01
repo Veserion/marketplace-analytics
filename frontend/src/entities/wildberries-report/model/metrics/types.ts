@@ -53,6 +53,8 @@ export type WildberriesAccrualMetricAtoms = {
   vvCorrectionAmount: number
   pvzCompensationAmount: number
   transportReimbursementAmount: number
+  voluntaryCompensation: number
+  discountCompensation: number
   salesLogisticsAmount: number
   salesStorageAmount: number
   salesWithholdingsAmount: number

@@ -27,6 +27,7 @@ const NET_PROFIT_LABEL = 'Чистая прибыль'
 const WB_SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 const WB_SALES_GROUP_LABEL = 'Продажи'
 const GROUPED_TOTAL_LABEL = 'Итог'
+const GROUPED_SUBTOTAL_LABELS = new Set(['Итого расходов', 'Итого компенсаций', 'Итого с учётом компенсаций'])
 const WB_OTHER_EXPENSES_LABEL = 'Прочие расходы WB'
 const COST_STRUCTURE_COLORS = {
   commission: '#2d79d5',
@@ -178,7 +179,8 @@ function buildWildberriesCostStructureModel(
     .filter((metric) =>
       metric.label !== WB_SALES_AND_RETURNS_GROUP_LABEL
       && metric.label !== WB_SALES_GROUP_LABEL
-      && metric.label !== GROUPED_TOTAL_LABEL)
+      && metric.label !== GROUPED_TOTAL_LABEL
+      && !GROUPED_SUBTOTAL_LABELS.has(metric.label))
     .sort((a, b) => Math.abs((b.value || 0)) - Math.abs((a.value || 0)))
     .map((metric, index) => ({
       key: `wb-group-${metric.label}`,

@@ -55,6 +55,8 @@ export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   vvCorrectionAmount: `-SUM("${WB_EXPENSE_COLUMNS.vvCorrection}")`,
   pvzCompensationAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.pvzCompensation}"))`,
   transportReimbursementAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.transportReimbursement}"))`,
+  voluntaryCompensation: `SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" содержит "добровольная компенсация")`,
+  discountCompensation: `SUM("${WB_LOYALTY_COLUMNS.loyaltyCompensation}")`,
   salesLogisticsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.logisticsToBuyer}")), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesStorageAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.storage}")), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesWithholdingsAmount: `ABS(SUM("${WB_EXPENSE_COLUMNS.withholdings}")), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
@@ -380,6 +382,26 @@ export function calculateWildberriesPvzCompensationAmount(rows: WildberriesAccru
  */
 export function calculateWildberriesTransportReimbursementAmount(rows: WildberriesAccrualRow[]): number {
   return absValue(sumRows(rows, (row) => row.transportReimbursement))
+}
+
+/**
+ * Атом добровольной компенсации: сумма выплат по строкам с reason "добровольная компенсация при возврате".
+ * Используется детальным блоком "Общие затраты по Маркетплейсу" и расшифровкой "Продажи и возвраты".
+ */
+export function calculateWildberriesVoluntaryCompensation(rows: WildberriesAccrualRow[]): number {
+  return sumRows(
+    rows,
+    (row) => row.payout,
+    (row) => normalizeLower(row.reason).includes('добровольн') && normalizeLower(row.reason).includes('компенсац'),
+  )
+}
+
+/**
+ * Атом компенсации скидки: модуль суммы `Компенсация скидки по программе лояльности`.
+ * Используется детальным блоком "Общие затраты по Маркетплейсу" и расшифровкой "Продажи и возвраты".
+ */
+export function calculateWildberriesDiscountCompensation(rows: WildberriesAccrualRow[]): number {
+  return absValue(sumRows(rows, (row) => row.loyaltyCompensation))
 }
 
 /**

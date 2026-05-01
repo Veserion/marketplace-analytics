@@ -125,6 +125,48 @@ export function buildWildberriesAccrualCells(
   const cogs = calculateWildberriesCogs(atoms)
   const taxAmount = calculateWildberriesTaxAmountCell(revenueBeforeSpp, vatRatePercent, taxRatePercent)
   const netProfit = calculateWildberriesNetProfitCell(transferToBank, taxAmount, cogs)
+  const marketplaceExpenses = calculateWildberriesMarketplaceExpenses(atoms)
+  const salesBase = calculateWildberriesSalesBaseCell(transferToBank, marketplaceExpenses)
+
+  if (import.meta.env.DEV) {
+    const salesAndReturnsForBank = salesBase ?? 0
+    const marketplaceCompensations = atoms.voluntaryCompensation + atoms.discountCompensation
+    const marketplaceExpensesNet = marketplaceExpenses - marketplaceCompensations
+
+    // 1. Верхний блок: salesAndReturnsForBank - marketplaceExpensesGross = transferToBank
+    if (Math.abs(salesAndReturnsForBank - marketplaceExpenses - transferToBank) >= 0.01) {
+      console.warn('[WB sync] Check 1 failed: salesAndReturnsForBank - marketplaceExpensesGross ≠ transferToBank',
+        { salesAndReturnsForBank, marketplaceExpensesGross: marketplaceExpenses, transferToBank, diff: salesAndReturnsForBank - marketplaceExpenses - transferToBank })
+    }
+    // 2. Детальный блок расходов: marketplaceExpensesGross = sum of expense atoms
+    const expenseAtomsSum = calculateWildberriesWbCommissionAmount(atoms)
+      + atoms.logisticsAmount + atoms.withholdingsAmount + atoms.paymentServicesAmount
+      + atoms.storageAmount + atoms.finesAmount + atoms.acceptanceOperationsAmount
+    if (Math.abs(marketplaceExpenses - expenseAtomsSum) >= 0.01) {
+      console.warn('[WB sync] Check 2 failed: marketplaceExpensesGross ≠ sum of expense atoms',
+        { marketplaceExpensesGross: marketplaceExpenses, expenseAtomsSum, diff: marketplaceExpenses - expenseAtomsSum })
+    }
+    // 3. Компенсации: marketplaceCompensations = voluntaryCompensation + discountCompensation
+    if (Math.abs(marketplaceCompensations - (atoms.voluntaryCompensation + atoms.discountCompensation)) >= 0.01) {
+      console.warn('[WB sync] Check 3 failed: marketplaceCompensations ≠ voluntaryCompensation + discountCompensation',
+        { marketplaceCompensations, voluntaryCompensation: atoms.voluntaryCompensation, discountCompensation: atoms.discountCompensation })
+    }
+    // 4. Net-итог маркетплейса: marketplaceExpensesNet = marketplaceExpensesGross - marketplaceCompensations
+    if (Math.abs(marketplaceExpensesNet - (marketplaceExpenses - marketplaceCompensations)) >= 0.01) {
+      console.warn('[WB sync] Check 4 failed: marketplaceExpensesNet ≠ marketplaceExpensesGross - marketplaceCompensations',
+        { marketplaceExpensesNet, marketplaceExpensesGross: marketplaceExpenses, marketplaceCompensations })
+    }
+    // 5. Чистая прибыль: netProfit = transferToBank - costOfGoods - taxAmount
+    if (Math.abs(netProfit - (transferToBank - (cogs ?? 0) - taxAmount)) >= 0.01) {
+      console.warn('[WB sync] Check 5 failed: netProfit ≠ transferToBank - costOfGoods - taxAmount',
+        { netProfit, transferToBank, costOfGoods: cogs, taxAmount, diff: netProfit - (transferToBank - (cogs ?? 0) - taxAmount) })
+    }
+    // 6. База структуры: structureBase = salesAndReturnsForBank
+    if (salesBase !== null && Math.abs(salesBase - salesAndReturnsForBank) >= 0.01) {
+      console.warn('[WB sync] Check 6 failed: structureBase ≠ salesAndReturnsForBank',
+        { structureBase: salesBase, salesAndReturnsForBank })
+    }
+  }
 
   return {
     salesQuantity: atoms.salesQuantity,
@@ -134,12 +176,12 @@ export function buildWildberriesAccrualCells(
     revenueWithoutSpp: atoms.revenueWithoutSpp,
     sppAndPromotions: calculateWildberriesSppAndPromotions(atoms),
     wbCommissionAmount: calculateWildberriesWbCommissionAmount(atoms),
-    marketplaceExpenses: calculateWildberriesMarketplaceExpenses(atoms),
+    marketplaceExpenses,
     transferToBank,
     cogs,
     taxAmount,
     marginRate: calculateWildberriesMarginRateCell(netProfit, revenueBeforeSpp),
     netProfit,
-    salesBase: calculateWildberriesSalesBaseCell(transferToBank, calculateWildberriesMarketplaceExpenses(atoms)),
+    salesBase,
   }
 }

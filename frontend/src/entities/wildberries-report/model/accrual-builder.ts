@@ -5,14 +5,9 @@ import type { CsvTable } from '@/shared/lib/reporting'
 import { addToNumberMap, assertCsvColumns, createCsvTable, formatSharePercent, isArticleIncludedByPattern, normalizeLower, sortByAbsDesc, stripBom, sumNumberMap } from '@/shared/lib/reporting'
 import type { CogsByArticleMap, CogsMatchingMode } from '@/entities/wildberries-report/model/cogs-builder'
 import { resolveCogsLookupKey } from '@/entities/wildberries-report/model/cogs-builder'
-import { buildWildberriesNetEffectSumFormula, calculateWildberriesAcceptanceOperationsAmount, calculateWildberriesCogsFromFile, calculateWildberriesCogsMatchedRows, calculateWildberriesFinesAmount, calculateWildberriesLogisticsAmount, calculateWildberriesPaymentServicesAmount, calculateWildberriesPvzCompensationAmount, calculateWildberriesReturnsAndCancellationsQuantity, calculateWildberriesReturnsNetEffect, calculateWildberriesReturnsQuantity, calculateWildberriesReturnsRevenueBeforeSpp, calculateWildberriesRevenueWithoutSpp, calculateWildberriesRowNetEffect, calculateWildberriesSalesAcceptanceOperationsAmount, calculateWildberriesSalesFinesAmount, calculateWildberriesSalesLogisticsAmount, calculateWildberriesSalesPayout, calculateWildberriesSalesQuantity, calculateWildberriesSalesRevenueBeforeSpp, calculateWildberriesSalesRevenueByRetailPrice, calculateWildberriesSalesStorageAmount, calculateWildberriesSalesWithholdingsAmount, calculateWildberriesStorageAmount, calculateWildberriesTransportReimbursementAmount, calculateWildberriesVvCorrectionAmount, calculateWildberriesWbCommissionCalculated, calculateWildberriesWithholdingsAmount, isWildberriesSaleRow, WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
+import { buildWildberriesNetEffectSumFormula, calculateWildberriesAcceptanceOperationsAmount, calculateWildberriesCogsFromFile, calculateWildberriesCogsMatchedRows, calculateWildberriesDiscountCompensation, calculateWildberriesFinesAmount, calculateWildberriesLogisticsAmount, calculateWildberriesPaymentServicesAmount, calculateWildberriesPvzCompensationAmount, calculateWildberriesReturnsAndCancellationsQuantity, calculateWildberriesReturnsNetEffect, calculateWildberriesReturnsQuantity, calculateWildberriesReturnsRevenueBeforeSpp, calculateWildberriesRevenueWithoutSpp, calculateWildberriesRowNetEffect, calculateWildberriesSalesAcceptanceOperationsAmount, calculateWildberriesSalesFinesAmount, calculateWildberriesSalesLogisticsAmount, calculateWildberriesSalesPayout, calculateWildberriesSalesQuantity, calculateWildberriesSalesRevenueBeforeSpp, calculateWildberriesSalesRevenueByRetailPrice, calculateWildberriesSalesStorageAmount, calculateWildberriesSalesWithholdingsAmount, calculateWildberriesStorageAmount, calculateWildberriesTransportReimbursementAmount, calculateWildberriesVoluntaryCompensation, calculateWildberriesVvCorrectionAmount, calculateWildberriesWbCommissionCalculated, calculateWildberriesWithholdingsAmount, isWildberriesSaleRow, WILDBERRIES_ACCRUAL_ATOM_FORMULAS } from '@/entities/wildberries-report/model/metrics/atoms'
 import { buildWildberriesAccrualCells, getWildberriesMarginRateCellFormula, getWildberriesNetProfitCellFormula, getWildberriesTaxCellFormula, WILDBERRIES_ACCRUAL_CELL_FORMULAS, type WildberriesAccrualCells } from '@/entities/wildberries-report/model/metrics/cells'
 import type { WildberriesAccrualMetricAtoms, WildberriesAccrualRow as WbRow, WildberriesSalesScheme as SalesScheme } from '@/entities/wildberries-report/model/metrics/types'
-
-type ClassifiedGroup = {
-  label: string
-  withSalesShare: boolean
-}
 
 const SALES_SCHEME_ORDER: SalesScheme[] = ['FBS', 'FBW', 'Не указано']
 const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
@@ -21,10 +16,18 @@ const SALES_SCHEME_LABELS: Record<SalesScheme, string> = {
   'Не указано': 'Не указано — нет обозначения склада в отчете',
 }
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
-const SALES_AND_RETURNS_GROUP_LABEL = 'Продажи и возвраты'
 const WB_COMMISSION_LABEL = 'Комиссия ВБ'
+const LOGISTICS_LABEL = 'Логистика'
+const ADVERTISING_LABEL = 'Расход на рекламу'
 const PAYMENT_SERVICES_LABEL = 'Эквайринг'
+const STORAGE_LABEL = 'Хранение ФБО'
+const FINES_LABEL = 'Штрафы'
 const ACCEPTANCE_OPERATIONS_LABEL = 'Операции на приемке'
+const VOLUNTARY_COMPENSATION_LABEL = 'Добровольная компенсация'
+const DISCOUNT_COMPENSATION_LABEL = 'Компенсация скидки'
+const TOTAL_EXPENSES_LABEL = 'Итого расходов'
+const TOTAL_COMPENSATIONS_LABEL = 'Итого компенсаций'
+const TOTAL_NET_LABEL = 'Итого с учётом компенсаций'
 
 /**
  * Проверяет наличие ненулевой суммы.
@@ -141,63 +144,6 @@ function toDateTimestamp(label: string): number | null {
   if (!Number.isNaN(parsed)) return parsed
 
   return null
-}
-
-/**
- * Классифицирует `Обоснование для оплаты` в человекочитаемую группу расходов.
- * Используется группой отчета `Общие затраты по Маркетплейсу`.
- */
-function classifyGroup(rawLabel: string): ClassifiedGroup {
-  const label = normalize(rawLabel) || 'Без обоснования'
-  const normalized = normalizeLower(label)
-
-  if (normalized === 'продажа' || normalized === 'возврат') {
-    return { label: 'Продажи и возвраты', withSalesShare: false }
-  }
-  if (normalized.includes('пвз') || normalized.includes('перевоз')) {
-    return { label: 'Продажи и возвраты', withSalesShare: false }
-  }
-  if (normalized.includes('логист')) {
-    return { label: 'Логистика', withSalesShare: true }
-  }
-  if (normalized.includes('хранен')) {
-    return { label: 'Хранение ФБО', withSalesShare: true }
-  }
-  if (normalized.includes('обработк')) {
-    return { label: 'Обработка товара', withSalesShare: true }
-  }
-  if (normalized.includes('удержан')) {
-    return { label: 'Расход на рекламу', withSalesShare: true }
-  }
-  if (normalized.includes('штраф')) {
-    return { label: 'Штрафы', withSalesShare: true }
-  }
-  if (normalized.includes('компенсац') && normalized.includes('ущерб')) {
-    return { label: 'Компенсация ущерба', withSalesShare: true }
-  }
-  if (normalized.includes('добровольн') && normalized.includes('компенсац') && normalized.includes('возврат')) {
-    return { label: 'Добровольная компенсация', withSalesShare: true }
-  }
-  if (normalized.includes('коррекц') && normalized.includes('продаж')) {
-    return { label: 'Коррекция продаж', withSalesShare: true }
-  }
-  if (normalized.includes('коррекц') && normalized.includes('эквайр')) {
-    return { label: 'Коррекция эквайринга', withSalesShare: true }
-  }
-  if (normalized.includes('платн') && normalized.includes('доставк')) {
-    return { label: 'Платная доставка', withSalesShare: true }
-  }
-  if (normalized.includes('бронирован')) {
-    return { label: 'Бронирование', withSalesShare: true }
-  }
-  if (normalized.includes('разов') && normalized.includes('срок') && normalized.includes('перечислен')) {
-    return { label: 'Вывести сейчас', withSalesShare: true }
-  }
-  if (normalized.includes('лояльност')) {
-    return { label: 'Компенсация скидки', withSalesShare: true }
-  }
-
-  return { label, withSalesShare: true }
 }
 
 /**
@@ -380,6 +326,8 @@ function buildWildberriesAccrualMetricAtoms(
     vvCorrectionAmount: calculateWildberriesVvCorrectionAmount(rows),
     pvzCompensationAmount: calculateWildberriesPvzCompensationAmount(rows),
     transportReimbursementAmount: calculateWildberriesTransportReimbursementAmount(rows),
+    voluntaryCompensation: calculateWildberriesVoluntaryCompensation(rows),
+    discountCompensation: calculateWildberriesDiscountCompensation(rows),
     salesLogisticsAmount: calculateWildberriesSalesLogisticsAmount(rows),
     salesStorageAmount: calculateWildberriesSalesStorageAmount(rows),
     salesWithholdingsAmount: calculateWildberriesSalesWithholdingsAmount(rows),
@@ -485,95 +433,124 @@ function buildWildberriesGroupedExpenseMetrics(
   cells: WildberriesAccrualCells,
 ): AccrualMetric[] {
   const atoms = aggregate.metricAtoms
-  const groupedByLabel = new Map<string, { value: number, withSalesShare: boolean, sourceLabels: Set<string> }>()
-  for (const [rawLabel, value] of sortByAbsDesc(Array.from(aggregate.sumByGroup.entries()))) {
-    const group = classifyGroup(rawLabel)
-    const current = groupedByLabel.get(group.label) || {
-      value: 0,
-      withSalesShare: group.withSalesShare,
-      sourceLabels: new Set<string>(),
-    }
-    current.value += value
-    current.withSalesShare = current.withSalesShare || group.withSalesShare
-    current.sourceLabels.add(rawLabel)
-    groupedByLabel.set(group.label, current)
-  }
+
+  const expenseItems: AccrualMetric[] = []
   if (hasNonZero(cells.wbCommissionAmount)) {
-    groupedByLabel.set(WB_COMMISSION_LABEL, {
+    expenseItems.push({
+      label: WB_COMMISSION_LABEL,
       value: -cells.wbCommissionAmount,
-      withSalesShare: true,
-      sourceLabels: new Set<string>(),
+      type: 'currency',
+      formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.wbCommissionAmount,
+      shareText: formatSharePercent(-cells.wbCommissionAmount, cells.salesBase),
+    })
+  }
+  if (hasNonZero(atoms.logisticsAmount)) {
+    expenseItems.push({
+      label: LOGISTICS_LABEL,
+      value: -atoms.logisticsAmount,
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.logisticsAmount})`,
+      shareText: formatSharePercent(-atoms.logisticsAmount, cells.salesBase),
+    })
+  }
+  if (hasNonZero(atoms.withholdingsAmount)) {
+    expenseItems.push({
+      label: ADVERTISING_LABEL,
+      value: -atoms.withholdingsAmount,
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.withholdingsAmount})`,
+      shareText: formatSharePercent(-atoms.withholdingsAmount, cells.salesBase),
     })
   }
   if (hasNonZero(atoms.paymentServicesAmount)) {
-    groupedByLabel.set(PAYMENT_SERVICES_LABEL, {
+    expenseItems.push({
+      label: PAYMENT_SERVICES_LABEL,
       value: -atoms.paymentServicesAmount,
-      withSalesShare: true,
-      sourceLabels: new Set<string>(),
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.paymentServicesAmount})`,
+      shareText: formatSharePercent(-atoms.paymentServicesAmount, cells.salesBase),
+    })
+  }
+  if (hasNonZero(atoms.storageAmount)) {
+    expenseItems.push({
+      label: STORAGE_LABEL,
+      value: -atoms.storageAmount,
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.storageAmount})`,
+      shareText: formatSharePercent(-atoms.storageAmount, cells.salesBase),
+    })
+  }
+  if (hasNonZero(atoms.finesAmount)) {
+    expenseItems.push({
+      label: FINES_LABEL,
+      value: -atoms.finesAmount,
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.finesAmount})`,
+      shareText: formatSharePercent(-atoms.finesAmount, cells.salesBase),
     })
   }
   if (hasNonZero(atoms.acceptanceOperationsAmount)) {
-    groupedByLabel.set(ACCEPTANCE_OPERATIONS_LABEL, {
+    expenseItems.push({
+      label: ACCEPTANCE_OPERATIONS_LABEL,
       value: -atoms.acceptanceOperationsAmount,
-      withSalesShare: true,
-      sourceLabels: new Set<string>(),
+      type: 'currency',
+      formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount})`,
+      shareText: formatSharePercent(-atoms.acceptanceOperationsAmount, cells.salesBase),
     })
   }
 
-  const groupMetrics: AccrualMetric[] = sortByAbsDesc(
-    Array.from(groupedByLabel.entries()).map(([label, data]) => [label, data.value] as [string, number]),
-  )
-    .filter(([label]) => label !== SALES_AND_RETURNS_GROUP_LABEL)
-    .map(([label, value]) => {
-      const data = groupedByLabel.get(label)!
-      if (label === WB_COMMISSION_LABEL) {
-        return {
-          label,
-          value,
-          type: 'currency',
-          formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.wbCommissionAmount,
-          shareText: formatSharePercent(value, cells.salesBase),
-        }
-      }
-      if (label === PAYMENT_SERVICES_LABEL) {
-        return {
-          label,
-          value,
-          type: 'currency',
-          formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.paymentServicesAmount})`,
-          shareText: formatSharePercent(value, cells.salesBase),
-        }
-      }
-      if (label === ACCEPTANCE_OPERATIONS_LABEL) {
-        return {
-          label,
-          value,
-          type: 'currency',
-          formula: `-(${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.acceptanceOperationsAmount})`,
-          shareText: formatSharePercent(value, cells.salesBase),
-        }
-      }
-
-      const sourceLabels = Array.from(data.sourceLabels)
-      const formula = buildWildberriesNetEffectSumFormula([buildReasonFilterFormula(sourceLabels)])
-
-      return {
-        label,
-        value,
-        type: 'currency',
-        formula,
-        shareText: data.withSalesShare ? formatSharePercent(value, cells.salesBase) : null,
-      }
+  const compensationItems: AccrualMetric[] = []
+  if (hasNonZero(atoms.voluntaryCompensation)) {
+    compensationItems.push({
+      label: VOLUNTARY_COMPENSATION_LABEL,
+      value: atoms.voluntaryCompensation,
+      type: 'currency',
+      formula: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.voluntaryCompensation,
+      shareText: formatSharePercent(atoms.voluntaryCompensation, cells.salesBase),
     })
+  }
+  if (hasNonZero(atoms.discountCompensation)) {
+    compensationItems.push({
+      label: DISCOUNT_COMPENSATION_LABEL,
+      value: atoms.discountCompensation,
+      type: 'currency',
+      formula: WILDBERRIES_ACCRUAL_ATOM_FORMULAS.discountCompensation,
+      shareText: formatSharePercent(atoms.discountCompensation, cells.salesBase),
+    })
+  }
 
-  groupMetrics.push({
-    label: 'Итог',
-    value: -Math.abs(cells.marketplaceExpenses),
-    type: 'currency',
-    formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.marketplaceExpenses,
-    shareText: formatSharePercent(cells.marketplaceExpenses, cells.salesBase),
-  })
-  return groupMetrics
+  const marketplaceExpensesGross = cells.marketplaceExpenses
+  const marketplaceCompensations = atoms.voluntaryCompensation + atoms.discountCompensation
+  const marketplaceExpensesNet = marketplaceExpensesGross - marketplaceCompensations
+
+  const reorderedMetrics: AccrualMetric[] = [
+    ...sortByAbsDesc(expenseItems.map((m) => [m.label, m.value] as [string, number])).map(([label]) =>
+      expenseItems.find((m) => m.label === label)!,
+    ),
+    {
+      label: TOTAL_EXPENSES_LABEL,
+      value: -Math.abs(marketplaceExpensesGross),
+      type: 'currency',
+      formula: WILDBERRIES_ACCRUAL_CELL_FORMULAS.marketplaceExpenses,
+      shareText: formatSharePercent(marketplaceExpensesGross, cells.salesBase),
+    },
+    ...compensationItems,
+    {
+      label: TOTAL_COMPENSATIONS_LABEL,
+      value: marketplaceCompensations,
+      type: 'currency',
+      formula: `${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.voluntaryCompensation} + ${WILDBERRIES_ACCRUAL_ATOM_FORMULAS.discountCompensation}`,
+      shareText: formatSharePercent(marketplaceCompensations, cells.salesBase),
+    },
+    {
+      label: TOTAL_NET_LABEL,
+      value: -Math.abs(marketplaceExpensesNet),
+      type: 'currency',
+      formula: `${TOTAL_EXPENSES_LABEL} + ${TOTAL_COMPENSATIONS_LABEL}`,
+      shareText: formatSharePercent(marketplaceExpensesNet, cells.salesBase),
+    },
+  ]
+  return reorderedMetrics
 }
 
 /**
