@@ -218,6 +218,8 @@ function parseWildberriesRowsFromTable(
   table: CsvTable,
   articlePattern: string,
   excludePattern: boolean,
+  priceMin: number | null = null,
+  priceMax: number | null = null,
 ): WbRow[] {
   assertCsvColumns(table, [
     WB_BASE_COLUMNS.article,
@@ -256,6 +258,14 @@ function parseWildberriesRowsFromTable(
     .filter((row) => {
       const article = normalize(table.getCell(row, WB_BASE_COLUMNS.article))
       return isArticleIncludedByPattern(article, articlePattern, excludePattern)
+    })
+    .filter((row) => {
+      if (priceMin === null && priceMax === null) return true
+      const retailPrice = parseNumber(table.getCell(row, WB_REVENUE_COLUMNS.retailPriceWithDiscount))
+      if (retailPrice === null) return false
+      if (priceMin !== null && retailPrice < priceMin) return false
+      if (priceMax !== null && retailPrice > priceMax) return false
+      return true
     })
     .map((row) => ({
       article: normalize(table.getCell(row, WB_BASE_COLUMNS.article)),
@@ -783,6 +793,8 @@ export function buildWildberriesAccrualReports(
   cogsByArticleMap: CogsByArticleMap | null = null,
   cogsMatchingMode: CogsMatchingMode = 'full',
   excludePattern = false,
+  priceMin: number | null = null,
+  priceMax: number | null = null,
 ): AccrualGroup[] {
   const rows = parseCsv(stripBom(rawCsv), WB_CSV_LAYOUT.delimiter)
   const headerIndex = rows.findIndex(
@@ -794,7 +806,7 @@ export function buildWildberriesAccrualReports(
   }
 
   const table = createCsvTable(rows, headerIndex)
-  const parsedRows = parseWildberriesRowsFromTable(table, articlePattern, excludePattern)
+  const parsedRows = parseWildberriesRowsFromTable(table, articlePattern, excludePattern, priceMin, priceMax)
   const aggregate = aggregateWildberriesAccrualRows(parsedRows, cogsByArticleMap, cogsMatchingMode)
 
   return buildWildberriesAccrualReportGroups(aggregate, vatRatePercent, taxRatePercent)

@@ -335,7 +335,9 @@ export function AccrualResults({
   const wildberriesPeriodRange = isWildberries
     ? parseDateRangeFromPeriodLabel(totalsReport?.periodLabel)
     : null
+  console.log('showAccrualOverview', showAccrualOverview)
   const overviewModel = showAccrualOverview ? buildOverviewModel(reports) : null
+  console.log('overviewModel', overviewModel)
   const salesAbsSum = overviewModel
     ? overviewModel.salesItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
     : 0
@@ -352,7 +354,7 @@ export function AccrualResults({
             <Typography
               variant="h2"
               color="primary"
-              className={getValueClassName(Math.abs(overviewModel.salesTotalValue))}
+              className={getValueClassName(overviewModel.salesTotalValue)}
             >
               {formatOverviewCurrency(overviewModel.salesTotalValue)}
             </Typography>

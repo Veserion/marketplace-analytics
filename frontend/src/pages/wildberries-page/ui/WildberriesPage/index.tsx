@@ -36,12 +36,16 @@ export function WildberriesPage() {
     onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    priceMin,
+    priceMax,
     removeWeeklyReport,
     reports,
     setArticlePattern,
     setIsArticlePatternExclude,
     setIsExtraParamsOpen,
     setCogsMatchingMode,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     topProducts,
     vatRatePercent,
@@ -83,12 +87,16 @@ export function WildberriesPage() {
         accrualArticlePattern={articlePattern}
         accrualArticlePatternExclude={isArticlePatternExclude}
         cogsMatchingMode={cogsMatchingMode}
+        priceMin={priceMin}
+        priceMax={priceMax}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
         onAccrualArticlePatternChange={setArticlePattern}
         onAccrualArticlePatternExcludeChange={setIsArticlePatternExclude}
         onCogsMatchingModeChange={setCogsMatchingMode}
+        onPriceMinChange={setPriceMin}
+        onPriceMaxChange={setPriceMax}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}
       />

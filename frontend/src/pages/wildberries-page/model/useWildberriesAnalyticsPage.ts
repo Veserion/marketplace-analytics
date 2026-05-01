@@ -191,6 +191,8 @@ export function useWildberriesAnalyticsPage() {
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
+  const [priceMin, setPriceMin] = useState<number | null>(null)
+  const [priceMax, setPriceMax] = useState<number | null>(null)
 
   const csvSource = useMemo(() => {
     const readyTexts = weeklyReports
@@ -246,6 +248,8 @@ export function useWildberriesAnalyticsPage() {
           cogsByArticleMap,
           cogsMatchingMode,
           isArticlePatternExclude,
+          priceMin,
+          priceMax,
         ),
         error: '',
       }
@@ -255,7 +259,7 @@ export function useWildberriesAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось построить отчёт Wildberries.',
       }
     }
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent, isArticlePatternExclude])
+  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude, priceMax, priceMin, taxRatePercent, vatRatePercent])
 
   const reports = reportBuild.reports
   const error = uploadError || reportBuild.error
@@ -516,12 +520,16 @@ export function useWildberriesAnalyticsPage() {
     onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    priceMin,
+    priceMax,
     removeWeeklyReport,
     reports,
     setArticlePattern,
     setIsArticlePatternExclude,
     setIsExtraParamsOpen,
     setCogsMatchingMode,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     topProducts,
     vatRatePercent,

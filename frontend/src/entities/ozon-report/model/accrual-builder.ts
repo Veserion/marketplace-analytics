@@ -290,7 +290,7 @@ function buildOzonAccrualReportGroups(
   const tax11 = amountBeforeSpp * totalTaxRate
   const cogsForNetProfit = aggregate.cogsFromUnitMap ?? 0
   const netProfit = aggregate.total - tax11 - cogsForNetProfit
-  const marginRate = revenueByStore !== 0 ? (netProfit / revenueByStore) * 100 : null
+  const marginRate = amountBeforeSpp !== 0 ? (netProfit / amountBeforeSpp) * 100 : null
   const groupMetrics = buildOzonGroupedExpenseMetrics(
     aggregate.sumByGroup,
     aggregate.marketplaceExpenses,
@@ -363,7 +363,7 @@ function buildOzonAccrualReportGroups(
           label: 'Маржинальность',
           value: marginRate,
           type: 'percent',
-          formula: 'Чистая прибыль / Выручка без СПП * 100%',
+          formula: 'Чистая прибыль / Выручка с учетом СПП * 100%',
         },
         {
           label: 'Чистая прибыль',
@@ -413,6 +413,8 @@ export function buildAccrualReports(
   cogsByArticleMap: Map<string, number> | null = null,
   articlePattern = '*',
   excludePattern = false,
+  priceMin: number | null = null,
+  priceMax: number | null = null,
 ): AccrualGroup[] {
   const rows = parseCsv(stripBom(rawCsv), OZON_CSV_LAYOUT.delimiter)
   const headerIndex = findHeaderRowIndex(rows, [
@@ -434,11 +436,23 @@ export function buildAccrualReports(
     OZON_ACCRUAL_COLUMNS.serviceGroup,
     OZON_ACCRUAL_COLUMNS.accrualDate,
   ], 'начислений Ozon')
-  const dataRows = table.dataRows.filter((row) => isArticleIncludedByPattern(
+  let dataRows = table.dataRows.filter((row) => isArticleIncludedByPattern(
     normalize(table.getCell(row, OZON_ACCRUAL_COLUMNS.article)),
     articlePattern,
     excludePattern,
   ))
+
+  if (priceMin !== null || priceMax !== null) {
+    dataRows = dataRows.filter((row) => {
+      const typeLower = normalizeLower(table.getCell(row, OZON_ACCRUAL_COLUMNS.accrualType))
+      if (typeLower !== 'выручка') return true
+      const amount = parseNumber(table.getCell(row, OZON_ACCRUAL_COLUMNS.amount))
+      if (amount === null) return false
+      if (priceMin !== null && amount < priceMin) return false
+      if (priceMax !== null && amount > priceMax) return false
+      return true
+    })
+  }
   const aggregate = aggregateOzonAccrualRows(dataRows, table, cogsByArticleMap)
 
   return buildOzonAccrualReportGroups(aggregate, vatRatePercent, taxRatePercent)

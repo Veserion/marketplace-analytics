@@ -37,11 +37,15 @@ export function AnalyticsPage() {
     onTaxRateChange,
     onVatRateChange,
     ozonCalculationType,
+    priceMin,
+    priceMax,
     setArticlePattern,
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     unitReports,
     vatRatePercent,
@@ -72,6 +76,8 @@ export function AnalyticsPage() {
         accrualArticlePattern={accrualArticlePattern}
         unitArticlePatternExclude={isUnitArticlePatternExclude}
         accrualArticlePatternExclude={isAccrualArticlePatternExclude}
+        priceMin={priceMin}
+        priceMax={priceMax}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
@@ -79,6 +85,8 @@ export function AnalyticsPage() {
         onAccrualArticlePatternChange={setAccrualArticlePattern}
         onUnitArticlePatternExcludeChange={setIsUnitArticlePatternExclude}
         onAccrualArticlePatternExcludeChange={setIsAccrualArticlePatternExclude}
+        onPriceMinChange={setPriceMin}
+        onPriceMaxChange={setPriceMax}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}
       />
