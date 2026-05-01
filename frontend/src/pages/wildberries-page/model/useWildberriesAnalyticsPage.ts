@@ -408,15 +408,18 @@ export function useWildberriesAnalyticsPage() {
 
   useEffect(() => {
     let isCancelled = false
+    const slotCount = WB_WEEKLY_SLOTS.length
     Promise.all([
       ...WB_WEEKLY_SLOTS.map((slot) => getCsvRecord(slot)),
       getCsvRecord('wildberriesCogs'),
       getCsvRecord('ozonCogs'),
     ])
-      .then(([slot1, slot2, slot3, slot4, wbCogsRecord, ozonCogsRecord]) => {
+      .then((results) => {
         if (isCancelled) return
 
-        const slotRecords = [slot1, slot2, slot3, slot4]
+        const slotRecords = results.slice(0, slotCount)
+        const wbCogsRecord = results[slotCount]
+        const ozonCogsRecord = results[slotCount + 1]
         const loadedReports: WbUploadedReport[] = []
 
         for (let i = 0; i < slotRecords.length; i++) {
