@@ -14,10 +14,14 @@ export async function buildApp() {
     logger: true,
   })
 
-  await app.register(helmet)
+  await app.register(helmet, {
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+  })
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'POST', 'DELETE'],
   })
 
   app.setErrorHandler((error, request, reply) => {
