@@ -9,7 +9,7 @@ import {useWildberriesAnalyticsPage} from '@/pages/wildberries-page/model/useWil
 import {UiCard} from '@/shared/ui-kit/card'
 import {UiFlex} from '@/shared/ui-kit/flex'
 import {InfoTooltip} from '@/shared/ui-kit/tooltip'
-import {UiPanel} from '@/shared/ui-kit/panel'
+import {UiAccordion} from '@/shared/ui-kit/accordion'
 import {Typography} from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -101,7 +101,12 @@ export function WildberriesPage() {
         onTaxRateChange={onTaxRateChange}
       />
 
-      <UiPanel title="Загрузка файла">
+      <UiAccordion title={(
+          <Typography as="span" variant="h3" color="accent">
+            Загрузка файла
+          </Typography>
+        )}
+        defaultOpen contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
         <UiCard padding="sm">
           <WbWeeklyReportManager
             weeklyReports={weeklyReports}
@@ -197,7 +202,7 @@ export function WildberriesPage() {
             )}
           </UiFlex>
         </UiCard>
-      </UiPanel>
+      </UiAccordion>
 
       {reports && (
         <Suspense fallback={null}>

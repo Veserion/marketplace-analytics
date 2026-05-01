@@ -4,6 +4,12 @@
   gap: 10px;
 }
 
+.ReportUploadPanel__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .ReportUploadPanel__upload-card {
   border: 1px solid var(--color-border-muted);
   border-radius: 12px;
