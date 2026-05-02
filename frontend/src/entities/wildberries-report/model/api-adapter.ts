@@ -8,89 +8,70 @@ import { normalize, parseNumber } from '@/shared/lib/csv'
  * Числовые поля API приходят как строки (например "47.43"), адаптер преобразует их в числа.
  *
  * Таблица сопоставления CSV ↔ API: wb-csv-to-api-fields.md
+ *
+ * Используемые поля для расчёта метрик:
+ * - vendorCode → article
+ * - docTypeName → documentType
+ * - sellerOperName → reason
+ * - saleDt → salesDate
+ * - deliveryMethod → salesMethod
+ * - officeName → warehouse
+ * - orderUid → basketId
+ * - srid → srid
+ * - bonusTypeName → logisticsKind
+ * - quantity → quantity
+ * - returnAmount → returnCount
+ * - deliveryAmount → deliveryCount
+ * - retailPrice → retailPrice
+ * - retailPriceWithDisc → retailPriceWithDiscount
+ * - retailAmount → sellerRealized
+ * - forPay → payout
+ * - deliveryService → logisticsCost
+ * - commissionPercent → wbCommissionRate
+ * - vw → wbCommission
+ * - acquiringFee → paymentServicesCommission
+ * - ppvzReward → pvzCompensation
+ * - rebillLogisticCost → transportReimbursement
+ * - paidStorage → storageCost
+ * - deduction → withholdings
+ * - paidAcceptance → acceptanceOperations
+ * - penalty → fines
+ * - additionalPayment → vvCorrection
+ * - cashbackDiscount → loyaltyCompensation
+ * - cashbackCommissionChange → loyaltyProgramCost
+ * - cashbackAmount → loyaltyPointsWithheld
  */
 export type WbApiReportRow = {
-  rrdId: number | null
-  giId: number | null
-  subjectName: string | null
-  nmId: number | null
-  brandName: string | null
   vendorCode: string | null
-  title: string | null
-  techSize: string | null
-  sku: number | null
   docTypeName: string | null
   sellerOperName: string | null
-  orderDt: string | null
   saleDt: string | null
-  quantity: number | null
-  retailPrice: string | null
-  retailAmount: string | null
-  productDiscountForReport: number | null
-  sellerPromo: number | null
-  salePercent: number | null
-  retailPriceWithDisc: string | null
-  supRatingUp: number | null
-  isKgvpV2: number | null
-  spp: number | null
-  commissionPercent: number | null
-  kvwBase: number | null
-  kvw: number | null
-  ppvzSalesCommission: string | null
-  ppvzReward: string | null
-  acquiringFee: string | null
-  acquiringPercent: number | null
-  paymentProcessing: string | null
-  vw: string | null
-  vwNds: string | null
-  forPay: string | null
-  deliveryAmount: number | null
-  returnAmount: number | null
-  deliveryService: string | null
-  fixTariffDateFrom: string | null
-  fixTariffDateTo: string | null
-  dlvPrc: number | null
-  penalty: string | null
-  additionalPayment: string | null
-  bonusTypeName: string | null
-  stickerId: string | null
-  acquiringBank: string | null
-  ppvzOfficeId: number | null
-  ppvzOfficeName: string | null
-  ppvzSupplierName: string | null
-  ppvzSupplierInn: string | null
+  deliveryMethod: string | null
   officeName: string | null
-  country: string | null
-  giBoxTypeName: string | null
-  declarationNumber: string | null
-  orderId: number | null
-  kiz: string | null
-  shkId: number | null
+  orderUid: string | null
   srid: string | null
+  bonusTypeName: string | null
+  quantity: number | null
+  returnAmount: number | null
+  deliveryAmount: number | null
+  retailPrice: string | null
+  retailPriceWithDisc: string | null
+  retailAmount: string | null
+  forPay: string | null
+  deliveryService: string | null
+  commissionPercent: number | null
+  vw: string | null
+  acquiringFee: string | null
+  ppvzReward: string | null
   rebillLogisticCost: string | null
-  rebillLogisticOrg: string | null
   paidStorage: string | null
   deduction: string | null
   paidAcceptance: string | null
-  isB2b: boolean | null
-  trbxId: string | null
-  installmentCofinancingAmount: string | null
-  wibesDiscountPercent: number | null
-  cashbackDiscount: number | null
+  penalty: string | null
+  additionalPayment: string | null
+  cashbackDiscount: string | null
   cashbackCommissionChange: string | null
   cashbackAmount: string | null
-  orderUid: string | null
-  paymentSchedule: string | null
-  sellerPromoId: number | null
-  sellerPromoDiscount: number | null
-  deliveryMethod: string | null
-  loyaltyId: number | null
-  loyaltyDiscount: number | null
-  uuidPromocode: string | null
-  salePricePromocodeDiscountPrc: number | null
-  articleSubstitution: string | null
-  salePriceAffiliatedDiscountPrc: number | null
-  salePriceWholesaleDiscountPrc: number | null
 }
 
 /**
@@ -148,7 +129,7 @@ export function mapWbApiRowToAccrualRow(api: WbApiReportRow): WildberriesAccrual
     acceptanceOperations: parseNumber(api.paidAcceptance) ?? 0,
     fines: parseNumber(api.penalty) ?? 0,
     vvCorrection: parseNumber(api.additionalPayment) ?? 0,
-    loyaltyCompensation: api.cashbackDiscount ?? 0,
+    loyaltyCompensation: parseNumber(api.cashbackDiscount) ?? 0,
     loyaltyProgramCost: parseNumber(api.cashbackCommissionChange) ?? 0,
     loyaltyPointsWithheld: parseNumber(api.cashbackAmount) ?? 0,
   }

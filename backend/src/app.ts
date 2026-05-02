@@ -8,6 +8,7 @@ import { MailDeliveryError } from './lib/mailer.js'
 import { authRoutes } from './modules/auth/routes.js'
 import { connectionRoutes } from './modules/connections/routes.js'
 import { meRoutes } from './modules/me/routes.js'
+import { wbFinanceRoutes } from './modules/wb-finance/routes.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -54,6 +55,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api' })
   await app.register(meRoutes, { prefix: '/api' })
   await app.register(connectionRoutes, { prefix: '/api' })
+  await app.register(wbFinanceRoutes, { prefix: '/api' })
 
   return app
 }

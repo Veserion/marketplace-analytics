@@ -1,7 +1,6 @@
 import classNames from 'classnames/bind'
 import DatePicker from 'antd/es/date-picker'
 import Button from 'antd/es/button'
-import Alert from 'antd/es/alert'
 import {useState, useMemo} from 'react'
 import type {Dayjs} from 'dayjs'
 import dayjs from 'dayjs'
@@ -147,12 +146,20 @@ export function PeriodSelectionPanel({
         <Typography variant="h4" color="accent" className={cn(`${BLOCK_NAME}__title`)}>
           Выберите период
         </Typography>
-        <Alert
-          type="success"
-          showIcon
-          message="Отчёт получен через API"
-          className={cn(`${BLOCK_NAME}__success-alert`)}
-        />
+        <UiCard
+          className={cn(`${BLOCK_NAME}__success-card`)}
+          padding="sm"
+          style={{background: 'var(--color-success-bg)', borderColor: 'var(--color-success-border)'}}
+        >
+          <UiFlex align="center" gap={8}>
+            <span className={cn(`${BLOCK_NAME}__success-icon`)}>
+              ✓
+            </span>
+            <Typography variant="body3" color="positive">
+              Отчёт получен через API
+            </Typography>
+          </UiFlex>
+        </UiCard>
         <Typography variant="body3" color="muted">
           Период аналитики: {startFormatted} – {endFormatted}
         </Typography>
@@ -218,7 +225,20 @@ export function PeriodSelectionPanel({
       </Typography>
 
       {(validationError || fetchError) && (
-        <Alert type="error" showIcon message={validationError || fetchError} className={cn(`${BLOCK_NAME}__error`)} />
+        <UiCard
+          className={cn(`${BLOCK_NAME}__error-card`)}
+          padding="sm"
+          style={{background: 'var(--color-error-bg)', borderColor: 'var(--color-error-border)'}}
+        >
+          <UiFlex align="center" gap={8}>
+            <span className={cn(`${BLOCK_NAME}__error-icon`)}>
+              ✕
+            </span>
+            <Typography variant="body3" color="negative">
+              {validationError || fetchError}
+            </Typography>
+          </UiFlex>
+        </UiCard>
       )}
 
       <Button

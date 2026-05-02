@@ -69,6 +69,38 @@
   margin-top: 2px;
 }
 
-.PeriodSelectionPanel__success-alert {
+.PeriodSelectionPanel__success-card {
   border-radius: 8px;
+  margin: 2px 0;
+}
+
+.PeriodSelectionPanel__success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-positive);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.PeriodSelectionPanel__error-card {
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+.PeriodSelectionPanel__error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-negative);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
 }

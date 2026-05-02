@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
@@ -202,9 +203,9 @@ export function useWildberriesAnalyticsPage() {
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
   const [priceMin, setPriceMin] = useState<number | null>(null)
   const [priceMax, setPriceMax] = useState<number | null>(null)
+  const [apiReportDateRange, setApiReportDateRange] = useState<{dateFrom: string; dateTo: string} | null>(null)
   const [apiReportData, setApiReportData] = useState<unknown[] | null>(null)
   const [apiReportPeriod, setApiReportPeriod] = useState<{dateFrom: string, dateTo: string} | null>(null)
-  const [isApiReportFetching, setIsApiReportFetching] = useState(false)
   const [apiReportError, setApiReportError] = useState('')
   const [apiAccrualRows, setApiAccrualRows] = useState<WildberriesAccrualRow[] | null>(null)
   const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
@@ -321,13 +322,11 @@ export function useWildberriesAnalyticsPage() {
 
   const { session } = useAuth()
 
-  const onFetchApiReport = useCallback(async (dateFrom: string, dateTo: string): Promise<void> => {
-    if (!session) return
+  const wbApiQuery = useQuery({
+    queryKey: ['wb-finance-report', apiReportDateRange],
+    queryFn: async () => {
+      if (!session || !apiReportDateRange) throw new Error('No session or date range')
 
-    setApiReportError('')
-    setIsApiReportFetching(true)
-
-    try {
       const response = await apiRequest<{
         data: unknown[]
         total: number
@@ -335,29 +334,82 @@ export function useWildberriesAnalyticsPage() {
       }>('/wb-finance/sales-reports/detailed', {
         token: session.token,
         method: 'POST',
-        body: JSON.stringify({ dateFrom, dateTo }),
+        body: JSON.stringify({
+          dateFrom: apiReportDateRange.dateFrom,
+          dateTo: apiReportDateRange.dateTo,
+          fields: [
+            'vendorCode',
+            'docTypeName',
+            'sellerOperName',
+            'saleDt',
+            'deliveryMethod',
+            'officeName',
+            'orderUid',
+            'srid',
+            'bonusTypeName',
+            'quantity',
+            'returnAmount',
+            'deliveryAmount',
+            'retailPrice',
+            'retailPriceWithDisc',
+            'retailAmount',
+            'forPay',
+            'deliveryService',
+            'commissionPercent',
+            'vw',
+            'acquiringFee',
+            'ppvzReward',
+            'rebillLogisticCost',
+            'paidStorage',
+            'deduction',
+            'paidAcceptance',
+            'penalty',
+            'additionalPayment',
+            'cashbackDiscount',
+            'cashbackCommissionChange',
+            'cashbackAmount',
+          ],
+        }),
       })
 
-      setApiReportData(response.data)
-      setApiReportPeriod(response.period)
+      return response
+    },
+    enabled: !!session && !!apiReportDateRange,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Update state when query data changes
+  useEffect(() => {
+    if (wbApiQuery.data) {
+      setApiReportData(wbApiQuery.data.data)
+      setApiReportPeriod(wbApiQuery.data.period)
 
       // Convert API data to accrual rows for the analytics flow
-      const apiRows = mapWbApiRowsToAccrualRows(response.data as WbApiReportRow[])
+      const apiRows = mapWbApiRowsToAccrualRows(wbApiQuery.data.data as WbApiReportRow[])
       setApiAccrualRows(apiRows)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Не удалось получить отчёт через API'
-      setApiReportError(errorMessage)
-    } finally {
-      setIsApiReportFetching(false)
     }
-  }, [session])
+  }, [wbApiQuery.data])
+
+  // Update error state when query error changes
+  useEffect(() => {
+    if (wbApiQuery.error) {
+      const errorMessage = wbApiQuery.error instanceof Error ? wbApiQuery.error.message : 'Не удалось получить отчёт через API'
+      setApiReportError(errorMessage)
+    }
+  }, [wbApiQuery.error])
+
+  const onFetchApiReport = useCallback((dateFrom: string, dateTo: string): void => {
+    setApiReportError('')
+    setApiReportDateRange({ dateFrom, dateTo })
+  }, [])
 
   const onResetApiReport = useCallback((): void => {
+    setApiReportDateRange(null)
     setApiReportData(null)
     setApiReportPeriod(null)
     setApiReportError('')
     setApiAccrualRows(null)
-  }, [])
+    }, [])
 
   const addWeeklyReport = useCallback(async (file: File, replaceId?: string): Promise<{ duplicate?: WbUploadedReport; added: boolean }> => {
     setUploadError('')
@@ -604,7 +656,7 @@ export function useWildberriesAnalyticsPage() {
     isUploadAccordionOpen,
     setIsUploadAccordionOpen,
     isMarketplaceConnected,
-    isApiReportFetching,
+    isApiReportFetching: wbApiQuery.isFetching,
     apiReportData,
     apiReportPeriod,
     apiReportError,
