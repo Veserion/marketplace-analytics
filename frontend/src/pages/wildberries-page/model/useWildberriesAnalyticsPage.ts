@@ -328,15 +328,18 @@ export function useWildberriesAnalyticsPage() {
       if (!session || !apiReportDateRange) throw new Error('No session or date range')
 
       const response = await apiRequest<{
-        data: unknown[]
-        total: number
-        period: { dateFrom: string; dateTo: string }
+        requestedPeriod: { from: string; to: string }
+        availablePeriod: { from: string; to: string }
+        loadedWeeklyReports: Array<{ id: string; periodFrom: string; periodTo: string; source: string }>
+        rowsCount: number
+        fields: string[]
+        rows: unknown[]
       }>('/wb-finance/sales-reports/detailed', {
         token: session.token,
         method: 'POST',
         body: JSON.stringify({
-          dateFrom: apiReportDateRange.dateFrom,
-          dateTo: apiReportDateRange.dateTo,
+          periodFrom: apiReportDateRange.dateFrom,
+          periodTo: apiReportDateRange.dateTo,
           fields: [
             'vendorCode',
             'docTypeName',
@@ -381,11 +384,14 @@ export function useWildberriesAnalyticsPage() {
   // Update state when query data changes
   useEffect(() => {
     if (wbApiQuery.data) {
-      setApiReportData(wbApiQuery.data.data)
-      setApiReportPeriod(wbApiQuery.data.period)
+      setApiReportData(wbApiQuery.data.rows)
+      setApiReportPeriod({
+        dateFrom: wbApiQuery.data.availablePeriod.from,
+        dateTo: wbApiQuery.data.availablePeriod.to,
+      })
 
       // Convert API data to accrual rows for the analytics flow
-      const apiRows = mapWbApiRowsToAccrualRows(wbApiQuery.data.data as WbApiReportRow[])
+      const apiRows = mapWbApiRowsToAccrualRows(wbApiQuery.data.rows as WbApiReportRow[])
       setApiAccrualRows(apiRows)
     }
   }, [wbApiQuery.data])
