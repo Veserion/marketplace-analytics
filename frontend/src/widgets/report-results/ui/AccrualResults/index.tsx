@@ -229,15 +229,9 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
 
-  const groupedRevenueAdjustments = groupedReport.metrics
-    .filter((metric) =>
-      POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
-      && metric.value !== null)
-
   const sppAndPromotionsValue = sppAndPromotions?.value || 0
   const revenueWithoutSppValue = revenueWithoutSpp?.value || 0
-  const adjustmentSum = groupedRevenueAdjustments.reduce((acc, metric) => acc + (metric.value || 0), 0)
-  const salesTotalValue = revenueWithoutSppValue + sppAndPromotionsValue + adjustmentSum
+  const salesTotalValue = revenueWithoutSppValue + sppAndPromotionsValue
 
   const baseSalesItems: OverviewItem[] = [
     {
@@ -254,15 +248,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
     },
   ]
 
-  const salesItems: OverviewItem[] = [
-    ...baseSalesItems,
-    ...groupedRevenueAdjustments.map((metric, index) => ({
-      label: metric.label,
-      value: metric.value || 0,
-      formula: metric.formula,
-      color: getOverviewColor(baseSalesItems.length + index),
-    })),
-  ]
+  const salesItems: OverviewItem[] = baseSalesItems
 
   const groupedItems = groupedReport.metrics
     .filter((metric) =>
@@ -270,14 +256,16 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       && metric.label !== RETURNS_LABEL
       && metric.label !== GROUPED_TOTAL_LABEL
       && !GROUPED_SUBTOTAL_LABELS.has(metric.label)
-      && !POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
-    .map((metric, index) => ({
-      label: metric.label,
-      value: metric.value || 0,
-      formula: metric.formula,
-      color: getOverviewColor(index + 2),
-    }))
+    .map((metric, index) => {
+      const isCompensation = POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
+      return {
+        label: metric.label,
+        value: isCompensation ? Math.abs(metric.value || 0) : -Math.abs(metric.value || 0),
+        formula: metric.formula,
+        color: getOverviewColor(index + 2),
+      }
+    })
 
   const accrualItems = groupedItems.slice(0, MAX_OVERVIEW_ITEMS)
   if (groupedItems.length > MAX_OVERVIEW_ITEMS) {
