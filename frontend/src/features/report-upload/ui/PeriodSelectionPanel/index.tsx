@@ -56,6 +56,7 @@ type PeriodSelectionPanelProps = {
   fetchedPeriodEnd?: string | null
   fetchedRowCount?: number | null
   fetchError?: string
+  rateLimitRetryAfter?: number | null
   onFetchReport?: (dateFrom: string, dateTo: string) => void
   onReset?: () => void
 }
@@ -67,6 +68,7 @@ export function PeriodSelectionPanel({
   fetchedPeriodEnd,
   fetchedRowCount,
   fetchError,
+  rateLimitRetryAfter,
   onFetchReport,
   onReset,
 }: PeriodSelectionPanelProps) {
@@ -236,6 +238,12 @@ export function PeriodSelectionPanel({
             </span>
             <Typography variant="body3" color="negative">
               {validationError || fetchError}
+              {rateLimitRetryAfter != null && (
+                <>
+                  {' '}
+                  Повторная попытка через {rateLimitRetryAfter} сек.
+                </>
+              )}
             </Typography>
           </UiFlex>
         </UiCard>

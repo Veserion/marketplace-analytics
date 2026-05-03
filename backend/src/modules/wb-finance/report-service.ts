@@ -3,7 +3,11 @@ import { WbReportStatus, WbReportType } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import { decryptCredentials } from '../../lib/credentials.js'
 import type { WbCredentials } from './routes.js'
-import { fetchWbApiWeeklyReport, type WbApiReportRow } from './wb-api.js'
+import {
+  fetchWbApiWeeklyReport,
+  WbApiRateLimitError,
+  type WbApiReportRow,
+} from './wb-api.js'
 import {
   dedupeRows,
   generateReportFileName,
@@ -333,6 +337,14 @@ export class WbReportService {
         error,
         errorMessage: error instanceof Error ? error.message : String(error),
       }, 'Failed to load weekly report from WB API')
+
+      // If it's a rate limit error, add rate limit info to the error
+      if (error instanceof WbApiRateLimitError) {
+        const rateLimitError = new Error(error.message) as Error & { rateLimit?: typeof error.rateLimit }
+        rateLimitError.rateLimit = error.rateLimit
+        throw rateLimitError
+      }
+
       throw error
     }
   }

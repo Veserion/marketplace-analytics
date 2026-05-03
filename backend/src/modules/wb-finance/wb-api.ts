@@ -9,6 +9,24 @@ export interface WbApiResponse {
   }
 }
 
+export interface WbApiRateLimitInfo {
+  retryAfter?: number
+  limit?: number
+  reset?: number
+}
+
+export class WbApiRateLimitError extends Error {
+  status: number
+  rateLimit?: WbApiRateLimitInfo
+
+  constructor(message: string, rateLimit?: WbApiRateLimitInfo) {
+    super(message)
+    this.name = 'WbApiRateLimitError'
+    this.status = 429
+    this.rateLimit = rateLimit
+  }
+}
+
 export interface WbApiReportRow {
   rrdId?: number
   docTypeName?: string
@@ -70,6 +88,15 @@ export async function fetchWbApiPage(
   if (!response.ok) {
     if (response.status === 204) {
       return { rows: [], lastRrdId: null, hasMore: false }
+    }
+    if (response.status === 429) {
+      const rateLimit: WbApiRateLimitInfo = {
+        retryAfter: response.headers.get('X-Ratelimit-Retry') ? parseInt(response.headers.get('X-Ratelimit-Retry')!, 10) : undefined,
+        limit: response.headers.get('X-Ratelimit-Limit') ? parseInt(response.headers.get('X-Ratelimit-Limit')!, 10) : undefined,
+        reset: response.headers.get('X-Ratelimit-Reset') ? parseInt(response.headers.get('X-Ratelimit-Reset')!, 10) : undefined,
+      }
+      const errorText = await response.text()
+      throw new WbApiRateLimitError(`WB Finance API rate limit exceeded: ${errorText}`, rateLimit)
     }
     const errorText = await response.text()
     throw new Error(`WB Finance API error: ${response.status} - ${errorText}`)

@@ -207,6 +207,7 @@ export function useWildberriesAnalyticsPage() {
   const [apiReportData, setApiReportData] = useState<unknown[] | null>(null)
   const [apiReportPeriod, setApiReportPeriod] = useState<{dateFrom: string, dateTo: string} | null>(null)
   const [apiReportError, setApiReportError] = useState('')
+  const [rateLimitRetryAfter, setRateLimitRetryAfter] = useState<number | null>(null)
   const [apiAccrualRows, setApiAccrualRows] = useState<WildberriesAccrualRow[] | null>(null)
   const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
@@ -402,8 +403,36 @@ export function useWildberriesAnalyticsPage() {
     if (wbApiQuery.error) {
       const errorMessage = wbApiQuery.error instanceof Error ? wbApiQuery.error.message : 'Не удалось получить отчёт через API'
       setApiReportError(errorMessage)
+
+      // Check if it's a rate limit error
+      const apiError = wbApiQuery.error as Error & { rateLimit?: { retryAfter?: number } }
+      if (apiError.rateLimit?.retryAfter) {
+        setRateLimitRetryAfter(apiError.rateLimit.retryAfter)
+      }
     }
   }, [wbApiQuery.error])
+
+  // Countdown timer for rate limit retry
+  useEffect(() => {
+    if (rateLimitRetryAfter === null) return
+
+    const timer = setInterval(() => {
+      setRateLimitRetryAfter((prev) => {
+        if (prev === null || prev <= 1) {
+          // Auto-retry when countdown reaches zero
+          if (apiReportDateRange) {
+            setApiReportError('')
+            // Trigger a refetch by invalidating the query
+            wbApiQuery.refetch()
+          }
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [rateLimitRetryAfter, apiReportDateRange, wbApiQuery])
 
   const onFetchApiReport = useCallback((dateFrom: string, dateTo: string): void => {
     setApiReportError('')
@@ -667,6 +696,7 @@ export function useWildberriesAnalyticsPage() {
     apiReportData,
     apiReportPeriod,
     apiReportError,
+    rateLimitRetryAfter,
     onFetchApiReport,
     onResetApiReport,
     missingCogsArticles,

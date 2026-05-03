@@ -6,11 +6,13 @@ type ApiRequestOptions = RequestInit & {
 
 export class ApiError extends Error {
   status: number
+  rateLimit?: { retryAfter?: number; limit?: number; reset?: number }
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, rateLimit?: { retryAfter?: number; limit?: number; reset?: number }) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.rateLimit = rateLimit
   }
 }
 
@@ -30,10 +32,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const payload = await response.json().catch(() => null) as { error?: string } | T | null
 
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'error' in payload && payload.error
-      ? payload.error
-      : 'Не удалось выполнить запрос.'
-    throw new ApiError(message, response.status)
+    const errorPayload = payload as { error?: string; message?: string; rateLimit?: { retryAfter?: number; limit?: number; reset?: number } } | null
+    const message = errorPayload?.message || errorPayload?.error || 'Не удалось выполнить запрос.'
+    throw new ApiError(message, response.status, errorPayload?.rateLimit)
   }
 
   return payload as T

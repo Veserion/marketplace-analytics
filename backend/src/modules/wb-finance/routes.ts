@@ -76,6 +76,17 @@ export async function wbFinanceRoutes(app: FastifyInstance): Promise<void> {
       return result
     } catch (error) {
       app.log.error({ error, errorMessage: error instanceof Error ? error.message : String(error) }, 'Failed to fetch WB finance report')
+
+      // Check if it's a rate limit error
+      const errorWithRateLimit = error as Error & { rateLimit?: { retryAfter?: number; limit?: number; reset?: number } }
+      if (errorWithRateLimit.rateLimit) {
+        return reply.code(429).send({
+          error: 'Rate limit exceeded for Wildberries Finance API.',
+          message: errorWithRateLimit.message,
+          rateLimit: errorWithRateLimit.rateLimit,
+        })
+      }
+
       return reply.code(502).send({
         error: 'Failed to fetch report from Wildberries Finance API.',
         message: error instanceof Error ? error.message : 'Unknown error',

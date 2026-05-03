@@ -38,6 +38,7 @@ export function WildberriesPage() {
     apiReportData,
     apiReportPeriod,
     apiReportError,
+    rateLimitRetryAfter,
     onFetchApiReport,
     onResetApiReport,
     missingCogsArticles,
@@ -118,6 +119,7 @@ export function WildberriesPage() {
           fetchedPeriodEnd={apiReportPeriod?.dateTo ?? null}
           fetchedRowCount={apiReportData?.length ?? null}
           fetchError={apiReportError}
+          rateLimitRetryAfter={rateLimitRetryAfter}
           onFetchReport={onFetchApiReport}
           onReset={onResetApiReport}
         />
