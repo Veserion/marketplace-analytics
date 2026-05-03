@@ -3,13 +3,13 @@ import {createElement, lazy, Suspense, useRef, useState} from 'react'
 import {DeleteOutlined, ExclamationCircleFilled} from '@ant-design/icons'
 import Button from 'antd/es/button'
 import Popconfirm from 'antd/es/popconfirm'
-import {WbWeeklyReportManager} from '@/features/report-upload'
+import {WbWeeklyReportManager, PeriodSelectionPanel} from '@/features/report-upload'
 import {UnitExtraParamsPanel} from '@/features/unit-extra-params'
 import {useWildberriesAnalyticsPage} from '@/pages/wildberries-page/model/useWildberriesAnalyticsPage'
 import {UiCard} from '@/shared/ui-kit/card'
 import {UiFlex} from '@/shared/ui-kit/flex'
 import {InfoTooltip} from '@/shared/ui-kit/tooltip'
-import {UiPanel} from '@/shared/ui-kit/panel'
+import {UiAccordion} from '@/shared/ui-kit/accordion'
 import {Typography} from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
 
@@ -31,17 +31,31 @@ export function WildberriesPage() {
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
+    isApiReportFetching,
+    apiReportData,
+    apiReportPeriod,
+    apiReportError,
+    rateLimitRetryAfter,
+    onFetchApiReport,
+    onResetApiReport,
     missingCogsArticles,
     onCogsFileDelete,
     onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    priceMin,
+    priceMax,
     removeWeeklyReport,
     reports,
     setArticlePattern,
     setIsArticlePatternExclude,
     setIsExtraParamsOpen,
     setCogsMatchingMode,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     topProducts,
     vatRatePercent,
@@ -83,28 +97,63 @@ export function WildberriesPage() {
         accrualArticlePattern={articlePattern}
         accrualArticlePatternExclude={isArticlePatternExclude}
         cogsMatchingMode={cogsMatchingMode}
+        priceMin={priceMin}
+        priceMax={priceMax}
         vatRatePercent={vatRatePercent}
         taxRatePercent={taxRatePercent}
         onToggleOpen={() => setIsExtraParamsOpen((prev) => !prev)}
         onAccrualArticlePatternChange={setArticlePattern}
         onAccrualArticlePatternExcludeChange={setIsArticlePatternExclude}
         onCogsMatchingModeChange={setCogsMatchingMode}
+        onPriceMinChange={setPriceMin}
+        onPriceMaxChange={setPriceMax}
         onVatRateChange={onVatRateChange}
         onTaxRateChange={onTaxRateChange}
       />
 
-      <UiPanel title="Загрузка файла">
-        <UiCard padding="sm">
-          <WbWeeklyReportManager
-            weeklyReports={weeklyReports}
-            isProcessing={isProcessing}
-            error={error}
-            hasResults={hasResults}
-            onAddReport={addWeeklyReport}
-            onRemoveReport={removeWeeklyReport}
-            onDownloadPdf={downloadPdf}
-          />
-        </UiCard>
+      {isMarketplaceConnected('wildberries') && (
+        <PeriodSelectionPanel
+          isFetching={isApiReportFetching}
+          hasFetchedReport={apiReportData !== null}
+          fetchedPeriodStart={apiReportPeriod?.dateFrom ?? null}
+          fetchedPeriodEnd={apiReportPeriod?.dateTo ?? null}
+          fetchedRowCount={apiReportData?.length ?? null}
+          fetchError={apiReportError}
+          rateLimitRetryAfter={rateLimitRetryAfter}
+          onFetchReport={onFetchApiReport}
+          onReset={onResetApiReport}
+        />
+      )}
+
+      <UiAccordion title={(
+          <Typography as="span" variant="h3" color="accent">
+            Загрузка файлов
+          </Typography>
+        )}
+        isOpen={isUploadAccordionOpen}
+        onToggle={setIsUploadAccordionOpen}
+        defaultOpen={isUploadAccordionOpen ?? true}
+        contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
+        {!apiReportData && (
+          <UiCard padding="sm">
+            <WbWeeklyReportManager
+              weeklyReports={weeklyReports}
+              isProcessing={isProcessing}
+              error={error}
+              hasResults={hasResults}
+              onAddReport={addWeeklyReport}
+              onRemoveReport={removeWeeklyReport}
+              onDownloadPdf={downloadPdf}
+            />
+          </UiCard>
+        )}
+        {apiReportData && (
+          <UiCard padding="sm">
+            <Typography variant="body3" color="muted">
+              Отчёт получен через API. Файловая загрузка отключена.
+            </Typography>
+          </UiCard>
+        )}
 
         <UiCard padding="sm">
           <UiFlex direction='column' gap={'10px'}>
@@ -189,7 +238,7 @@ export function WildberriesPage() {
             )}
           </UiFlex>
         </UiCard>
-      </UiPanel>
+      </UiAccordion>
 
       {reports && (
         <Suspense fallback={null}>

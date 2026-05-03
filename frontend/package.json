@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.8",
     "antd": "^6.3.7",
     "classnames": "^2.5.1",
     "fast-xml-parser": "^4.5.6",

@@ -8,16 +8,21 @@ import { MailDeliveryError } from './lib/mailer.js'
 import { authRoutes } from './modules/auth/routes.js'
 import { connectionRoutes } from './modules/connections/routes.js'
 import { meRoutes } from './modules/me/routes.js'
+import { wbFinanceRoutes } from './modules/wb-finance/routes.js'
 
 export async function buildApp() {
   const app = Fastify({
     logger: true,
   })
 
-  await app.register(helmet)
+  await app.register(helmet, {
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+  })
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'POST', 'DELETE'],
   })
 
   app.setErrorHandler((error, request, reply) => {
@@ -50,6 +55,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api' })
   await app.register(meRoutes, { prefix: '/api' })
   await app.register(connectionRoutes, { prefix: '/api' })
+  await app.register(wbFinanceRoutes, { prefix: '/api' })
 
   return app
 }

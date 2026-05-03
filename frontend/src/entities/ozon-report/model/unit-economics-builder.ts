@@ -255,6 +255,8 @@ export function buildUnitEconomicsReports(
   vatRatePercent: number,
   taxRatePercent: number,
   excludePattern = false,
+  priceMin: number | null = null,
+  priceMax: number | null = null,
 ): ReportGroup[] {
   const rows = parseCsv(stripBom(rawCsv), OZON_CSV_LAYOUT.delimiter)
   const headerIndex = findHeaderRowIndex(rows, [
@@ -275,11 +277,21 @@ export function buildUnitEconomicsReports(
     OZON_UNIT_COLUMNS.revenue,
   ], 'юнит-экономики Ozon')
 
-  const matchedRows = table.dataRows.filter((row) => isArticleIncludedByPattern(
+  let matchedRows = table.dataRows.filter((row) => isArticleIncludedByPattern(
     normalize(table.getCell(row, OZON_UNIT_COLUMNS.article)),
     articlePattern,
     excludePattern,
   ))
+
+  if (priceMin !== null || priceMax !== null) {
+    matchedRows = matchedRows.filter((row) => {
+      const revenue = parseNumber(table.getCell(row, OZON_UNIT_COLUMNS.revenue))
+      if (revenue === null) return false
+      if (priceMin !== null && revenue < priceMin) return false
+      if (priceMax !== null && revenue > priceMax) return false
+      return true
+    })
+  }
   const normalizedPattern = articlePattern.trim()
   const hasActivePattern = normalizedPattern !== '' && normalizedPattern !== '*'
   const printablePattern = normalizedPattern || '*'

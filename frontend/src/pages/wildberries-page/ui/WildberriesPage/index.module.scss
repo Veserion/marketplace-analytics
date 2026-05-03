@@ -62,3 +62,9 @@
   max-height: 120px;
   overflow-y: auto;
 }
+
+.WildberriesPage__upload-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

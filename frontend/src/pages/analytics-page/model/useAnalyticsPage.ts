@@ -17,6 +17,7 @@ import type {
 import { formatValue } from '@/shared/lib/csv'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
@@ -216,6 +217,9 @@ export function useOzonAnalyticsPage() {
   const [cogsFallbackNote, setCogsFallbackNote] = useState('')
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
+  const [priceMin, setPriceMin] = useState<number | null>(null)
+  const [priceMax, setPriceMax] = useState<number | null>(null)
+  const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
   const unitReportBuild = useMemo(() => {
@@ -228,6 +232,8 @@ export function useOzonAnalyticsPage() {
           vatRatePercent,
           taxRatePercent,
           isUnitArticlePatternExclude,
+          priceMin,
+          priceMax,
         ),
         error: '',
       }
@@ -237,7 +243,7 @@ export function useOzonAnalyticsPage() {
         error: err instanceof Error ? err.message : 'Не удалось применить фильтр по артикулу.',
       }
     }
-  }, [articlePattern, isOzonUnitEconomics, isUnitArticlePatternExclude, taxRatePercent, unitCsvSource, vatRatePercent])
+  }, [articlePattern, isOzonUnitEconomics, isUnitArticlePatternExclude, priceMax, priceMin, taxRatePercent, unitCsvSource, vatRatePercent])
   const unitReports = unitReportBuild.reports
   const cogsByArticleMap = useMemo(() => {
     if (!cogsCsvSource) return null
@@ -254,6 +260,8 @@ export function useOzonAnalyticsPage() {
           cogsByArticleMap,
           accrualArticlePattern,
           isAccrualArticlePatternExclude,
+          priceMin,
+          priceMax,
         ),
         error: '',
       }
@@ -267,6 +275,8 @@ export function useOzonAnalyticsPage() {
     accrualArticlePattern,
     accrualCsvSource,
     isAccrualArticlePatternExclude,
+    priceMax,
+    priceMin,
     taxRatePercent,
     vatRatePercent,
     cogsByArticleMap,
@@ -275,6 +285,12 @@ export function useOzonAnalyticsPage() {
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
   const hasResults = isOzonUnitEconomics ? Boolean(unitReports) : Boolean(accrualReports)
+  const isOzonConnected = isMarketplaceConnected('ozon')
+  const [isUploadAccordionOpen, setIsUploadAccordionOpen] = useState(false)
+
+  useEffect(() => {
+    setIsUploadAccordionOpen(!isOzonConnected || !hasResults)
+  }, [isOzonConnected, hasResults])
 
   const onSwitchOzonCalculation = (calcType: OzonCalculationType): void => {
     setOzonCalculationType(calcType)
@@ -483,6 +499,9 @@ export function useOzonAnalyticsPage() {
     isOzonUnitEconomics,
     isProcessing,
     isUnitArticlePatternExclude,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
     onFileUpload,
     onCogsFileUpload,
     onPrimaryFileDelete,
@@ -491,11 +510,15 @@ export function useOzonAnalyticsPage() {
     onTaxRateChange,
     onVatRateChange,
     ozonCalculationType,
+    priceMin,
+    priceMax,
     setArticlePattern,
     setAccrualArticlePattern,
     setIsExtraParamsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     unitReports,
     vatRatePercent,

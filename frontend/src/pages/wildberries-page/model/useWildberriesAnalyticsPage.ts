@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ChangeEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import type { AccrualGroup } from '@/entities/ozon-report/model/types'
 import {
   buildWildberriesAccrualReports,
+  buildWildberriesAccrualReportsFromRows,
   buildWildberriesCogsMap,
   buildWildberriesTopProducts,
   type CogsMatchingMode,
@@ -17,10 +19,18 @@ import {
   type WildberriesTopProductItem,
   validateWildberriesWeeklyColumns,
 } from '@/entities/wildberries-report'
+import {
+  mapWbApiRowsToAccrualRows,
+  type WbApiReportRow,
+} from '@/entities/wildberries-report/model/api-adapter'
+import type { WildberriesAccrualRow } from '@/entities/wildberries-report/model/metrics/types'
 import { formatValue, normalize, parseCsv } from '@/shared/lib/csv'
 import type { CsvStorageMode } from '@/shared/lib/indexed-db'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
+import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
+import { useAuth } from '@/features/auth'
+import { apiRequest } from '@/shared/api/client'
 import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
@@ -191,6 +201,15 @@ export function useWildberriesAnalyticsPage() {
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
+  const [priceMin, setPriceMin] = useState<number | null>(null)
+  const [priceMax, setPriceMax] = useState<number | null>(null)
+  const [apiReportDateRange, setApiReportDateRange] = useState<{dateFrom: string; dateTo: string} | null>(null)
+  const [apiReportData, setApiReportData] = useState<unknown[] | null>(null)
+  const [apiReportPeriod, setApiReportPeriod] = useState<{dateFrom: string, dateTo: string} | null>(null)
+  const [apiReportError, setApiReportError] = useState('')
+  const [rateLimitRetryAfter, setRateLimitRetryAfter] = useState<number | null>(null)
+  const [apiAccrualRows, setApiAccrualRows] = useState<WildberriesAccrualRow[] | null>(null)
+  const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const csvSource = useMemo(() => {
     const readyTexts = weeklyReports
@@ -235,6 +254,31 @@ export function useWildberriesAnalyticsPage() {
   }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude])
 
   const reportBuild = useMemo(() => {
+    // Prioritize API data if available
+    if (apiAccrualRows) {
+      try {
+        return {
+          reports: buildWildberriesAccrualReportsFromRows(
+            apiAccrualRows,
+            vatRatePercent,
+            taxRatePercent,
+            articlePattern,
+            cogsByArticleMap,
+            cogsMatchingMode,
+            isArticlePatternExclude,
+            priceMin,
+            priceMax,
+          ),
+          error: '',
+        }
+      } catch (err) {
+        return {
+          reports: null,
+          error: err instanceof Error ? err.message : 'Не удалось построить отчёт из данных API',
+        }
+      }
+    }
+
     if (!csvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
       return {
@@ -246,20 +290,28 @@ export function useWildberriesAnalyticsPage() {
           cogsByArticleMap,
           cogsMatchingMode,
           isArticlePatternExclude,
+          priceMin,
+          priceMax,
         ),
         error: '',
       }
     } catch (err) {
       return {
         reports: null,
-        error: err instanceof Error ? err.message : 'Не удалось построить отчёт Wildberries.',
+        error: err instanceof Error ? err.message : 'Не удалось построить отчёт',
       }
     }
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, taxRatePercent, vatRatePercent, isArticlePatternExclude])
+  }, [apiAccrualRows, csvSource, vatRatePercent, taxRatePercent, articlePattern, cogsByArticleMap, cogsMatchingMode, isArticlePatternExclude, priceMin, priceMax])
 
   const reports = reportBuild.reports
   const error = uploadError || reportBuild.error
   const hasResults = Boolean(reports)
+  const isWildberriesConnected = isMarketplaceConnected('wildberries')
+  const [isUploadAccordionOpen, setIsUploadAccordionOpen] = useState(false)
+
+  useEffect(() => {
+    setIsUploadAccordionOpen(!isWildberriesConnected || !hasResults)
+  }, [isWildberriesConnected, hasResults])
 
   const onVatRateChange = (value: number): void => {
     setVatRatePercent(Number.isFinite(value) ? value : 0)
@@ -268,6 +320,132 @@ export function useWildberriesAnalyticsPage() {
   const onTaxRateChange = (value: number): void => {
     setTaxRatePercent(Number.isFinite(value) ? value : 0)
   }
+
+  const { session } = useAuth()
+
+  const wbApiQuery = useQuery({
+    queryKey: ['wb-finance-report', apiReportDateRange],
+    queryFn: async () => {
+      if (!session || !apiReportDateRange) throw new Error('No session or date range')
+
+      const response = await apiRequest<{
+        requestedPeriod: { from: string; to: string }
+        availablePeriod: { from: string; to: string }
+        loadedWeeklyReports: Array<{ id: string; periodFrom: string; periodTo: string; source: string }>
+        rowsCount: number
+        fields: string[]
+        rows: unknown[]
+      }>('/wb-finance/sales-reports/detailed', {
+        token: session.token,
+        method: 'POST',
+        body: JSON.stringify({
+          periodFrom: apiReportDateRange.dateFrom,
+          periodTo: apiReportDateRange.dateTo,
+          fields: [
+            'vendorCode',
+            'docTypeName',
+            'sellerOperName',
+            'saleDt',
+            'deliveryMethod',
+            'officeName',
+            'orderUid',
+            'srid',
+            'bonusTypeName',
+            'quantity',
+            'returnAmount',
+            'deliveryAmount',
+            'retailPrice',
+            'retailPriceWithDisc',
+            'retailAmount',
+            'sellerRealized',
+            'forPay',
+            'deliveryService',
+            'commissionPercent',
+            'vw',
+            'acquiringFee',
+            'ppvzReward',
+            'rebillLogisticCost',
+            'paidStorage',
+            'deduction',
+            'paidAcceptance',
+            'penalty',
+            'additionalPayment',
+            'cashbackDiscount',
+            'cashbackCommissionChange',
+            'cashbackAmount',
+          ],
+        }),
+      })
+
+      return response
+    },
+    enabled: !!session && !!apiReportDateRange,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Update state when query data changes
+  useEffect(() => {
+    if (wbApiQuery.data) {
+      setApiReportData(wbApiQuery.data.rows)
+      setApiReportPeriod({
+        dateFrom: wbApiQuery.data.availablePeriod.from,
+        dateTo: wbApiQuery.data.availablePeriod.to,
+      })
+
+      // Convert API data to accrual rows for the analytics flow
+      const apiRows = mapWbApiRowsToAccrualRows(wbApiQuery.data.rows as WbApiReportRow[])
+      setApiAccrualRows(apiRows)
+    }
+  }, [wbApiQuery.data])
+
+  // Update error state when query error changes
+  useEffect(() => {
+    if (wbApiQuery.error) {
+      const errorMessage = wbApiQuery.error instanceof Error ? wbApiQuery.error.message : 'Не удалось получить отчёт через API'
+      setApiReportError(errorMessage)
+
+      // Check if it's a rate limit error
+      const apiError = wbApiQuery.error as Error & { rateLimit?: { retryAfter?: number } }
+      if (apiError.rateLimit?.retryAfter) {
+        setRateLimitRetryAfter(apiError.rateLimit.retryAfter)
+      }
+    }
+  }, [wbApiQuery.error])
+
+  // Countdown timer for rate limit retry
+  useEffect(() => {
+    if (rateLimitRetryAfter === null) return
+
+    const timer = setInterval(() => {
+      setRateLimitRetryAfter((prev) => {
+        if (prev === null || prev <= 1) {
+          // Auto-retry when countdown reaches zero
+          if (apiReportDateRange) {
+            setApiReportError('')
+            // Trigger a refetch by invalidating the query
+            wbApiQuery.refetch()
+          }
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [rateLimitRetryAfter, apiReportDateRange, wbApiQuery])
+
+  const onFetchApiReport = useCallback((dateFrom: string, dateTo: string): void => {
+    setApiReportError('')
+    setApiReportDateRange({ dateFrom, dateTo })
+  }, [])
+
+  const onResetApiReport = useCallback((): void => {
+    setApiReportDateRange(null)
+    setApiReportData(null)
+    setApiReportPeriod(null)
+    setApiReportError('')
+    setApiAccrualRows(null)
+    }, [])
 
   const addWeeklyReport = useCallback(async (file: File, replaceId?: string): Promise<{ duplicate?: WbUploadedReport; added: boolean }> => {
     setUploadError('')
@@ -511,17 +689,31 @@ export function useWildberriesAnalyticsPage() {
     isArticlePatternExclude,
     isExtraParamsOpen,
     isProcessing,
+    isUploadAccordionOpen,
+    setIsUploadAccordionOpen,
+    isMarketplaceConnected,
+    isApiReportFetching: wbApiQuery.isFetching,
+    apiReportData,
+    apiReportPeriod,
+    apiReportError,
+    rateLimitRetryAfter,
+    onFetchApiReport,
+    onResetApiReport,
     missingCogsArticles,
     onCogsFileDelete,
     onCogsFileUpload,
     onTaxRateChange,
     onVatRateChange,
+    priceMin,
+    priceMax,
     removeWeeklyReport,
     reports,
     setArticlePattern,
     setIsArticlePatternExclude,
     setIsExtraParamsOpen,
     setCogsMatchingMode,
+    setPriceMin,
+    setPriceMax,
     taxRatePercent,
     topProducts,
     vatRatePercent,

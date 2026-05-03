@@ -220,31 +220,24 @@ function getOverviewColor(index: number): string {
 }
 
 function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
-  console.log('reports', reports)
   const totalsReport = reports.find((report) => report.title === 'Итоги периода')
   const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
   if (!totalsReport || !groupedReport) return null
 
+  const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
   const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
 
-  const salesTotalValue = (transferTotal?.value ?? 0) + (accrualTotal?.value ?? 0)
-
-  const groupedRevenueAdjustments = groupedReport.metrics
-    .filter((metric) =>
-      POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
-      && metric.value !== null)
-
-  const adjustmentSum = groupedRevenueAdjustments.reduce((acc, metric) => acc + (metric.value || 0), 0)
   const sppAndPromotionsValue = sppAndPromotions?.value || 0
-  const revenueWithoutSppValue = salesTotalValue - sppAndPromotionsValue - adjustmentSum
+  const revenueWithoutSppValue = revenueWithoutSpp?.value || 0
+  const salesTotalValue = revenueWithoutSppValue + sppAndPromotionsValue
 
   const baseSalesItems: OverviewItem[] = [
     {
       label: REVENUE_WITHOUT_SPP_LABEL,
       value: revenueWithoutSppValue,
-      formula: `${TRANSFER_TO_BANK_LABEL} + ${MARKETPLACE_EXPENSES_LABEL} - ${SPP_AND_PROMOTIONS_LABEL} - ${Array.from(POSITIVE_REVENUE_ADJUSTMENT_LABELS).join(' - ')}`,
+      formula: revenueWithoutSpp?.formula ?? REVENUE_WITHOUT_SPP_LABEL,
       color: getOverviewColor(0),
     },
     {
@@ -255,15 +248,7 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
     },
   ]
 
-  const salesItems: OverviewItem[] = [
-    ...baseSalesItems,
-    ...groupedRevenueAdjustments.map((metric, index) => ({
-      label: metric.label,
-      value: metric.value || 0,
-      formula: metric.formula,
-      color: getOverviewColor(baseSalesItems.length + index),
-    })),
-  ]
+  const salesItems: OverviewItem[] = baseSalesItems
 
   const groupedItems = groupedReport.metrics
     .filter((metric) =>
@@ -271,14 +256,16 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       && metric.label !== RETURNS_LABEL
       && metric.label !== GROUPED_TOTAL_LABEL
       && !GROUPED_SUBTOTAL_LABELS.has(metric.label)
-      && !POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       && metric.value !== null)
-    .map((metric, index) => ({
-      label: metric.label,
-      value: metric.value || 0,
-      formula: metric.formula,
-      color: getOverviewColor(index + 2),
-    }))
+    .map((metric, index) => {
+      const isCompensation = POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
+      return {
+        label: metric.label,
+        value: isCompensation ? Math.abs(metric.value || 0) : -Math.abs(metric.value || 0),
+        formula: metric.formula,
+        color: getOverviewColor(index + 2),
+      }
+    })
 
   const accrualItems = groupedItems.slice(0, MAX_OVERVIEW_ITEMS)
   if (groupedItems.length > MAX_OVERVIEW_ITEMS) {
@@ -335,7 +322,9 @@ export function AccrualResults({
   const wildberriesPeriodRange = isWildberries
     ? parseDateRangeFromPeriodLabel(totalsReport?.periodLabel)
     : null
+  console.log('showAccrualOverview', showAccrualOverview)
   const overviewModel = showAccrualOverview ? buildOverviewModel(reports) : null
+  console.log('overviewModel', overviewModel)
   const salesAbsSum = overviewModel
     ? overviewModel.salesItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
     : 0
@@ -352,7 +341,7 @@ export function AccrualResults({
             <Typography
               variant="h2"
               color="primary"
-              className={getValueClassName(Math.abs(overviewModel.salesTotalValue))}
+              className={getValueClassName(overviewModel.salesTotalValue)}
             >
               {formatOverviewCurrency(overviewModel.salesTotalValue)}
             </Typography>

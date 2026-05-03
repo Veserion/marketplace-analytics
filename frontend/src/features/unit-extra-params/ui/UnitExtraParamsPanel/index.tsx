@@ -18,6 +18,8 @@ type UnitExtraParamsPanelProps = {
   unitArticlePatternExclude?: boolean
   accrualArticlePatternExclude?: boolean
   cogsMatchingMode?: 'full' | 'digits'
+  priceMin?: number | null
+  priceMax?: number | null
   vatRatePercent: number
   taxRatePercent: number
   onToggleOpen: () => void
@@ -26,6 +28,8 @@ type UnitExtraParamsPanelProps = {
   onUnitArticlePatternExcludeChange?: (exclude: boolean) => void
   onAccrualArticlePatternExcludeChange?: (exclude: boolean) => void
   onCogsMatchingModeChange?: (mode: 'full' | 'digits') => void
+  onPriceMinChange?: (value: number | null) => void
+  onPriceMaxChange?: (value: number | null) => void
   onVatRateChange: (value: number) => void
   onTaxRateChange: (value: number) => void
 }
@@ -38,6 +42,8 @@ export function UnitExtraParamsPanel({
   unitArticlePatternExclude = false,
   accrualArticlePatternExclude = false,
   cogsMatchingMode = 'full',
+  priceMin = null,
+  priceMax = null,
   vatRatePercent,
   taxRatePercent,
   onToggleOpen,
@@ -46,6 +52,8 @@ export function UnitExtraParamsPanel({
   onUnitArticlePatternExcludeChange,
   onAccrualArticlePatternExcludeChange,
   onCogsMatchingModeChange,
+  onPriceMinChange,
+  onPriceMaxChange,
   onVatRateChange,
   onTaxRateChange,
 }: UnitExtraParamsPanelProps) {
@@ -65,6 +73,13 @@ export function UnitExtraParamsPanel({
 
   if (onPatternChange) {
     titleSummaryParts.push(`Паттерн ${activePattern || '*'}`)
+  }
+
+  if (priceMin != null || priceMax != null) {
+    const priceParts: string[] = []
+    if (priceMin != null) priceParts.push(`от ${priceMin}`)
+    if (priceMax != null) priceParts.push(`до ${priceMax}`)
+    titleSummaryParts.push(`Цена ${priceParts.join(' ')}`)
   }
 
   return (
@@ -141,6 +156,34 @@ export function UnitExtraParamsPanel({
               </Checkbox>
             )}
           </label>
+          {(onPriceMinChange || onPriceMaxChange) && (
+            <div className={cn(`${BLOCK_NAME}__grid`)}>
+              <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="priceMinInput">
+                <Typography as="span" variant="body2" color="accent" semiBold>Цена от</Typography>
+                <InputNumber<number>
+                  className={cn(`${BLOCK_NAME}__number-input`)}
+                  id="priceMinInput"
+                  min={0}
+                  step={100}
+                  placeholder="0"
+                  value={priceMin ?? undefined}
+                  onChange={(value) => onPriceMinChange?.(typeof value === 'number' ? value : null)}
+                />
+              </label>
+              <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="priceMaxInput">
+                <Typography as="span" variant="body2" color="accent" semiBold>Цена до</Typography>
+                <InputNumber<number>
+                  className={cn(`${BLOCK_NAME}__number-input`)}
+                  id="priceMaxInput"
+                  min={0}
+                  step={100}
+                  placeholder="∞"
+                  value={priceMax ?? undefined}
+                  onChange={(value) => onPriceMaxChange?.(typeof value === 'number' ? value : null)}
+                />
+              </label>
+            </div>
+          )}
         </section>
       )}
 
