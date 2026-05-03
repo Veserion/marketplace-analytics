@@ -6,6 +6,7 @@ import {
   buildOzonCogsMap,
   buildUnitEconomicsReports,
   extractOzonCogsCsv,
+  getOzonMissingCogsArticles,
   getUnitMetricClassValue,
   getUnitMetricDisplay,
 } from '@/entities/ozon-report'
@@ -282,6 +283,17 @@ export function useOzonAnalyticsPage() {
     cogsByArticleMap,
   ])
   const accrualReports = accrualReportBuild.reports
+
+  const missingCogsArticles = useMemo(() => {
+    if (isOzonUnitEconomics || !accrualCsvSource) return [] as string[]
+    return getOzonMissingCogsArticles(
+      accrualCsvSource,
+      cogsByArticleMap,
+      accrualArticlePattern,
+      isAccrualArticlePatternExclude,
+    )
+  }, [accrualArticlePattern, accrualCsvSource, cogsByArticleMap, isAccrualArticlePatternExclude, isOzonUnitEconomics])
+
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
   const hasResults = isOzonUnitEconomics ? Boolean(unitReports) : Boolean(accrualReports)
@@ -500,6 +512,7 @@ export function useOzonAnalyticsPage() {
     isProcessing,
     isUnitArticlePatternExclude,
     isUploadAccordionOpen,
+    missingCogsArticles,
     setIsUploadAccordionOpen,
     isMarketplaceConnected,
     onFileUpload,

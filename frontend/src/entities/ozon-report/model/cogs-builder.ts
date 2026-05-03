@@ -1,6 +1,6 @@
-import { OZON_CSV_LAYOUT, OZON_UNIT_COLUMNS } from '@/entities/ozon-report/model/columns'
+import { OZON_ACCRUAL_COLUMNS, OZON_CSV_LAYOUT, OZON_UNIT_COLUMNS } from '@/entities/ozon-report/model/columns'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
-import { averageByKey, createCsvTable, findHeaderRowIndex, normalizeArticleKey, parseCsvWithFallback, rowsToSemicolonCsv, stripBom } from '@/shared/lib/reporting'
+import { assertCsvColumns, averageByKey, createCsvTable, findHeaderRowIndex, isArticleIncludedByPattern, normalizeArticleKey, parseCsvWithFallback, rowsToSemicolonCsv, stripBom } from '@/shared/lib/reporting'
 
 function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
   const normalizedHeaders = headers.map((header) => normalize(header).toLowerCase().replace(/ё/g, 'е'))
@@ -86,4 +86,40 @@ export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | n
   }
 
   return averageByKey(cogsRows, (row) => row.article, (row) => row.cogs)
+}
+
+export function getOzonMissingCogsArticles(
+  accrualCsv: string,
+  cogsByArticleMap: Map<string, number> | null,
+  articlePattern = '*',
+  excludePattern = false,
+): string[] {
+  if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
+
+  const rows = parseCsv(stripBom(accrualCsv), OZON_CSV_LAYOUT.delimiter)
+  const headerIndex = rows.findIndex(
+    (row) => normalize(row[0]) === OZON_CSV_LAYOUT.accrualHeaderFirstCell
+      && normalize(row[1]) === OZON_CSV_LAYOUT.accrualHeaderSecondCell,
+  )
+  if (headerIndex === -1) return []
+
+  const table = createCsvTable(rows, headerIndex)
+  assertCsvColumns(table, [OZON_ACCRUAL_COLUMNS.article], 'отчета по начислениям Ozon')
+  const articleIdx = table.colIndex.get(OZON_ACCRUAL_COLUMNS.article)
+  if (articleIdx === undefined) return []
+
+  const missingByKey = new Map<string, string>()
+  for (const row of table.dataRows) {
+    const article = normalize(row[articleIdx] || '')
+    if (!article) continue
+    if (!isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
+
+    const articleKey = normalizeArticleKey(article)
+    if (cogsByArticleMap.has(articleKey)) continue
+    if (!missingByKey.has(articleKey)) {
+      missingByKey.set(articleKey, article)
+    }
+  }
+
+  return Array.from(missingByKey.values()).sort((a, b) => a.localeCompare(b, 'ru'))
 }

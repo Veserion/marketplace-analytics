@@ -1,5 +1,5 @@
 export { buildWildberriesAccrualReports, buildWildberriesAccrualReportsFromRows } from '@/entities/wildberries-report/model/accrual-builder'
-export { buildWildberriesCogsMap, extractWildberriesCogsCsv, getWildberriesMissingCogsArticles } from '@/entities/wildberries-report/model/cogs-builder'
+export { buildWildberriesCogsMap, extractWildberriesCogsCsv, getWildberriesMissingCogsArticles, getWildberriesMissingCogsArticlesFromRows } from '@/entities/wildberries-report/model/cogs-builder'
 export type { CogsMatchingMode } from '@/entities/wildberries-report/model/cogs-builder'
 export { buildWildberriesTopProducts } from '@/entities/wildberries-report/model/top-products-builder'
 export type { WildberriesTopProductItem } from '@/entities/wildberries-report/model/top-products-builder'

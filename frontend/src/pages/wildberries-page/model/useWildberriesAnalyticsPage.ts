@@ -12,6 +12,7 @@ import {
   extractWildberriesCogsCsv,
   extractWildberriesPeriodFromCsv,
   getWildberriesMissingCogsArticles,
+  getWildberriesMissingCogsArticlesFromRows,
   MAX_WEEKLY_REPORTS,
   type WbUploadedReport,
   WB_WEEKLY_SLOTS,
@@ -228,6 +229,15 @@ export function useWildberriesAnalyticsPage() {
   }, [cogsCsvSource, cogsMatchingMode])
 
   const missingCogsArticles = useMemo(() => {
+    if (apiAccrualRows) {
+      return getWildberriesMissingCogsArticlesFromRows(
+        apiAccrualRows,
+        cogsByArticleMap,
+        articlePattern,
+        cogsMatchingMode,
+        isArticlePatternExclude,
+      )
+    }
     if (!csvSource) return [] as string[]
     return getWildberriesMissingCogsArticles(
       csvSource,
@@ -236,7 +246,7 @@ export function useWildberriesAnalyticsPage() {
       cogsMatchingMode,
       isArticlePatternExclude,
     )
-  }, [articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude])
+  }, [apiAccrualRows, articlePattern, cogsByArticleMap, cogsMatchingMode, csvSource, isArticlePatternExclude])
 
   const topProducts = useMemo(() => {
     if (!csvSource) return [] as WildberriesTopProductItem[]

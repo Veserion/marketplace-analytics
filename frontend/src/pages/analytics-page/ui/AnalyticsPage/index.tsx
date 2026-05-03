@@ -30,6 +30,7 @@ export function AnalyticsPage() {
     isProcessing,
     isUnitArticlePatternExclude,
     isUploadAccordionOpen,
+    missingCogsArticles,
     setIsUploadAccordionOpen,
     isMarketplaceConnected,
     onCogsFileUpload,
@@ -106,6 +107,7 @@ export function AnalyticsPage() {
         secondaryFileLabel="Себестоимость товаров"
         secondaryFileHint='Добавьте файл себестоимости, чтобы получить точный отчет. Обязательные колонки: "Артикул" и "Себестоимость".'
         secondaryUsageNote={cogsFallbackNote}
+        secondaryMissingArticles={missingCogsArticles}
         error={error}
         showWildberriesWarning={false}
         isAccordionOpen={isUploadAccordionOpen}

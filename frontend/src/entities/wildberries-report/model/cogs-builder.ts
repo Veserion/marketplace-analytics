@@ -1,4 +1,5 @@
 import { WB_BASE_COLUMNS, WB_COGS_COLUMNS, WB_CSV_LAYOUT } from '@/entities/wildberries-report/model/columns'
+import type { WildberriesAccrualRow } from '@/entities/wildberries-report/model/metrics/types'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 import { assertCsvColumns, averageByKey, createCsvTable, isArticleIncludedByPattern, normalizeArticleKey, normalizeLower, parseCsvWithFallback, rowsToSemicolonCsv, stripBom } from '@/shared/lib/reporting'
 
@@ -104,6 +105,31 @@ export function getWildberriesMissingCogsArticles(
   const missingByKey = new Map<string, string>()
   for (const row of table.dataRows) {
     const article = normalize(row[articleIdx] || '')
+    if (!article) continue
+    if (!isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
+
+    const articleKey = resolveCogsLookupKey(article, cogsMatchingMode)
+    if (cogsByArticleMap.has(articleKey)) continue
+    if (!missingByKey.has(articleKey)) {
+      missingByKey.set(articleKey, article)
+    }
+  }
+
+  return Array.from(missingByKey.values()).sort((a, b) => a.localeCompare(b, 'ru'))
+}
+
+export function getWildberriesMissingCogsArticlesFromRows(
+  rows: WildberriesAccrualRow[],
+  cogsByArticleMap: CogsByArticleMap | null,
+  articlePattern = '*',
+  cogsMatchingMode: CogsMatchingMode = 'full',
+  excludePattern = false,
+): string[] {
+  if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
+
+  const missingByKey = new Map<string, string>()
+  for (const row of rows) {
+    const article = normalize(row.article)
     if (!article) continue
     if (!isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
 

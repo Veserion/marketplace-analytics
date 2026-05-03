@@ -5,6 +5,7 @@ export {
   buildWildberriesTopProducts,
   extractWildberriesCogsCsv,
   getWildberriesMissingCogsArticles,
+  getWildberriesMissingCogsArticlesFromRows,
 } from '@/entities/wildberries-report/model/report-builders'
 export type { CogsMatchingMode } from '@/entities/wildberries-report/model/cogs-builder'
 export type { WildberriesTopProductItem } from '@/entities/wildberries-report/model/top-products-builder'
