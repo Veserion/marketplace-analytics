@@ -115,6 +115,7 @@ export function WildberriesPage() {
         <PeriodSelectionPanel
           isFetching={isApiReportFetching}
           hasFetchedReport={apiReportData !== null}
+          hasResults={hasResults}
           fetchedPeriodStart={apiReportPeriod?.dateFrom ?? null}
           fetchedPeriodEnd={apiReportPeriod?.dateTo ?? null}
           fetchedRowCount={apiReportData?.length ?? null}
@@ -122,6 +123,7 @@ export function WildberriesPage() {
           rateLimitRetryAfter={rateLimitRetryAfter}
           onFetchReport={onFetchApiReport}
           onReset={onResetApiReport}
+          onDownloadPdf={downloadPdf}
         />
       )}
 

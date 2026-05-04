@@ -48,6 +48,12 @@ const COGS_LABEL = 'Себестоимость'
 const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const STRUCTURE_PREFIX = 'Структура: '
 const COGS_MISSING_VALUE_TEXT = 'Нет данных: загрузите CSV с себестоимостью товаров'
+const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
+  RETURNS_QUANTITY_LABEL,
+  TAX_LABEL,
+  COGS_LABEL,
+  MARKETPLACE_EXPENSES_LABEL,
+])
 const COGS_FILE_ALIAS = 'Себестоимость'
 const WB_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей Ozon'
 
@@ -137,14 +143,25 @@ function buildWildberriesPdfSections(reports: AccrualGroup[]): PdfSection[] {
     const reportTitle = report.title === 'Итоги периода' && report.periodLabel
       ? `${report.title} ${report.periodLabel}`
       : report.title
-    const rows: PdfSection['rows'] = report.metrics.map((metric) => ({
-      label: metric.label,
-      value: metric.label === COGS_LABEL && metric.value === null
-        ? COGS_MISSING_VALUE_TEXT
-        : formatValue(metric.value, metric.type),
-      extra: metric.shareText ?? null,
-      tone: getWbMetricTone(metric.label, metric.value),
-    }))
+    const rows: PdfSection['rows'] = report.metrics.map((metric) => {
+      const shouldForceNegative = report.title === 'Итоги периода'
+        && metric.label !== CANCELLATIONS_AND_RETURNS_LABEL
+        && metric.label !== CANCELLATIONS_AND_NON_PICKUPS_LABEL
+        && metric.type !== 'number'
+        && metric.type !== 'count'
+        && FORCED_NEGATIVE_DISPLAY_LABELS.has(metric.label)
+      const normalizedValue = shouldForceNegative && metric.value !== null
+        ? -Math.abs(metric.value)
+        : metric.value
+      return {
+        label: metric.label,
+        value: metric.label === COGS_LABEL && metric.value === null
+          ? COGS_MISSING_VALUE_TEXT
+          : formatValue(normalizedValue, metric.type),
+        extra: metric.shareText ?? null,
+        tone: getWbMetricTone(metric.label, metric.value),
+      }
+    })
 
     sections.push({
       title: reportTitle,

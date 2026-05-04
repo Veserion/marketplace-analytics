@@ -25,7 +25,6 @@ const PRESET_CONFIG: {key: PeriodPreset; label: string}[] = [
   {key: 'custom', label: 'Свой период'},
 ]
 
-const MAX_PERIOD_DAYS = 31
 
 function getPresetRange(preset: PeriodPreset): [Dayjs, Dayjs] | null {
   const today = dayjs()
@@ -52,6 +51,7 @@ function getPresetRange(preset: PeriodPreset): [Dayjs, Dayjs] | null {
 type PeriodSelectionPanelProps = {
   isFetching?: boolean
   hasFetchedReport?: boolean
+  hasResults?: boolean
   fetchedPeriodStart?: string | null
   fetchedPeriodEnd?: string | null
   fetchedRowCount?: number | null
@@ -59,11 +59,13 @@ type PeriodSelectionPanelProps = {
   rateLimitRetryAfter?: number | null
   onFetchReport?: (dateFrom: string, dateTo: string) => void
   onReset?: () => void
+  onDownloadPdf?: () => void
 }
 
 export function PeriodSelectionPanel({
   isFetching = false,
   hasFetchedReport = false,
+  hasResults = false,
   fetchedPeriodStart,
   fetchedPeriodEnd,
   fetchedRowCount,
@@ -71,6 +73,7 @@ export function PeriodSelectionPanel({
   rateLimitRetryAfter,
   onFetchReport,
   onReset,
+  onDownloadPdf,
 }: PeriodSelectionPanelProps) {
   const [activePreset, setActivePreset] = useState<PeriodPreset | null>(null)
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
@@ -117,11 +120,6 @@ export function PeriodSelectionPanel({
       return
     }
 
-    const diffDays = to.diff(from, 'day') + 1
-    if (diffDays > MAX_PERIOD_DAYS) {
-      setValidationError('Выберите период не больше 31 дня.')
-      return
-    }
 
     onFetchReport?.(from.format('YYYY-MM-DD'), to.format('YYYY-MM-DD'))
   }
@@ -177,6 +175,11 @@ export function PeriodSelectionPanel({
           <Button onClick={handleReset}>
             Сбросить
           </Button>
+          {onDownloadPdf && (
+            <Button onClick={onDownloadPdf} disabled={!hasResults}>
+              Скачать метрики в PDF
+            </Button>
+          )}
         </UiFlex>
       </UiCard>
     )
