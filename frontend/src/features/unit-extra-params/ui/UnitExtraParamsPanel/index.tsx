@@ -1,4 +1,5 @@
 import classNames from 'classnames/bind'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Checkbox from 'antd/es/checkbox'
 import Input from 'antd/es/input'
 import InputNumber from 'antd/es/input-number'
@@ -9,6 +10,24 @@ import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'UnitExtraParamsPanel'
+const DEBOUNCE_MS = 400
+
+function useDebouncedCallback<T>(value: T, onChange: ((value: T) => void) | undefined, delay = DEBOUNCE_MS): [T, (v: T) => void] {
+  const [local, setLocal] = useState<T>(value)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => { setLocal(value) }, [value])
+
+  const set = useCallback((v: T) => {
+    setLocal(v)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => onChange?.(v), delay)
+  }, [onChange, delay])
+
+  useEffect(() => () => clearTimeout(timerRef.current), [])
+
+  return [local, set]
+}
 
 type UnitExtraParamsPanelProps = {
   isOpen: boolean
@@ -63,6 +82,9 @@ export function UnitExtraParamsPanel({
   const onPatternExcludeChange = isAccrualMode
     ? onAccrualArticlePatternExcludeChange
     : onUnitArticlePatternExcludeChange
+  const [localPattern, setLocalPattern] = useDebouncedCallback(activePattern, onPatternChange)
+  const [localPriceMin, setLocalPriceMin] = useDebouncedCallback(priceMin, onPriceMinChange)
+  const [localPriceMax, setLocalPriceMax] = useDebouncedCallback(priceMax, onPriceMaxChange)
   const patternHint = isAccrualMode
     ? 'Фильтр применяется к отчету по начислениям. Поддерживаются `*` и `?`.\nПримеры: `st*` — все артикулы, начинающиеся с `st`; `??123` — любые 2 символа перед `123`.'
     : 'Фильтр применяется к юнит-экономике. Поддерживаются `*` и `?`.\nПримеры: `st*` — все артикулы, начинающиеся с `st`; `??123` — любые 2 символа перед `123`.'
@@ -137,8 +159,8 @@ export function UnitExtraParamsPanel({
             <Typography as="span" variant="body2" color="accent" semiBold>Паттерн артикула</Typography>
             <Input
               id="articlePatternInput"
-              value={activePattern}
-              onChange={(event) => onPatternChange(event.target.value)}
+              value={localPattern}
+              onChange={(event) => setLocalPattern(event.target.value)}
               placeholder="Например: st*"
             />
             <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
@@ -166,8 +188,8 @@ export function UnitExtraParamsPanel({
                   min={0}
                   step={100}
                   placeholder="0"
-                  value={priceMin ?? undefined}
-                  onChange={(value) => onPriceMinChange?.(typeof value === 'number' ? value : null)}
+                  value={localPriceMin ?? undefined}
+                  onChange={(value) => setLocalPriceMin(typeof value === 'number' ? value : null)}
                 />
               </label>
               <label className={cn(`${BLOCK_NAME}__field`)} htmlFor="priceMaxInput">
@@ -178,8 +200,8 @@ export function UnitExtraParamsPanel({
                   min={0}
                   step={100}
                   placeholder="∞"
-                  value={priceMax ?? undefined}
-                  onChange={(value) => onPriceMaxChange?.(typeof value === 'number' ? value : null)}
+                  value={localPriceMax ?? undefined}
+                  onChange={(value) => setLocalPriceMax(typeof value === 'number' ? value : null)}
                 />
               </label>
             </div>
