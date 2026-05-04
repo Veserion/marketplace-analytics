@@ -6,7 +6,7 @@ import InputNumber from 'antd/es/input-number'
 import Radio from 'antd/es/radio'
 import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { Typography } from '@/shared/ui-kit/typography'
-import { useDebouncedCallback } from '@/shared/hooks/useDebounceCallback'
+import { useDebouncedCallback } from '@/shared/hooks/useDebounceCallback.ts'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
