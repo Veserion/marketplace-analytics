@@ -173,7 +173,6 @@ export const WB_DEFAULT_FIELDS = [
   'retailPrice',
   'retailPriceWithDisc',
   'retailAmount',
-  'sellerRealized',
   'commissionPercent',
   'forPay',
   'deliveryService',
