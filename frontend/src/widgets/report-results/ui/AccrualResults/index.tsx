@@ -56,16 +56,6 @@ const OVERVIEW_COLORS = [
   '#7f93ae',
 ]
 
-// const COST_STRUCTURE_COLORS = {
-//   commission: '#005bff',
-//   promotion: '#e85a9b',
-//   logistic: '#fcca09',
-//   returns: '#fd743d',
-//   tax: '#a66401',
-//   cogs: '#8c7ed8',
-//   netProfit: '#028d30',
-// }
-
 const DYNAMICS_REPORT_TITLE = 'Динамика по датам начисления'
 const compactRubleFormatter = new Intl.NumberFormat('ru-RU', {
   notation: 'compact',
@@ -226,7 +216,6 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
 
   const revenueWithoutSpp = getMetric(totalsReport, REVENUE_WITHOUT_SPP_LABEL)
   const sppAndPromotions = getMetric(totalsReport, SPP_AND_PROMOTIONS_LABEL)
-  const accrualTotal = getMetric(totalsReport, MARKETPLACE_EXPENSES_LABEL)
   const transferTotal = getMetric(totalsReport, TRANSFER_TO_BANK_LABEL)
 
   const sppAndPromotionsValue = sppAndPromotions?.value || 0
@@ -276,6 +265,14 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       formula: `SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "${SALES_GROUP_LABEL}" и вне топ-${MAX_OVERVIEW_ITEMS}`,
       color: getOverviewColor(MAX_OVERVIEW_ITEMS + 2),
     })
+  }
+
+  const accrualTotalValue = accrualItems.reduce((sum, item) => sum + item.value, 0)
+  const accrualTotal: AccrualGroup['metrics'][number] = {
+    label: MARKETPLACE_EXPENSES_LABEL,
+    value: accrualTotalValue,
+    type: 'currency',
+    formula: `Сумма статей расходов и компенсаций`,
   }
 
   return {

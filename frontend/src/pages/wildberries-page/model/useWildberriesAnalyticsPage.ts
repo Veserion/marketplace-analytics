@@ -367,7 +367,6 @@ export function useWildberriesAnalyticsPage() {
             'retailPrice',
             'retailPriceWithDisc',
             'retailAmount',
-            'sellerRealized',
             'forPay',
             'deliveryService',
             'commissionPercent',

@@ -24,7 +24,7 @@ import { normalize, parseNumber } from '@/shared/lib/csv'
  * - deliveryAmount → deliveryCount
  * - retailPrice → retailPrice
  * - retailPriceWithDisc → retailPriceWithDiscount
- * - retailAmount → sellerRealized
+ * - retailAmount → retailAmount
  * - forPay → payout
  * - deliveryService → logisticsCost
  * - commissionPercent → wbCommissionRate
@@ -116,7 +116,7 @@ export function mapWbApiRowToAccrualRow(api: WbApiReportRow): WildberriesAccrual
     deliveryCount: api.deliveryAmount ?? 0,
     retailPrice: parseNumber(api.retailPrice ?? undefined) ?? 0,
     retailPriceWithDiscount: parseNumber(api.retailPriceWithDisc ?? undefined) ?? 0,
-    sellerRealized: parseNumber(api.retailAmount ?? undefined) ?? 0,
+    retailAmount: parseNumber(api.retailAmount ?? undefined) ?? 0,
     payout: parseNumber(api.forPay ?? undefined) ?? 0,
     logisticsCost: parseNumber(api.deliveryService ?? undefined) ?? 0,
     wbCommissionRate: api.commissionPercent ?? 0,
@@ -208,7 +208,7 @@ export function accrualRowsToCsv(rows: WildberriesAccrualRow[]): string {
     escapeCsvValue(row.deliveryCount),
     escapeCsvValue(row.retailPrice),
     escapeCsvValue(row.retailPriceWithDiscount),
-    escapeCsvValue(row.sellerRealized),
+    escapeCsvValue(row.retailAmount),
     escapeCsvValue(row.payout),
     escapeCsvValue(row.logisticsCost),
     escapeCsvValue(row.wbCommissionRate),

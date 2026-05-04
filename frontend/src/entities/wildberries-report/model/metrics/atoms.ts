@@ -42,7 +42,7 @@ export const WILDBERRIES_ACCRUAL_ATOM_FORMULAS = {
   salesRevenueByRetailPrice: `SUM("${WB_REVENUE_COLUMNS.retailPrice}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   returnsRevenueBeforeSpp: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат"`,
-  revenueWithoutSpp: `SUM("${WB_REVENUE_COLUMNS.sellerRealized}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
+  revenueWithoutSpp: `SUM("${WB_REVENUE_COLUMNS.retailAmount}"), фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа"`,
   salesPayout: `SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа") - SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат") + SUM("${WB_REVENUE_COLUMNS.payout}", фильтр: "${WB_BASE_COLUMNS.reason}" ≠ "Продажа" и "${WB_BASE_COLUMNS.reason}" ≠ "Возврат" и значение > 0)`,
   wbCommissionCalculated: `SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100, фильтр: "${WB_BASE_COLUMNS.reason}" = "Продажа") - SUM("${WB_REVENUE_COLUMNS.retailPriceWithDiscount}" * "${WB_EXPENSE_COLUMNS.wbCommissionRate}" / 100, фильтр: "${WB_BASE_COLUMNS.reason}" = "Возврат")`,
   returnsNetEffect: buildWildberriesNetEffectSumFormula([`"${WB_BASE_COLUMNS.reason}" = "Возврат"`]),
@@ -270,7 +270,7 @@ export function calculateWildberriesReturnsRevenueBeforeSpp(rows: WildberriesAcc
  * Возвраты здесь не вычитаются; если понадобится net-метрика, она должна быть отдельной молекулой.
  */
 export function calculateWildberriesRevenueWithoutSpp(rows: WildberriesAccrualRow[]): number {
-  return sumRows(rows, (row) => row.sellerRealized, isWildberriesSaleRow)
+  return sumRows(rows, (row) => row.retailAmount, isWildberriesSaleRow)
 }
 
 /**

@@ -15,7 +15,7 @@ export type WildberriesAccrualRow = {
   deliveryCount: number
   retailPrice: number
   retailPriceWithDiscount: number
-  sellerRealized: number
+  retailAmount: number
   payout: number
   logisticsCost: number
   wbCommissionRate: number
