@@ -6,28 +6,11 @@ import InputNumber from 'antd/es/input-number'
 import Radio from 'antd/es/radio'
 import { UiAccordion } from '@/shared/ui-kit/accordion'
 import { Typography } from '@/shared/ui-kit/typography'
+import { useDebouncedCallback } from '@/shared/hooks/useDebounceCallback'
 import styles from './index.module.scss'
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'UnitExtraParamsPanel'
-const DEBOUNCE_MS = 400
-
-function useDebouncedCallback<T>(value: T, onChange: ((value: T) => void) | undefined, delay = DEBOUNCE_MS): [T, (v: T) => void] {
-  const [local, setLocal] = useState<T>(value)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  useEffect(() => { setLocal(value) }, [value])
-
-  const set = useCallback((v: T) => {
-    setLocal(v)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => onChange?.(v), delay)
-  }, [onChange, delay])
-
-  useEffect(() => () => clearTimeout(timerRef.current), [])
-
-  return [local, set]
-}
 
 type UnitExtraParamsPanelProps = {
   isOpen: boolean

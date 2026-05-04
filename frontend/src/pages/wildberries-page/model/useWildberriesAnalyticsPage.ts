@@ -32,7 +32,7 @@ import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
 import { useAuth } from '@/features/auth'
 import { apiRequest } from '@/shared/api/client'
-import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
+import { useFileParserWorker } from '@/shared/hooks/useFileParserWorker'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'wildberries_accrual_vat_rate_percent'
@@ -226,6 +226,7 @@ export function useWildberriesAnalyticsPage() {
   const [articlePattern, setArticlePattern] = useState('*')
   const [isArticlePatternExclude, setIsArticlePatternExclude] = useState(false)
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
+  const { parseFile } = useFileParserWorker()
   const [vatRatePercent, setVatRatePercent] = useState<number>(() => readStoredRate(VAT_RATE_STORAGE_KEY, DEFAULT_VAT_RATE))
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
   const [priceMin, setPriceMin] = useState<number | null>(null)
@@ -487,7 +488,12 @@ export function useWildberriesAnalyticsPage() {
     setIsProcessing(true)
 
     try {
-      const text = await readUploadFileAsCsv(file)
+      const result = await parseFile(file)
+      if (result.ok === false) {
+        setUploadError(result.error)
+        return { added: false }
+      }
+      const text = result.csv
 
       const missingColumns = validateWildberriesWeeklyColumns(text)
       if (missingColumns.length > 0) {
@@ -552,7 +558,7 @@ export function useWildberriesAnalyticsPage() {
     } finally {
       setIsProcessing(false)
     }
-  }, [weeklyReports])
+  }, [weeklyReports, parseFile])
 
   const removeWeeklyReport = useCallback(async (reportId: string): Promise<void> => {
     const report = weeklyReports.find((r) => r.id === reportId)
@@ -576,7 +582,12 @@ export function useWildberriesAnalyticsPage() {
     setIsProcessing(true)
 
     try {
-      const text = await readUploadFileAsCsv(file)
+      const result = await parseFile(file)
+      if (result.ok === false) {
+        setUploadError(result.error)
+        return
+      }
+      const text = result.csv
       const compactCsv = extractWildberriesCogsCsv(text)
       if (!compactCsv) {
         setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')

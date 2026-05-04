@@ -20,7 +20,7 @@ import { formatValue } from '@/shared/lib/csv'
 import { deleteCsvRecord, getCsvRecord, saveCsvRecord } from '@/shared/lib/indexed-db'
 import { configurePdfFont, PDF_THEMES, renderPdfReport } from '@/shared/lib/pdf'
 import { useMarketplaceConnections } from '@/shared/api/use-marketplace-connection'
-import { readUploadFileAsCsv } from '@/shared/lib/upload-file'
+import { useFileParserWorker } from '@/shared/hooks/useFileParserWorker'
 import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
@@ -238,6 +238,7 @@ export function useOzonAnalyticsPage() {
   const [priceMin, setPriceMin] = useState<number | null>(null)
   const [priceMax, setPriceMax] = useState<number | null>(null)
   const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
+  const { parseFile } = useFileParserWorker()
   const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
@@ -352,7 +353,12 @@ export function useOzonAnalyticsPage() {
     setIsProcessing(true)
 
     try {
-      const text = await readUploadFileAsCsv(file)
+      const result = await parseFile(file)
+      if (result.ok === false) {
+        setUploadError(result.error)
+        return
+      }
+      const text = result.csv
       if (ozonCalculationType === 'accrualReport') {
         setAccrualCsvSource(text)
       } else {
@@ -384,7 +390,12 @@ export function useOzonAnalyticsPage() {
     setIsProcessing(true)
 
     try {
-      const text = await readUploadFileAsCsv(file)
+      const result = await parseFile(file)
+      if (result.ok === false) {
+        setUploadError(result.error)
+        return
+      }
+      const text = result.csv
       const compactCsv = extractOzonCogsCsv(text)
       if (!compactCsv) {
         setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
