@@ -57,6 +57,15 @@ const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
 const COGS_FILE_ALIAS = 'Себестоимость'
 const WB_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей Ozon'
 
+function formatPeriodForFilename(periodLabel: string | undefined): string {
+  if (!periodLabel) return ''
+  const dates = periodLabel.split(/\s*[-–—]\s*/)
+  const stripYear = (d: string) => d.replace(/\.\d{4}$/, '').trim()
+  const from = stripYear(dates[0])
+  const to = dates.length > 1 ? stripYear(dates[1]) : ''
+  return to ? `${from}—${to}` : from
+}
+
 function stripBom(value: string): string {
   return value.startsWith('\uFEFF') ? value.slice(1) : value
 }
@@ -700,7 +709,8 @@ export function useWildberriesAnalyticsPage() {
       source: pdfSource,
       sections: buildWildberriesPdfSections(reports),
     })
-    doc.save(`wildberries-analytics-${Date.now()}.pdf`)
+    const periodSuffix = formatPeriodForFilename(periodLabel)
+    doc.save(`wildberries-analytics${periodSuffix ? `-${periodSuffix}` : ''}-${Date.now()}.pdf`)
   }
 
   return {

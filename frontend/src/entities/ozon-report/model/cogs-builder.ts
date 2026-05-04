@@ -2,6 +2,21 @@ import { OZON_ACCRUAL_COLUMNS, OZON_CSV_LAYOUT, OZON_UNIT_COLUMNS } from '@/enti
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 import { assertCsvColumns, averageByKey, createCsvTable, findHeaderRowIndex, isArticleIncludedByPattern, normalizeArticleKey, parseCsvWithFallback, rowsToSemicolonCsv, stripBom } from '@/shared/lib/reporting'
 
+export type CogsMatchingMode = 'full' | 'digits'
+
+function extractDigitsPattern(article: string): string {
+  return normalizeArticleKey(article).replace(/\D/g, '')
+}
+
+export function resolveCogsLookupKey(article: string, mode: CogsMatchingMode): string {
+  const normalizedArticle = normalizeArticleKey(article)
+  if (mode === 'digits') {
+    const digitsPattern = extractDigitsPattern(normalizedArticle)
+    if (digitsPattern) return `digits:${digitsPattern}`
+  }
+  return `full:${normalizedArticle}`
+}
+
 function findCogsHeader(headers: string[]): { articleIdx: number, cogsIdx: number } | null {
   const normalizedHeaders = headers.map((header) => normalize(header).toLowerCase().replace(/ё/g, 'е'))
   const articleIdx = normalizedHeaders.findIndex(
@@ -54,11 +69,11 @@ export function extractOzonCogsCsv(rawCsv: string): string | null {
   ])
 }
 
-export function buildOzonCogsMap(rawCsv: string): Map<string, number> | null {
+export function buildOzonCogsMap(rawCsv: string, mode: CogsMatchingMode = 'full'): Map<string, number> | null {
   const parsedRows = parseOzonCogsRows(rawCsv)
   if (!parsedRows) return null
 
-  return averageByKey(parsedRows, (row) => normalizeArticleKey(row.article), (row) => row.cogs)
+  return averageByKey(parsedRows, (row) => resolveCogsLookupKey(row.article, mode), (row) => row.cogs)
 }
 
 export function buildUnitArticleCogsMap(rawCsv: string): Map<string, number> | null {
@@ -93,6 +108,7 @@ export function getOzonMissingCogsArticles(
   cogsByArticleMap: Map<string, number> | null,
   articlePattern = '*',
   excludePattern = false,
+  cogsMatchingMode: CogsMatchingMode = 'full',
 ): string[] {
   if (!cogsByArticleMap || cogsByArticleMap.size === 0) return []
 
@@ -114,7 +130,7 @@ export function getOzonMissingCogsArticles(
     if (!article) continue
     if (!isArticleIncludedByPattern(article, articlePattern, excludePattern)) continue
 
-    const articleKey = normalizeArticleKey(article)
+    const articleKey = resolveCogsLookupKey(article, cogsMatchingMode)
     if (cogsByArticleMap.has(articleKey)) continue
     if (!missingByKey.has(articleKey)) {
       missingByKey.set(articleKey, article)

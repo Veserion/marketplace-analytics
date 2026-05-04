@@ -1,8 +1,10 @@
 import { OZON_ACCRUAL_COLUMNS, OZON_CSV_LAYOUT } from '@/entities/ozon-report/model/columns'
+import type { CogsMatchingMode } from '@/entities/ozon-report/model/cogs-builder'
+import { resolveCogsLookupKey } from '@/entities/ozon-report/model/cogs-builder'
 import type { AccrualGroup, AccrualMetric, ValueType } from '@/entities/ozon-report/model/types'
 import { normalize, parseCsv, parseNumber } from '@/shared/lib/csv'
 import type { CsvTable } from '@/shared/lib/reporting'
-import { addToNumberMap, assertCsvColumns, createCsvTable, findHeaderRowIndex, formatSharePercent, isArticleIncludedByPattern, normalizeArticleKey, normalizeLower, sortByAbsDesc, stripBom } from '@/shared/lib/reporting'
+import { addToNumberMap, assertCsvColumns, createCsvTable, findHeaderRowIndex, formatSharePercent, isArticleIncludedByPattern, normalizeLower, sortByAbsDesc, stripBom } from '@/shared/lib/reporting'
 
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
@@ -75,6 +77,7 @@ function calculateOzonAccrualCogs(
   dataRows: string[][],
   table: CsvTable,
   cogsByArticleMap: Map<string, number> | null,
+  cogsMatchingMode: CogsMatchingMode,
 ): number | null {
   if (!cogsByArticleMap || cogsByArticleMap.size === 0) return null
   if (
@@ -90,7 +93,7 @@ function calculateOzonAccrualCogs(
   for (const row of dataRows) {
     const accrualType = normalizeLower(table.getCell(row, OZON_ACCRUAL_COLUMNS.accrualType))
     if (accrualType !== 'выручка') continue
-    const articleKey = normalizeArticleKey(table.getCell(row, OZON_ACCRUAL_COLUMNS.article))
+    const articleKey = resolveCogsLookupKey(table.getCell(row, OZON_ACCRUAL_COLUMNS.article), cogsMatchingMode)
     const quantity = parseNumber(table.getCell(row, OZON_ACCRUAL_COLUMNS.qty))
     if (!articleKey || quantity === null) continue
     const unitCost = cogsByArticleMap.get(articleKey)
@@ -105,10 +108,11 @@ function aggregateOzonAccrualRows(
   dataRows: string[][],
   table: CsvTable,
   cogsByArticleMap: Map<string, number> | null,
+  cogsMatchingMode: CogsMatchingMode,
 ): OzonAccrualAggregate {
   const aggregate: OzonAccrualAggregate = {
     rowCount: dataRows.length,
-    cogsFromUnitMap: calculateOzonAccrualCogs(dataRows, table, cogsByArticleMap),
+    cogsFromUnitMap: calculateOzonAccrualCogs(dataRows, table, cogsByArticleMap, cogsMatchingMode),
     sumByGroup: new Map<string, number>(),
     sumByDate: new Map<string, number>(),
     sumByScheme: new Map<string, number>(),
@@ -413,6 +417,7 @@ export function buildAccrualReports(
   cogsByArticleMap: Map<string, number> | null = null,
   articlePattern = '*',
   excludePattern = false,
+  cogsMatchingMode: CogsMatchingMode = 'full',
   priceMin: number | null = null,
   priceMax: number | null = null,
 ): AccrualGroup[] {
@@ -453,7 +458,7 @@ export function buildAccrualReports(
       return true
     })
   }
-  const aggregate = aggregateOzonAccrualRows(dataRows, table, cogsByArticleMap)
+  const aggregate = aggregateOzonAccrualRows(dataRows, table, cogsByArticleMap, cogsMatchingMode)
 
   return buildOzonAccrualReportGroups(aggregate, vatRatePercent, taxRatePercent)
 }

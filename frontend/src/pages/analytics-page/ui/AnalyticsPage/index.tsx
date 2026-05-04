@@ -20,6 +20,7 @@ export function AnalyticsPage() {
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
+    cogsMatchingMode,
     downloadPdf,
     error,
     fileName,
@@ -45,6 +46,7 @@ export function AnalyticsPage() {
     priceMax,
     setArticlePattern,
     setAccrualArticlePattern,
+    setCogsMatchingMode,
     setIsExtraParamsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,
@@ -80,6 +82,7 @@ export function AnalyticsPage() {
         accrualArticlePattern={accrualArticlePattern}
         unitArticlePatternExclude={isUnitArticlePatternExclude}
         accrualArticlePatternExclude={isAccrualArticlePatternExclude}
+        cogsMatchingMode={cogsMatchingMode}
         priceMin={priceMin}
         priceMax={priceMax}
         vatRatePercent={vatRatePercent}
@@ -89,6 +92,7 @@ export function AnalyticsPage() {
         onAccrualArticlePatternChange={setAccrualArticlePattern}
         onUnitArticlePatternExcludeChange={setIsUnitArticlePatternExclude}
         onAccrualArticlePatternExcludeChange={setIsAccrualArticlePatternExclude}
+        onCogsMatchingModeChange={setCogsMatchingMode}
         onPriceMinChange={setPriceMin}
         onPriceMaxChange={setPriceMax}
         onVatRateChange={onVatRateChange}

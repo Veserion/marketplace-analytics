@@ -7,6 +7,7 @@ import {
   buildUnitEconomicsReports,
   extractOzonCogsCsv,
   getOzonMissingCogsArticles,
+  type CogsMatchingMode,
   getUnitMetricClassValue,
   getUnitMetricDisplay,
 } from '@/entities/ozon-report'
@@ -24,6 +25,7 @@ import type { PdfMetricTone, PdfSection } from '@/shared/lib/pdf'
 
 const VAT_RATE_STORAGE_KEY = 'unit_economics_vat_rate_percent'
 const TAX_RATE_STORAGE_KEY = 'unit_economics_tax_rate_percent'
+const COGS_MATCHING_MODE_STORAGE_KEY = 'ozon_cogs_matching_mode'
 const DEFAULT_VAT_RATE = 5
 const DEFAULT_TAX_RATE = 6
 const CANCELLATIONS_AND_RETURNS_LABEL = 'Отмены, возвраты, не выкупы'
@@ -35,11 +37,26 @@ const STRUCTURE_PREFIX = 'Структура: '
 const COGS_FILE_ALIAS = 'Себестоимость'
 const OZON_COGS_FALLBACK_NOTE = 'Используется файл себестоимостей WB'
 
+function formatPeriodForFilename(periodLabel: string | undefined): string {
+  if (!periodLabel) return ''
+  const dates = periodLabel.split(/\s*[-–—]\s*/)
+  const stripYear = (d: string) => d.replace(/\.\d{4}$/, '').trim()
+  const from = stripYear(dates[0])
+  const to = dates.length > 1 ? stripYear(dates[1]) : ''
+  return to ? `${from}—${to}` : from
+}
+
 function readStoredRate(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
   const raw = window.localStorage.getItem(key)
   const parsed = raw === null ? Number.NaN : Number(raw)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function readStoredCogsMatchingMode(): CogsMatchingMode {
+  if (typeof window === 'undefined') return 'full'
+  const raw = window.localStorage.getItem(COGS_MATCHING_MODE_STORAGE_KEY)
+  return raw === 'digits' ? 'digits' : 'full'
 }
 
 function getValueTone(value: number | null): PdfMetricTone {
@@ -220,6 +237,7 @@ export function useOzonAnalyticsPage() {
   const [taxRatePercent, setTaxRatePercent] = useState<number>(() => readStoredRate(TAX_RATE_STORAGE_KEY, DEFAULT_TAX_RATE))
   const [priceMin, setPriceMin] = useState<number | null>(null)
   const [priceMax, setPriceMax] = useState<number | null>(null)
+  const [cogsMatchingMode, setCogsMatchingMode] = useState<CogsMatchingMode>(() => readStoredCogsMatchingMode())
   const { isConnected: isMarketplaceConnected } = useMarketplaceConnections()
 
   const isOzonUnitEconomics = ozonCalculationType === 'unitEconomics'
@@ -248,8 +266,8 @@ export function useOzonAnalyticsPage() {
   const unitReports = unitReportBuild.reports
   const cogsByArticleMap = useMemo(() => {
     if (!cogsCsvSource) return null
-    return buildOzonCogsMap(cogsCsvSource)
-  }, [cogsCsvSource])
+    return buildOzonCogsMap(cogsCsvSource, cogsMatchingMode)
+  }, [cogsCsvSource, cogsMatchingMode])
   const accrualReportBuild = useMemo(() => {
     if (!accrualCsvSource) return { reports: null as AccrualGroup[] | null, error: '' }
     try {
@@ -261,6 +279,7 @@ export function useOzonAnalyticsPage() {
           cogsByArticleMap,
           accrualArticlePattern,
           isAccrualArticlePatternExclude,
+          cogsMatchingMode,
           priceMin,
           priceMax,
         ),
@@ -275,12 +294,13 @@ export function useOzonAnalyticsPage() {
   }, [
     accrualArticlePattern,
     accrualCsvSource,
+    cogsByArticleMap,
+    cogsMatchingMode,
     isAccrualArticlePatternExclude,
     priceMax,
     priceMin,
     taxRatePercent,
     vatRatePercent,
-    cogsByArticleMap,
   ])
   const accrualReports = accrualReportBuild.reports
 
@@ -291,8 +311,9 @@ export function useOzonAnalyticsPage() {
       cogsByArticleMap,
       accrualArticlePattern,
       isAccrualArticlePatternExclude,
+      cogsMatchingMode,
     )
-  }, [accrualArticlePattern, accrualCsvSource, cogsByArticleMap, isAccrualArticlePatternExclude, isOzonUnitEconomics])
+  }, [accrualArticlePattern, accrualCsvSource, cogsByArticleMap, cogsMatchingMode, isAccrualArticlePatternExclude, isOzonUnitEconomics])
 
   const modeError = isOzonUnitEconomics ? unitReportBuild.error : accrualReportBuild.error
   const error = uploadError || modeError
@@ -369,7 +390,7 @@ export function useOzonAnalyticsPage() {
         setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
         return
       }
-      const parsedMap = buildOzonCogsMap(compactCsv)
+      const parsedMap = buildOzonCogsMap(compactCsv, cogsMatchingMode)
       if (!parsedMap) {
         setUploadError('Некорректный CSV себестоимости: обязательны колонки "Артикул" и "Себестоимость" (регистр не важен).')
         return
@@ -433,6 +454,11 @@ export function useOzonAnalyticsPage() {
   }, [taxRatePercent])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(COGS_MATCHING_MODE_STORAGE_KEY, cogsMatchingMode)
+  }, [cogsMatchingMode])
+
+  useEffect(() => {
     let isCancelled = false
     Promise.all([
       getCsvRecord('unitEconomics'),
@@ -493,7 +519,11 @@ export function useOzonAnalyticsPage() {
       sections,
     })
 
-    doc.save(`ozon-analytics-${Date.now()}.pdf`)
+    const periodLabel = !isOzonUnitEconomics && accrualReports
+      ? accrualReports.find((r) => r.title === 'Итоги периода')?.periodLabel
+      : undefined
+    const periodSuffix = formatPeriodForFilename(periodLabel)
+    doc.save(`ozon-analytics${periodSuffix ? `-${periodSuffix}` : ''}-${Date.now()}.pdf`)
   }
 
   return {
@@ -502,6 +532,7 @@ export function useOzonAnalyticsPage() {
     articlePattern,
     cogsFallbackNote,
     cogsFileName,
+    cogsMatchingMode,
     downloadPdf,
     error,
     fileName,
@@ -527,6 +558,7 @@ export function useOzonAnalyticsPage() {
     priceMax,
     setArticlePattern,
     setAccrualArticlePattern,
+    setCogsMatchingMode,
     setIsExtraParamsOpen,
     setIsAccrualArticlePatternExclude,
     setIsUnitArticlePatternExclude,

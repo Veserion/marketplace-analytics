@@ -531,7 +531,11 @@ export class WbReportService {
     const userPeriodToStr = availablePeriodTo.toISOString().split('T')[0]
 
     const filteredRows = dedupedRows.filter((row: any) => {
-      const rowDate = row.rrDate || row.saleDt || row.orderDt
+      const rawDate = row.rrDate || row.saleDt || row.orderDt
+      if (!rawDate) return false
+      // API dates may come as ISO strings (e.g. "2024-03-15T00:00:00"),
+      // extract date-only part for correct string comparison with YYYY-MM-DD boundaries
+      const rowDate = String(rawDate).slice(0, 10)
       return rowDate >= userPeriodFromStr && rowDate <= userPeriodToStr
     })
 
