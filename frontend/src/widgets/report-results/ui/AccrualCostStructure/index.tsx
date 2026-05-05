@@ -9,9 +9,6 @@ import styles from './index.module.scss'
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'AccrualCostStructure'
 const REVENUE_BEFORE_SPP_LABEL = 'Выручка с учетом СПП'
-const SALES_AND_RETURNS_AND_COMPENSATIONS_LABEL = 'Продажи, возвраты и компенсации'
-const TRANSFER_TO_BANK_LABEL = 'Перевод в банк'
-const MARKETPLACE_EXPENSES_LABEL = 'Общие затраты по Маркетплейсу'
 const RETURNS_LABEL = 'Возвраты'
 const TAX_LABEL = 'Налог'
 const COGS_LABEL = 'Себестоимость'
@@ -32,7 +29,7 @@ const WB_OTHER_EXPENSES_LABEL = 'Прочие расходы WB'
 const COST_STRUCTURE_COLORS = {
   commission: '#005bff',
   promotion: '#e85a9b',
-  logistic: '#866b00',
+  logistic: '#daec47',
   returns: '#fd743d',
   tax: '#a66401',
   cogs: '#ae9fff',
@@ -115,9 +112,8 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
     return buildWildberriesCostStructureModel(totalsReport, groupedReport)
   }
 
-  const revenueBeforeSppNet = getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL)
+  const baseValue = Math.max(getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL), 0)
   const returnsValue = Math.abs(getMetricValue(totalsReport, RETURNS_LABEL))
-  const baseValue = Math.max(revenueBeforeSppNet + returnsValue, 0)
   if (baseValue <= 0) return null
 
   const commissionComponents = [
@@ -197,9 +193,7 @@ function buildWildberriesCostStructureModel(
   totalsReport: AccrualGroup,
   groupedReport: AccrualGroup,
 ): CostStructureModel | null {
-  const transferToBankValue = getMetricValue(totalsReport, TRANSFER_TO_BANK_LABEL)
-  const marketplaceExpensesValue = Math.abs(getMetricValue(totalsReport, MARKETPLACE_EXPENSES_LABEL))
-  const baseValue = Math.max(transferToBankValue + marketplaceExpensesValue, 0)
+  const baseValue = Math.max(getMetricValue(totalsReport, REVENUE_BEFORE_SPP_LABEL), 0)
   if (baseValue <= 0) return null
 
   const returnsMetric = getMetric(totalsReport, RETURNS_LABEL)
@@ -319,7 +313,7 @@ export function AccrualCostStructure({ reports }: AccrualCostStructureProps) {
       <header className={cn(`${BLOCK_NAME}__header`)}>
         <Typography variant="h3" color="accent">Структура затрат и прибыли</Typography>
         <Typography variant="body2" color="muted">
-          100% = {formatOverviewCurrency(costStructureModel.baseValue)} ({SALES_AND_RETURNS_AND_COMPENSATIONS_LABEL})
+          100% = {formatOverviewCurrency(costStructureModel.baseValue)} ({REVENUE_BEFORE_SPP_LABEL})
         </Typography>
       </header>
       <div className={cn(`${BLOCK_NAME}__layout`)}>
