@@ -8,6 +8,7 @@ import { addToNumberMap, assertCsvColumns, createCsvTable, findHeaderRowIndex, f
 
 const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Маркетплейсу'
 const SALES_GROUP_LABEL = 'Продажи'
+const OZON_COMPENSATIONS_LABEL = 'Компенсации и декомпенсации'
 
 function formatDateLabel(date: Date): string {
   const day = String(date.getUTCDate()).padStart(2, '0')
@@ -191,6 +192,9 @@ function classifyOzonAccrualGroup(rawLabel: string): { label: string, withSalesS
   if (normalizedLabel.includes('продвижен') && normalizedLabel.includes('реклам')) {
     return { label: 'Продвижение', withSalesShare: true }
   }
+  if (normalizedLabel.includes('компенсац') || normalizedLabel.includes('декомпенсац')) {
+    return { label: OZON_COMPENSATIONS_LABEL, withSalesShare: true }
+  }
   if (normalizedLabel.includes('услуги фбо') || normalizedLabel.includes('fbo')) {
     return { label: 'Услуги ФБО', withSalesShare: true }
   }
@@ -243,7 +247,7 @@ function buildOzonGroupedExpenseMetrics(
 
   groupMetrics.push({
     label: 'Итог',
-    value: -Math.abs(marketplaceExpenses),
+    value: marketplaceExpenses,
     type: 'currency',
     formula: 'SUM("Сумма итого, руб."), фильтр: "Группа услуг" != "Продажи" и исключая возвраты',
     shareText: formatSharePercent(marketplaceExpenses, salesBase),

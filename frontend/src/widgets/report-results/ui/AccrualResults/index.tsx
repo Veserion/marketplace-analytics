@@ -37,7 +37,6 @@ const GROUPED_EXPENSES_REPORT_TITLE = 'Общие затраты по Марке
 const SALES_GROUP_LABEL = 'Продажи'
 const GROUPED_TOTAL_LABEL = 'Итог'
 const GROUPED_SUBTOTAL_LABELS = new Set(['Итого расходов', 'Итого компенсаций', 'Итого с учётом компенсаций'])
-const POSITIVE_REVENUE_ADJUSTMENT_LABELS = new Set(['Добровольная компенсация', 'Компенсация скидки'])
 const EXPLANATION_REPORT_TITLES = new Set([
   'Итоги периода',
   GROUPED_EXPENSES_REPORT_TITLE,
@@ -187,6 +186,7 @@ function getMetricExplanation(reportTitle: string, label: string): string | null
     'Продвижение': 'Расходы на рекламные инструменты и платное продвижение товаров внутри маркетплейса.',
     'Услуги партнеров': 'Платные сервисы партнеров маркетплейса, связанные с продажами и операциями.',
     'Другие услуги и штрафы': 'Прочие удержания маркетплейса, включая дополнительные услуги, корректировки и штрафы.',
+    'Компенсации и декомпенсации': 'Корректировки от маркетплейса: компенсации уменьшают расходы, декомпенсации увеличивают их.',
     'Реклама и удержания': 'Расходы на продвижение и связанные удержания маркетплейса.',
     'Эквайринг и платежи': 'Расходы на прием и обработку платежей покупателей.',
     'Хранение': 'Расходы за размещение товаров на складах маркетплейса.',
@@ -302,10 +302,9 @@ function buildOverviewModel(reports: AccrualGroup[]): OverviewModel | null {
       && !GROUPED_SUBTOTAL_LABELS.has(metric.label)
       && metric.value !== null)
     .map((metric, index) => {
-      const isCompensation = POSITIVE_REVENUE_ADJUSTMENT_LABELS.has(metric.label)
       return {
         label: metric.label,
-        value: isCompensation ? Math.abs(metric.value || 0) : -Math.abs(metric.value || 0),
+        value: metric.value || 0,
         formula: metric.formula,
         color: getOverviewColor(index + 2),
       }
