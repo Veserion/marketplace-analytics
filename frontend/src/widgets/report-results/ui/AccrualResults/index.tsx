@@ -38,6 +38,11 @@ const SALES_GROUP_LABEL = 'Продажи'
 const GROUPED_TOTAL_LABEL = 'Итог'
 const GROUPED_SUBTOTAL_LABELS = new Set(['Итого расходов', 'Итого компенсаций', 'Итого с учётом компенсаций'])
 const POSITIVE_REVENUE_ADJUSTMENT_LABELS = new Set(['Добровольная компенсация', 'Компенсация скидки'])
+const EXPLANATION_REPORT_TITLES = new Set([
+  'Итоги периода',
+  GROUPED_EXPENSES_REPORT_TITLE,
+  'Схема работы',
+])
 const MAX_OVERVIEW_ITEMS = 8
 const FORCED_NEGATIVE_DISPLAY_LABELS = new Set([
   RETURNS_LABEL,
@@ -154,6 +159,56 @@ function getPrimaryMetricValueClassName(label: string, value: number | null): st
   return getValueClassName(value)
 }
 
+function getMetricExplanation(reportTitle: string, label: string): string | null {
+  if (reportTitle.startsWith(STRUCTURE_PREFIX)) {
+    return 'Крупная составляющая выбранной категории начислений: показывает, за счет какого типа операции сформировалась сумма.'
+  }
+  if (!EXPLANATION_REPORT_TITLES.has(reportTitle)) return null
+
+  const explanations: Record<string, string> = {
+    'Количество продаж': 'Число проданных товаров за выбранный период.',
+    [CANCELLATIONS_AND_RETURNS_LABEL]: 'Количество заказов, которые не дошли до успешной продажи: возвраты, отмены и невыкупы.',
+    [CANCELLATIONS_AND_NON_PICKUPS_LABEL]: 'Количество заказов, которые не были выкуплены или были отменены покупателями.',
+    [RETURNS_LABEL]: 'Возвраты покупателей: показатель помогает оценить потери оборота и нагрузку на логистику.',
+    'Выручка с учетом СПП': 'Оборот продаж с учетом скидок и компенсаций маркетплейса, близкий к полной цене реализации товара.',
+    [REVENUE_WITHOUT_SPP_LABEL]: 'Сумма продаж после скидок маркетплейса, которая отражает фактическую цену для покупателя.',
+    [SPP_AND_PROMOTIONS_LABEL]: 'Влияние скидок, акций и программ продвижения маркетплейса на цену продажи.',
+    [MARKETPLACE_EXPENSES_LABEL]: 'Совокупные удержания маркетплейса за комиссии, логистику, хранение, продвижение и другие услуги.',
+    [TRANSFER_TO_BANK_LABEL]: 'Деньги, которые маркетплейс перечисляет продавцу после своих начислений и удержаний.',
+    [COGS_LABEL]: 'Закупочная или производственная стоимость проданных товаров.',
+    [TAX_LABEL]: 'Оценка налоговой нагрузки по продажам за период.',
+    'Маржинальность': 'Доля чистой прибыли в выручке: показывает экономическую эффективность продаж.',
+    'Чистая прибыль': 'Оценка результата после расходов маркетплейса, себестоимости и налогов.',
+    'Комиссия Ozon': 'Вознаграждение маркетплейса за продажу товара на площадке.',
+    'Расходы по Ozon': 'Основные удержания Ozon за обслуживание продаж и выполнение операций на площадке.',
+    'Комиссия WB': 'Вознаграждение Wildberries за продажу товара на площадке.',
+    'Услуги ФБО': 'Расходы на операции маркетплейса по модели хранения и обработки товаров на стороне площадки.',
+    'Логистика': 'Расходы на доставку, перемещение и обработку отправлений.',
+    'Продвижение': 'Расходы на рекламные инструменты и платное продвижение товаров внутри маркетплейса.',
+    'Услуги партнеров': 'Платные сервисы партнеров маркетплейса, связанные с продажами и операциями.',
+    'Другие услуги и штрафы': 'Прочие удержания маркетплейса, включая дополнительные услуги, корректировки и штрафы.',
+    'Реклама и удержания': 'Расходы на продвижение и связанные удержания маркетплейса.',
+    'Эквайринг и платежи': 'Расходы на прием и обработку платежей покупателей.',
+    'Хранение': 'Расходы за размещение товаров на складах маркетплейса.',
+    'Штрафы': 'Финансовые санкции маркетплейса за нарушения правил или операционные ошибки.',
+    'Приемка': 'Расходы на приемку и обработку товаров на стороне маркетплейса.',
+    'Добровольная компенсация': 'Компенсация от маркетплейса, которая уменьшает общий эффект расходов.',
+    'Компенсация скидки': 'Возмещение скидок или акций со стороны маркетплейса.',
+    'Итого расходов': 'Суммарный объем расходов маркетплейса до учета компенсаций.',
+    'Итого компенсаций': 'Суммарные компенсации, которые уменьшают итоговую нагрузку расходов.',
+    'Итого с учётом компенсаций': 'Итоговый эффект расходов маркетплейса после учета компенсаций.',
+    'Итог': 'Суммарный результат по категориям внутри блока.',
+  }
+
+  if (label.startsWith('FBS') || label.startsWith('FBW') || label.startsWith('FBM')) {
+    return 'Доля продаж или выплат по выбранной схеме работы с маркетплейсом.'
+  }
+  if (label === 'Не указано') {
+    return 'Операции, для которых схема работы не была определена в данных отчета.'
+  }
+  return explanations[label] ?? 'Показатель отражает отдельную категорию начислений или удержаний маркетплейса за выбранный период.'
+}
+
 function toMetricRow(
   reportTitle: string,
   metric: AccrualGroup['metrics'][number],
@@ -177,7 +232,7 @@ function toMetricRow(
   return {
     id: `${reportTitle}-${metric.label}`,
     label: metric.label,
-    formula: metric.formula,
+    formula: getMetricExplanation(reportTitle, metric.label) ?? metric.formula,
     valueText,
     percentText: metric.shareText,
     valueClassName,
@@ -319,9 +374,7 @@ export function AccrualResults({
   const wildberriesPeriodRange = isWildberries
     ? parseDateRangeFromPeriodLabel(totalsReport?.periodLabel)
     : null
-  console.log('showAccrualOverview', showAccrualOverview)
   const overviewModel = showAccrualOverview ? buildOverviewModel(reports) : null
-  console.log('overviewModel', overviewModel)
   const salesAbsSum = overviewModel
     ? overviewModel.salesItems.reduce((acc, item) => acc + Math.abs(item.value), 0)
     : 0
@@ -543,9 +596,10 @@ export function AccrualResults({
                   </div>
                 ) : (
                   <UiMetricsList
-                    rows={report.metrics.map((metric) => (
-                      toMetricRow(report.title, metric, getValueClassName(metric.value), cogsMissingValueText)
-                    ))}
+                    rows={report.metrics.map((metric) => {
+                      const row = toMetricRow(report.title, metric, getValueClassName(metric.value), cogsMissingValueText)
+                      return { ...row, formula: undefined }
+                    })}
                   />
                 )}
               </div>

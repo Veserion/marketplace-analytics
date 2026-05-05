@@ -32,13 +32,13 @@ const WB_OTHER_EXPENSES_LABEL = 'Прочие расходы WB'
 const COST_STRUCTURE_COLORS = {
   commission: '#005bff',
   promotion: '#e85a9b',
-  logistic: '#fcca09',
+  logistic: '#866b00',
   returns: '#fd743d',
   tax: '#a66401',
-  cogs: '#8c7ed8',
+  cogs: '#ae9fff',
   netProfit: '#028d30',
 }
-const WB_EXPENSE_PALETTE = ['#2d79d5', '#8c7ed8', '#e85a9b', '#5fa9d7', '#d9b15e', '#f08359']
+const WB_EXPENSE_PALETTE = ['#2d79d5', '#f51c37', '#ff52d7', '#5fa9d7', '#d9b15e', '#f08359']
 const WB_MAX_GROUP_SEGMENTS = 5
 
 type CostStructureSegment = {
@@ -76,6 +76,35 @@ function getMetricValue(report: AccrualGroup | undefined, label: string): number
   return getMetric(report, label)?.value ?? 0
 }
 
+function getCostStructureExplanation(label: string): string {
+  const explanations: Record<string, string> = {
+    [COMMISSION_OZON_DISPLAY_LABEL]: 'Основные удержания Ozon за обслуживание продаж и операции на площадке.',
+    [LOGISTICS_LABEL]: 'Расходы на доставку, перемещение и обработку отправлений.',
+    [PROMOTION_LABEL]: 'Расходы на рекламные инструменты и платное продвижение товаров внутри маркетплейса.',
+    [RETURNS_LABEL]: 'Возвраты покупателей: показатель помогает оценить потери оборота и нагрузку на логистику.',
+    [TAX_LABEL]: 'Оценка налоговой нагрузки по продажам за период.',
+    [COGS_LABEL]: 'Закупочная или производственная стоимость проданных товаров.',
+    [NET_PROFIT_LABEL]: 'Оценка результата после расходов маркетплейса, себестоимости и налогов.',
+    [WB_OTHER_EXPENSES_LABEL]: 'Сумма менее крупных расходов маркетплейса, объединенных для компактного отображения.',
+  }
+  return explanations[label] ?? 'Расход маркетплейса, который уменьшает итоговый финансовый результат продавца.'
+}
+
+function getSegmentOrderGroup(segment: CostStructureSegment): number {
+  if (segment.label === NET_PROFIT_LABEL) return 3
+  if (segment.label === TAX_LABEL) return 2
+  if (segment.label === COGS_LABEL) return 1
+  return 0
+}
+
+function sortCostStructureSegments(segments: CostStructureSegment[]): CostStructureSegment[] {
+  return [...segments].sort((a, b) => {
+    const groupDiff = getSegmentOrderGroup(a) - getSegmentOrderGroup(b)
+    if (groupDiff !== 0) return groupDiff
+    return b.value - a.value
+  })
+}
+
 function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | null {
   const totalsReport = reports.find((report) => report.title === 'Итоги периода')
   const groupedReport = reports.find((report) => report.title === GROUPED_EXPENSES_REPORT_TITLE)
@@ -98,7 +127,6 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
     OTHER_SERVICES_LABEL,
   ]
   const groupedValue = (label: string): number => getMetricValue(groupedReport, label)
-  console.log('commissionComponents', commissionComponents)
   const commissionValue = commissionComponents.reduce((acc, label) => acc + Math.abs(groupedValue(label)), 0)
   const logisticValue = Math.abs(groupedValue(LOGISTICS_LABEL))
   const promotionValue = Math.abs(groupedValue(PROMOTION_LABEL))
@@ -106,58 +134,57 @@ function buildCostStructureModel(reports: AccrualGroup[]): CostStructureModel | 
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
   const netProfitValue = Math.max(baseValue - (commissionValue + promotionValue + returnsValue + taxValue + cogsValue), 0)
 
-  const expenseSegments: CostStructureSegment[] = [
+  const expenseSegments: CostStructureSegment[] = sortCostStructureSegments([
     {
       key: 'commission',
       label: COMMISSION_OZON_DISPLAY_LABEL,
       value: commissionValue,
       color: COST_STRUCTURE_COLORS.commission,
-      hint: 'ABS(Комиссия Ozon) + ABS(Услуги ФБО) + ABS(Логистика) + ABS(Услуги партнеров) + ABS(Другие услуги и штрафы) из блока "Общие затраты по Маркетплейсу".',
+      hint: getCostStructureExplanation(COMMISSION_OZON_DISPLAY_LABEL),
     },
     {
       key: 'commission',
       label: LOGISTICS_LABEL,
       value: logisticValue,
       color: COST_STRUCTURE_COLORS.logistic,
-      hint: 'ABS(Комиссия Ozon) + ABS(Услуги ФБО) + ABS(Логистика) + ABS(Услуги партнеров) + ABS(Другие услуги и штрафы) из блока "Общие затраты по Маркетплейсу".',
+      hint: getCostStructureExplanation(LOGISTICS_LABEL),
     },
     {
       key: 'promotion',
       label: PROMOTION_LABEL,
       value: promotionValue,
       color: COST_STRUCTURE_COLORS.promotion,
-      hint: 'ABS(категории "Продвижение") из блока "Общие затраты по Маркетплейсу".',
+      hint: getCostStructureExplanation(PROMOTION_LABEL),
     },
     {
       key: 'returns',
       label: RETURNS_LABEL,
       value: returnsValue,
       color: COST_STRUCTURE_COLORS.returns,
-      hint: 'ABS(метрики "Возвраты" из блока "Итоги периода"), учитывается как расход.',
+      hint: getCostStructureExplanation(RETURNS_LABEL),
     },
     {
       key: 'tax',
       label: TAX_LABEL,
       value: taxValue,
       color: COST_STRUCTURE_COLORS.tax,
-      hint: 'ABS(метрики "Налог" из блока "Итоги периода").',
+      hint: getCostStructureExplanation(TAX_LABEL),
     },
     {
       key: 'cogs',
       label: COGS_LABEL,
       value: cogsValue,
       color: COST_STRUCTURE_COLORS.cogs,
-      hint: 'ABS(метрики "Себестоимость" из блока "Итоги периода").',
+      hint: getCostStructureExplanation(COGS_LABEL),
     },
-  ]
-    .sort((a, b) => b.value - a.value)
+  ])
 
   const netProfitSegment: CostStructureSegment = {
     key: 'netProfit',
     label: NET_PROFIT_LABEL,
     value: netProfitValue,
     color: COST_STRUCTURE_COLORS.netProfit,
-    hint: 'MAX(0, База - (Расходы по Ozon + Продвижение + Возвраты + Налог + Себестоимость)), где База = Выручка с учетом СПП + ABS(Возвраты).',
+    hint: getCostStructureExplanation(NET_PROFIT_LABEL),
   }
 
   return {
@@ -179,8 +206,6 @@ function buildWildberriesCostStructureModel(
   const isReturnsCount = returnsMetric?.type === 'count'
   const taxValue = Math.abs(getMetricValue(totalsReport, TAX_LABEL))
   const cogsValue = Math.abs(getMetricValue(totalsReport, COGS_LABEL))
-  const taxFormula = getMetric(totalsReport, TAX_LABEL)?.formula ?? TAX_LABEL
-  const cogsFormula = getMetric(totalsReport, COGS_LABEL)?.formula ?? COGS_LABEL
   const netProfitValue = Math.max(getMetricValue(totalsReport, NET_PROFIT_LABEL), 0)
 
   const groupedExpenseSegments = groupedReport.metrics
@@ -196,7 +221,7 @@ function buildWildberriesCostStructureModel(
       label: metric.label,
       value: Math.abs(metric.value || 0),
       color: WB_EXPENSE_PALETTE[index % WB_EXPENSE_PALETTE.length],
-      hint: `ABS(${metric.formula})`,
+      hint: getCostStructureExplanation(metric.label),
     }))
 
   const topGroupedSegments = groupedExpenseSegments.slice(0, WB_MAX_GROUP_SEGMENTS)
@@ -209,7 +234,7 @@ function buildWildberriesCostStructureModel(
       label: WB_OTHER_EXPENSES_LABEL,
       value: groupedTailSum,
       color: WB_EXPENSE_PALETTE[WB_MAX_GROUP_SEGMENTS % WB_EXPENSE_PALETTE.length],
-      hint: `Сумма ABS(formula) остальных отрицательных категорий из "Общие затраты по Маркетплейсу" вне топ-${WB_MAX_GROUP_SEGMENTS}; каждая категория использует свою полную formula из tooltip блока расходов.`,
+      hint: getCostStructureExplanation(WB_OTHER_EXPENSES_LABEL),
     })
   }
 
@@ -217,13 +242,12 @@ function buildWildberriesCostStructureModel(
   if (!isReturnsCount) {
     const returnsValue = Math.abs(returnsMetric?.value ?? 0)
     if (returnsValue > 0) {
-      const returnsFormula = returnsMetric?.formula ?? RETURNS_LABEL
       addonSegments.push({
         key: 'wb-returns',
         label: RETURNS_LABEL,
         value: returnsValue,
         color: COST_STRUCTURE_COLORS.returns,
-        hint: `ABS(${returnsFormula})`,
+        hint: getCostStructureExplanation(RETURNS_LABEL),
       })
     }
   }
@@ -233,7 +257,7 @@ function buildWildberriesCostStructureModel(
       label: TAX_LABEL,
       value: taxValue,
       color: COST_STRUCTURE_COLORS.tax,
-      hint: `ABS(${taxFormula})`,
+      hint: getCostStructureExplanation(TAX_LABEL),
     })
   }
   if (cogsValue > 0) {
@@ -242,18 +266,18 @@ function buildWildberriesCostStructureModel(
       label: COGS_LABEL,
       value: cogsValue,
       color: COST_STRUCTURE_COLORS.cogs,
-      hint: `ABS(${cogsFormula})`,
+      hint: getCostStructureExplanation(COGS_LABEL),
     })
   }
 
-  const expenseSegments = [...topGroupedSegments, ...addonSegments].sort((a, b) => b.value - a.value)
+  const expenseSegments = sortCostStructureSegments([...topGroupedSegments, ...addonSegments])
 
   const netProfitSegment: CostStructureSegment = {
     key: 'wb-net-profit',
     label: NET_PROFIT_LABEL,
     value: netProfitValue,
     color: COST_STRUCTURE_COLORS.netProfit,
-    hint: 'transferToBank - costOfGoods - taxAmount',
+    hint: getCostStructureExplanation(NET_PROFIT_LABEL),
   }
 
   return {

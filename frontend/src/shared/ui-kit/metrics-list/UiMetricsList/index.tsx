@@ -38,7 +38,7 @@ export function UiMetricsList({ rows, className, hideThirdColumn = false }: UiMe
             <Typography as="span" variant="body2" color={row.labelColor ?? 'accent'} semiBold>{row.label}</Typography>
             {row.formula && (
               <InfoTooltip
-                ariaLabel={`Формула: ${row.formula}`}
+                ariaLabel={`Пояснение: ${row.formula}`}
                 content={row.formula}
                 icon={formulaIcon}
               />
