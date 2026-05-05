@@ -93,6 +93,7 @@ export function PeriodSelectionPanel({
   const [activePreset, setActivePreset] = useState<PeriodPreset | null>(null)
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
   const [validationError, setValidationError] = useState('')
+  const calendarPanelMonths = useMemo(() => getCalendarPanelMonths(), [])
 
   const hasDateRange = dateRange?.[0] != null && dateRange?.[1] != null
 
@@ -240,11 +241,12 @@ export function PeriodSelectionPanel({
         </Typography>
         <RangePicker
           picker="week"
+          showWeek={false}
           value={dateRange}
           onChange={handleRangeChange}
           format={formatWeekRange}
           locale={ruDatePickerLocale}
-          defaultPickerValue={getCalendarPanelMonths()}
+          defaultPickerValue={calendarPanelMonths}
           placeholder={['Начальная неделя', 'Конечная неделя']}
           allowClear
           inputReadOnly

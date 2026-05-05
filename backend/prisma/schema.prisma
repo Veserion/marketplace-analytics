@@ -42,6 +42,12 @@ enum WbReportType {
   weekly_detailed
 }
 
+enum StoredArtifactStatus {
+  processing
+  ready
+  error
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -53,6 +59,7 @@ model User {
   memberships    OrganizationMember[]
   auditLogs      AuditLog[]
   requestedWbReports WbApiReport[]
+  uploadedCogsFiles MarketplaceCogsFile[]
 }
 
 model EmailAuthCode {
@@ -78,6 +85,9 @@ model Organization {
   connections MarketplaceConnection[]
   auditLogs   AuditLog[]
   wbReports   WbApiReport[]
+  cogsFiles   MarketplaceCogsFile[]
+  cogsItems   MarketplaceCogsItem[]
+  metricSnapshots MarketplaceWeeklyMetricSnapshot[]
 }
 
 model OrganizationMember {
@@ -173,4 +183,82 @@ model WbApiReport {
   @@unique([organizationId, marketplace, reportType, periodFrom, periodTo], name: "uniq_wb_api_report_week")
   @@index([organizationId, periodFrom, periodTo], name: "idx_wb_api_reports_company_period")
   @@index([organizationId, status], name: "idx_wb_api_reports_company_status")
+}
+
+model MarketplaceCogsFile {
+  id               String               @id @default(cuid())
+  organizationId   String
+  marketplace      Marketplace
+  fileName         String
+  filePath         String
+  fileSize         BigInt
+  fileHash         String
+  mimeType         String               @default("text/csv")
+  rowsCount        Int                  @default(0)
+  status           StoredArtifactStatus @default(processing)
+  errorMessage     String?
+  uploadedByUserId String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  deletedAt        DateTime?
+
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy     User?                 @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  cogsItems      MarketplaceCogsItem[]
+  metricSnapshots MarketplaceWeeklyMetricSnapshot[]
+
+  @@index([organizationId, marketplace, deletedAt], name: "idx_marketplace_cogs_files_org_marketplace_deleted")
+  @@index([organizationId, marketplace, status], name: "idx_marketplace_cogs_files_org_marketplace_status")
+}
+
+model MarketplaceCogsItem {
+  id                String      @id @default(cuid())
+  organizationId    String
+  marketplace       Marketplace
+  cogsFileId        String
+  article           String
+  articleNormalized String
+  articleDigits     String?
+  unitCost          Decimal     @db.Decimal(14, 4)
+  currency          String      @default("RUB")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cogsFile     MarketplaceCogsFile @relation(fields: [cogsFileId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, marketplace, articleNormalized], name: "idx_marketplace_cogs_items_article")
+  @@index([organizationId, marketplace, articleDigits], name: "idx_marketplace_cogs_items_article_digits")
+  @@index([cogsFileId], name: "idx_marketplace_cogs_items_file")
+}
+
+model MarketplaceWeeklyMetricSnapshot {
+  id                String               @id @default(cuid())
+  organizationId    String
+  marketplace       Marketplace
+  reportType        String
+  periodFrom        DateTime
+  periodTo          DateTime
+  sourceReportId    String?
+  cogsFileId        String?
+  cogsHash          String
+  calculatorVersion String
+  status            StoredArtifactStatus @default(processing)
+  atoms             Json                 @default("{}")
+  molecules         Json                 @default("{}")
+  cells             Json                 @default("{}")
+  breakdowns        Json                 @default("{}")
+  dataQuality       Json                 @default("{}")
+  rowsCount         Int                  @default(0)
+  errorMessage      String?
+  calculatedAt      DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cogsFile     MarketplaceCogsFile?  @relation(fields: [cogsFileId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, marketplace, reportType, periodFrom, periodTo, cogsHash, calculatorVersion], name: "uniq_marketplace_weekly_metric_snapshot")
+  @@index([organizationId, marketplace, periodFrom, periodTo], name: "idx_marketplace_weekly_metric_snapshots_period")
+  @@index([organizationId, marketplace, status], name: "idx_marketplace_weekly_metric_snapshots_status")
 }

@@ -432,7 +432,7 @@ export function AccrualResults({
 
       {baseReports.map((report) => {
         const isWbSalesSchemeReport = report.title === 'Схема работы'
-          && report.metrics.some((metric) => metric.label.startsWith('FBS') || metric.label.startsWith('FBW') || metric.label.startsWith('Не указано'))
+          && report.metrics.some((metric) => metric.label.startsWith('FBS') || metric.label.startsWith('FBW') || metric.label.startsWith('FBM') || metric.label.startsWith('Не указано'))
         const isAccrualDynamicsReport = report.title === DYNAMICS_REPORT_TITLE
         const reportTitle = report.title === 'Итоги периода' && report.periodLabel
           ? `${report.title} ${report.periodLabel}`

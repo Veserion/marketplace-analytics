@@ -35,7 +35,7 @@ export function WildberriesPage() {
     setIsUploadAccordionOpen,
     isMarketplaceConnected,
     isApiReportFetching,
-    apiReportData,
+    apiReportRowCount,
     apiReportPeriod,
     apiReportError,
     rateLimitRetryAfter,
@@ -114,11 +114,11 @@ export function WildberriesPage() {
       {isMarketplaceConnected('wildberries') && (
         <PeriodSelectionPanel
           isFetching={isApiReportFetching}
-          hasFetchedReport={apiReportData !== null}
+          hasFetchedReport={apiReportRowCount !== null}
           hasResults={hasResults}
           fetchedPeriodStart={apiReportPeriod?.dateFrom ?? null}
           fetchedPeriodEnd={apiReportPeriod?.dateTo ?? null}
-          fetchedRowCount={apiReportData?.length ?? null}
+          fetchedRowCount={apiReportRowCount}
           fetchError={apiReportError}
           rateLimitRetryAfter={rateLimitRetryAfter}
           onFetchReport={onFetchApiReport}
@@ -136,7 +136,7 @@ export function WildberriesPage() {
         onToggle={setIsUploadAccordionOpen}
         defaultOpen={isUploadAccordionOpen ?? true}
         contentInnerClassName={cn(`${BLOCK_NAME}__upload-content`)}>
-        {!apiReportData && (
+        {apiReportRowCount === null && (
           <UiCard padding="sm">
             <WbWeeklyReportManager
               weeklyReports={weeklyReports}
@@ -149,7 +149,7 @@ export function WildberriesPage() {
             />
           </UiCard>
         )}
-        {apiReportData && (
+        {apiReportRowCount !== null && (
           <UiCard padding="sm">
             <Typography variant="body3" color="muted">
               Отчёт получен через API. Файловая загрузка отключена.

@@ -8,6 +8,8 @@ import { MailDeliveryError } from './lib/mailer.js'
 import { prisma } from './lib/prisma.js'
 import { authRoutes } from './modules/auth/routes.js'
 import { connectionRoutes } from './modules/connections/routes.js'
+import { marketplaceCogsRoutes } from './modules/marketplace-cogs/routes.js'
+import { marketplaceMetricsRoutes } from './modules/marketplace-metrics/routes.js'
 import { meRoutes } from './modules/me/routes.js'
 import { wbFinanceRoutes } from './modules/wb-finance/routes.js'
 import { WbSyncJob } from './modules/wb-finance/sync-job.js'
@@ -57,6 +59,8 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api' })
   await app.register(meRoutes, { prefix: '/api' })
   await app.register(connectionRoutes, { prefix: '/api' })
+  await app.register(marketplaceCogsRoutes, { prefix: '/api' })
+  await app.register(marketplaceMetricsRoutes, { prefix: '/api' })
   await app.register(wbFinanceRoutes, { prefix: '/api' })
 
   // Start WB background sync job
