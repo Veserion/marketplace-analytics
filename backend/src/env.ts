@@ -19,6 +19,7 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   EMAIL_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
+  WB_API_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: booleanFromEnv.default(false),

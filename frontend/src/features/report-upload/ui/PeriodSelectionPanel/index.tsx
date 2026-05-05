@@ -1,51 +1,66 @@
 import classNames from 'classnames/bind'
 import DatePicker from 'antd/es/date-picker'
+import ruDatePickerLocale from 'antd/es/date-picker/locale/ru_RU'
 import Button from 'antd/es/button'
 import {useState, useMemo} from 'react'
 import type {Dayjs} from 'dayjs'
 import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
+import 'dayjs/locale/ru'
 import {UiCard} from '@/shared/ui-kit/card'
 import {UiFlex} from '@/shared/ui-kit/flex'
 import {Typography} from '@/shared/ui-kit/typography'
 import styles from './index.module.scss'
+
+dayjs.extend(isoWeek)
+dayjs.locale('ru')
 
 const cn = classNames.bind(styles)
 const BLOCK_NAME = 'PeriodSelectionPanel'
 
 const {RangePicker} = DatePicker
 
-type PeriodPreset = '7d' | '14d' | '30d' | 'currentMonth' | 'lastMonth' | 'custom'
+type PeriodPreset = 'lastWeek' | 'last2Weeks' | 'last4Weeks' | 'custom'
 
 const PRESET_CONFIG: {key: PeriodPreset; label: string}[] = [
-  {key: '7d', label: '7 дней'},
-  {key: '14d', label: '14 дней'},
-  {key: '30d', label: '30 дней'},
-  {key: 'currentMonth', label: 'Текущий месяц'},
-  {key: 'lastMonth', label: 'Прошлый месяц'},
+  {key: 'lastWeek', label: 'Прошлая неделя'},
+  {key: 'last2Weeks', label: '2 недели'},
+  {key: 'last4Weeks', label: '4 недели'},
   {key: 'custom', label: 'Свой период'},
 ]
 
+function normalizeToWeekRange(from: Dayjs, to: Dayjs): [Dayjs, Dayjs] {
+  return [from.startOf('isoWeek'), to.endOf('isoWeek')]
+}
 
 function getPresetRange(preset: PeriodPreset): [Dayjs, Dayjs] | null {
   const today = dayjs()
-  const yesterday = today.subtract(1, 'day')
+  const lastWeek = today.subtract(1, 'week')
   switch (preset) {
-    case '7d':
-      return [yesterday.subtract(6, 'day'), yesterday]
-    case '14d':
-      return [yesterday.subtract(13, 'day'), yesterday]
-    case '30d':
-      return [yesterday.subtract(29, 'day'), yesterday]
-    case 'currentMonth':
-      return [today.startOf('month'), today]
-    case 'lastMonth': {
-      const lastMonthStart = today.subtract(1, 'month').startOf('month')
-      const lastMonthEnd = today.subtract(1, 'month').endOf('month')
-      return [lastMonthStart, lastMonthEnd]
-    }
+    case 'lastWeek':
+      return normalizeToWeekRange(lastWeek, lastWeek)
+    case 'last2Weeks':
+      return normalizeToWeekRange(today.subtract(2, 'week'), lastWeek)
+    case 'last4Weeks':
+      return normalizeToWeekRange(today.subtract(4, 'week'), lastWeek)
     case 'custom':
       return null
   }
+}
+
+function getCalendarPanelMonths(): [Dayjs, Dayjs] {
+  const today = dayjs()
+  return [today.subtract(1, 'month'), today]
+}
+
+function formatWeekRange(value: Dayjs): string {
+  const start = value.startOf('isoWeek').format('DD.MM.YYYY')
+  const end = value.endOf('isoWeek').format('DD.MM.YYYY')
+  return `${start} - ${end}`
+}
+
+function isFullWeekRange(from: Dayjs, to: Dayjs): boolean {
+  return from.isoWeekday() === 1 && to.isoWeekday() === 7
 }
 
 type PeriodSelectionPanelProps = {
@@ -106,7 +121,12 @@ export function PeriodSelectionPanel({
     if (activePreset !== 'custom') {
       setActivePreset('custom')
     }
-    setDateRange(values)
+    if (!values?.[0] || !values?.[1]) {
+      setDateRange(values)
+      return
+    }
+
+    setDateRange(normalizeToWeekRange(values[0], values[1]))
   }
 
   function handleFetch() {
@@ -120,6 +140,10 @@ export function PeriodSelectionPanel({
       return
     }
 
+    if (!isFullWeekRange(from, to)) {
+      setValidationError('Выберите период полными неделями: с понедельника по воскресенье.')
+      return
+    }
 
     onFetchReport?.(from.format('YYYY-MM-DD'), to.format('YYYY-MM-DD'))
   }
@@ -215,18 +239,22 @@ export function PeriodSelectionPanel({
           Период:
         </Typography>
         <RangePicker
+          picker="week"
           value={dateRange}
           onChange={handleRangeChange}
-          format="DD.MM.YYYY"
-          placeholder={['Начало', 'Конец']}
+          format={formatWeekRange}
+          locale={ruDatePickerLocale}
+          defaultPickerValue={getCalendarPanelMonths()}
+          placeholder={['Начальная неделя', 'Конечная неделя']}
           allowClear
+          inputReadOnly
           className={cn(`${BLOCK_NAME}__range-picker`)}
           disabled={isFetching}
         />
       </div>
 
       <Typography variant="body3" color="muted" className={cn(`${BLOCK_NAME}__hint`)}>
-        Будет получен отчёт WB за выбранный период.
+        Будет получен отчёт WB за полные недели с понедельника по воскресенье.
       </Typography>
 
       {(validationError || fetchError) && (

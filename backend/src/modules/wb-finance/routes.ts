@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../../lib/prisma.js'
-import { decryptCredentials } from '../../lib/credentials.js'
 import { requireAuth } from '../../lib/auth-hook.js'
 import { WbReportService } from './report-service.js'
+import { WB_DEFAULT_FIELDS } from './utils.js'
 
 interface AuthenticatedRequest extends FastifyRequest {
   auth: {
@@ -50,22 +50,23 @@ export async function wbFinanceRoutes(app: FastifyInstance): Promise<void> {
   const reportService = new WbReportService(prisma, app)
 
   app.post('/wb-finance/sales-reports/detailed', { preHandler: requireAuth }, async (request, reply) => {
-    const { userId } = (request as AuthenticatedRequest).auth
+    const { userId, organizationId } = (request as AuthenticatedRequest).auth
     const body = fetchReportSchema.parse(request.body)
 
     try {
       const periodFrom = new Date(body.periodFrom)
       const periodTo = new Date(body.periodTo)
-      const fields = body.fields ?? []
+      const fields = body.fields?.length ? body.fields : [...WB_DEFAULT_FIELDS]
 
       app.log.info({
         userId,
+        organizationId,
         periodFrom: body.periodFrom,
         periodTo: body.periodTo,
         fieldsCount: fields.length,
       }, 'Fetching WB finance report with caching')
 
-      const result = await reportService.getDetailedReports(userId, periodFrom, periodTo, fields)
+      const result = await reportService.getDetailedReports(userId, organizationId, periodFrom, periodTo, fields)
 
       app.log.info({
         userId,
@@ -95,10 +96,10 @@ export async function wbFinanceRoutes(app: FastifyInstance): Promise<void> {
   })
 
   app.get('/wb-finance/sales-reports', { preHandler: requireAuth }, async (request, reply) => {
-    const { userId } = (request as AuthenticatedRequest).auth
+    const { organizationId } = (request as AuthenticatedRequest).auth
 
     try {
-      const reports = await reportService.getSavedReports(userId)
+      const reports = await reportService.getSavedReports(organizationId)
       return reports
     } catch (error) {
       app.log.error({ error, errorMessage: error instanceof Error ? error.message : String(error) }, 'Failed to fetch saved WB reports')

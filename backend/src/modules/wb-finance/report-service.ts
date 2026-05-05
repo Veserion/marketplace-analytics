@@ -1,12 +1,15 @@
 import type { PrismaClient } from '@prisma/client'
-import { WbReportStatus, WbReportType } from '@prisma/client'
+import { Prisma, WbReportStatus, WbReportType } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import { decryptCredentials } from '../../lib/credentials.js'
+import {
+  assertMarketplaceRateLimitAvailable,
+  recordMarketplaceRateLimit,
+} from '../../lib/marketplace-rate-limit.js'
 import type { WbCredentials } from './routes.js'
 import {
   fetchWbApiWeeklyReport,
   WbApiRateLimitError,
-  type WbApiReportRow,
 } from './wb-api.js'
 import {
   dedupeRows,
@@ -53,41 +56,23 @@ interface LoadedWeeklyReport {
   filePath: string
 }
 
+type WbConnectionCredentials = {
+  connectionId: string
+  credentials: WbCredentials
+}
+
 export class WbReportService {
   constructor(
     private prisma: PrismaClient,
     private app: FastifyInstance,
   ) {
-    // Ensure storage directory exists on startup
-    ensureStorageDirectory()
-  }
-
-  /**
-   * Get the organization ID for the current user.
-   */
-  private async getOrganizationId(userId: string): Promise<string> {
-    const memberships = await this.prisma.organizationMember.findMany({
-      where: { userId },
-      include: { organization: true },
-    })
-
-    if (memberships.length === 0) {
-      throw new Error('User is not a member of any organization')
-    }
-
-    if (memberships.length === 1) {
-      return memberships[0].organizationId
-    }
-
-    // If multiple organizations, we need to determine which one is active
-    // For now, return the first one (this should be improved based on business logic)
-    return memberships[0].organizationId
+    void ensureStorageDirectory()
   }
 
   /**
    * Get WB credentials for an organization.
    */
-  private async getWbCredentials(organizationId: string): Promise<WbCredentials> {
+  private async getWbCredentials(organizationId: string): Promise<WbConnectionCredentials> {
     const connection = await this.prisma.marketplaceConnection.findUnique({
       where: {
         organizationId_marketplace: {
@@ -101,7 +86,10 @@ export class WbReportService {
       throw new Error('Wildberries connection not found or not connected')
     }
 
-    return decryptCredentials<WbCredentials>(connection.encryptedCredentials)
+    return {
+      connectionId: connection.id,
+      credentials: decryptCredentials<WbCredentials>(connection.encryptedCredentials),
+    }
   }
 
   /**
@@ -133,56 +121,71 @@ export class WbReportService {
     periodTo: Date,
     token: string,
     userId: string,
+    connectionId: string,
   ): Promise<LoadedWeeklyReport> {
     const formatDate = (d: Date) => d.toISOString().split('T')[0]
     const dateFrom = formatDate(periodFrom)
     const dateTo = formatDate(periodTo)
+    const reportKey = {
+      organizationId,
+      marketplace: 'wildberries',
+      reportType: WbReportType.weekly_detailed,
+      periodFrom,
+      periodTo,
+    }
 
     // Check if report already exists (regardless of status)
-    const existingReport = await this.prisma.wbApiReport.findFirst({
+    const existingReport = await this.prisma.wbApiReport.findUnique({
       where: {
-        organizationId,
-        marketplace: 'wildberries',
-        reportType: WbReportType.weekly_detailed,
-        periodFrom,
-        periodTo,
-        deletedAt: null,
+        uniq_wb_api_report_week: reportKey,
       },
     })
 
-    if (existingReport) {
-      if (existingReport.status === WbReportStatus.ready) {
+    let report = existingReport
+
+    if (report && report.deletedAt) {
+      this.app.log.info({
+        userId,
+        organizationId,
+        reportId: report.id,
+        dateFrom,
+        dateTo,
+      }, 'Report exists as soft-deleted, restoring it for refetch')
+    }
+
+    if (report && !report.deletedAt) {
+      if (report.status === WbReportStatus.ready && report.filePath) {
         this.app.log.info({
           userId,
           organizationId,
-          reportId: existingReport.id,
+          reportId: report.id,
           dateFrom,
           dateTo,
-          status: existingReport.status,
+          status: report.status,
         }, 'Report already exists and is ready, loading from cache')
         return this.loadWeeklyReportFromCache(
-          existingReport.id,
-          existingReport.filePath || '',
-          existingReport.periodFrom,
-          existingReport.periodTo,
+          report.id,
+          report.filePath,
+          report.periodFrom,
+          report.periodTo,
         )
-      } else if (existingReport.status === WbReportStatus.processing) {
+      } else if (report.status === WbReportStatus.processing) {
         // Check if the report has been processing for too long (more than 10 minutes)
-        const processingTime = Date.now() - existingReport.updatedAt.getTime()
+        const processingTime = Date.now() - report.updatedAt.getTime()
         const timeoutMs = 10 * 60 * 1000 // 10 minutes
 
         if (processingTime > timeoutMs) {
           this.app.log.warn({
             userId,
             organizationId,
-            reportId: existingReport.id,
+            reportId: report.id,
             dateFrom,
             dateTo,
-            status: existingReport.status,
+            status: report.status,
             processingTimeMs: processingTime,
           }, 'Report has been processing for too long, resetting to error and retrying')
-          await this.prisma.wbApiReport.update({
-            where: { id: existingReport.id },
+          report = await this.prisma.wbApiReport.update({
+            where: { id: report.id },
             data: {
               status: WbReportStatus.error,
               errorMessage: 'Processing timeout - report was stuck in processing status',
@@ -193,10 +196,10 @@ export class WbReportService {
           this.app.log.warn({
             userId,
             organizationId,
-            reportId: existingReport.id,
+            reportId: report.id,
             dateFrom,
             dateTo,
-            status: existingReport.status,
+            status: report.status,
             processingTimeMs: processingTime,
           }, 'Report is currently being processed by another request')
           throw new Error(`Report for period ${dateFrom} - ${dateTo} is currently being processed. Please try again later.`)
@@ -206,26 +209,57 @@ export class WbReportService {
         this.app.log.info({
           userId,
           organizationId,
-          reportId: existingReport.id,
+          reportId: report.id,
           dateFrom,
           dateTo,
-          status: existingReport.status,
+          status: report.status,
         }, 'Report exists with error status, retrying')
-        await this.prisma.wbApiReport.update({
-          where: { id: existingReport.id },
-          data: { status: WbReportStatus.processing },
+      }
+    }
+
+    if (report) {
+      report = await this.prisma.wbApiReport.update({
+        where: { id: report.id },
+        data: {
+          status: WbReportStatus.processing,
+          errorMessage: null,
+          deletedAt: null,
+          requestedByUserId: userId,
+        },
+      })
+    } else {
+      try {
+        report = await this.prisma.wbApiReport.create({
+          data: {
+            ...reportKey,
+            status: WbReportStatus.processing,
+            requestedByUserId: userId,
+          },
         })
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new Error(`Report for period ${dateFrom} - ${dateTo} is currently being processed. Please try again later.`)
+        }
+
+        throw error
       }
     }
 
     this.app.log.info({
       userId,
       organizationId,
+      reportId: report.id,
       dateFrom,
       dateTo,
     }, 'Loading weekly report from WB API (not found in cache)')
 
     try {
+      await assertMarketplaceRateLimitAvailable(this.prisma, {
+        marketplace: 'wildberries',
+        organizationId,
+        marketplaceConnectionId: connectionId,
+      })
+
       // Fetch all rows from WB API with pagination
       const rows = await fetchWbApiWeeklyReport(
         token,
@@ -249,35 +283,6 @@ export class WbReportService {
         rowsCount: rows.length,
         rows: rows as Record<string, unknown>[],
       }
-
-      // Create or update database record
-      const report = existingReport
-        ? await this.prisma.wbApiReport.update({
-            where: { id: existingReport.id },
-            data: {
-              status: WbReportStatus.processing,
-              requestedByUserId: userId,
-            },
-          })
-        : await this.prisma.wbApiReport.create({
-            data: {
-              organizationId,
-              marketplace: 'wildberries',
-              reportType: WbReportType.weekly_detailed,
-              periodFrom,
-              periodTo,
-              status: WbReportStatus.processing,
-              requestedByUserId: userId,
-            },
-          })
-
-      this.app.log.info({
-        userId,
-        organizationId,
-        reportId: report.id,
-        dateFrom,
-        dateTo,
-      }, 'Created database record for weekly report')
 
       // Generate file path
       const fileName = generateReportFileName(periodFrom, periodTo)
@@ -329,9 +334,18 @@ export class WbReportService {
         filePath: `${WB_STORAGE_BASE_PATH}${filePath}`,
       }
     } catch (error) {
+      await this.prisma.wbApiReport.update({
+        where: { id: report.id },
+        data: {
+          status: WbReportStatus.error,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      })
+
       this.app.log.error({
         userId,
         organizationId,
+        reportId: report.id,
         dateFrom,
         dateTo,
         error,
@@ -340,6 +354,12 @@ export class WbReportService {
 
       // If it's a rate limit error, add rate limit info to the error
       if (error instanceof WbApiRateLimitError) {
+        await recordMarketplaceRateLimit(this.prisma, {
+          marketplace: 'wildberries',
+          organizationId,
+          marketplaceConnectionId: connectionId,
+        }, error.rateLimit ?? {})
+
         const rateLimitError = new Error(error.message) as Error & { rateLimit?: typeof error.rateLimit }
         rateLimitError.rateLimit = error.rateLimit
         throw rateLimitError
@@ -411,6 +431,7 @@ export class WbReportService {
     periodTo: Date,
     token: string,
     userId: string,
+    connectionId: string,
   ): Promise<LoadedWeeklyReport[]> {
     const requiredWeeks = getRequiredWbWeeklyPeriods(periodFrom, periodTo)
     const reports: LoadedWeeklyReport[] = []
@@ -419,7 +440,7 @@ export class WbReportService {
       // Check if report exists in database
       const existingReport = await this.findWeeklyReport(organizationId, week.from, week.to)
 
-      if (existingReport && existingReport.filePath) {
+      if (existingReport && existingReport.status === WbReportStatus.ready && existingReport.filePath) {
         // Load from cache
         reports.push(
           await this.loadWeeklyReportFromCache(
@@ -432,7 +453,7 @@ export class WbReportService {
       } else {
         // Load from API
         reports.push(
-          await this.loadWeeklyReportFromApi(organizationId, week.from, week.to, token, userId),
+          await this.loadWeeklyReportFromApi(organizationId, week.from, week.to, token, userId, connectionId),
         )
       }
     }
@@ -445,12 +466,12 @@ export class WbReportService {
    */
   async getDetailedReports(
     userId: string,
+    organizationId: string,
     periodFrom: Date,
     periodTo: Date,
     fields: string[],
   ) {
-    const organizationId = await this.getOrganizationId(userId)
-    const credentials = await this.getWbCredentials(organizationId)
+    const connection = await this.getWbCredentials(organizationId)
 
     // Get last closed week to check if requested period is available
     const lastClosedWeek = getLastClosedWeek()
@@ -475,8 +496,9 @@ export class WbReportService {
       organizationId,
       availablePeriodFrom,
       availablePeriodTo,
-      credentials.token,
+      connection.credentials.token,
       userId,
+      connection.connectionId,
     )
 
     this.app.log.info({
@@ -603,9 +625,7 @@ export class WbReportService {
   /**
    * Get list of saved weekly reports for an organization.
    */
-  async getSavedReports(userId: string) {
-    const organizationId = await this.getOrganizationId(userId)
-
+  async getSavedReports(organizationId: string) {
     const reports = await this.prisma.wbApiReport.findMany({
       where: {
         organizationId,

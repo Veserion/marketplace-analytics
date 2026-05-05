@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "db:up": "docker compose up -d",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

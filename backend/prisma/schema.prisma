@@ -112,6 +112,23 @@ model MarketplaceConnection {
   @@index([organizationId])
 }
 
+model MarketplaceRateLimitState {
+  id                      String    @id @default(cuid())
+  scopeKey                String    @unique
+  organizationId          String
+  marketplace             Marketplace
+  marketplaceConnectionId String?
+  blockedUntil            DateTime?
+  lastRetryAfterSeconds   Int?
+  lastResetSeconds        Int?
+  lastLimit               Int?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([organizationId, marketplace])
+  @@index([blockedUntil])
+}
+
 model AuditLog {
   id             String      @id @default(cuid())
   organizationId String?

@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { requireAuth } from '../../lib/auth-hook.js'
 import {
@@ -33,6 +33,25 @@ function getPreview(credentials: z.infer<typeof credentialsSchema>): string {
   return `Token ${maskSecret(credentials.token)}`
 }
 
+async function requireCredentialAdmin(userId: string, organizationId: string, reply: FastifyReply): Promise<boolean> {
+  const membership = await prisma.organizationMember.findUnique({
+    where: {
+      userId_organizationId: {
+        userId,
+        organizationId,
+      },
+    },
+    select: { role: true },
+  })
+
+  if (!membership || !['owner', 'admin'].includes(membership.role)) {
+    await reply.code(403).send({ error: 'Only organization owners and admins can manage marketplace credentials.' })
+    return false
+  }
+
+  return true
+}
+
 export async function connectionRoutes(app: FastifyInstance): Promise<void> {
   app.get('/marketplace-connections', { preHandler: requireAuth }, async (request) => {
     const { organizationId } = (request as AuthenticatedRequest).auth
@@ -55,6 +74,8 @@ export async function connectionRoutes(app: FastifyInstance): Promise<void> {
 
   app.put('/marketplace-connections/:marketplace/credentials', { preHandler: requireAuth }, async (request, reply) => {
     const { organizationId, userId } = (request as AuthenticatedRequest).auth
+    if (!(await requireCredentialAdmin(userId, organizationId, reply))) return
+
     const params = marketplaceParamSchema.parse(request.params)
     const credentials = credentialsSchema.parse({
       ...(request.body as Record<string, unknown>),
@@ -103,8 +124,9 @@ export async function connectionRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send({ connection })
   })
 
-  app.delete('/marketplace-connections/:marketplace/credentials', { preHandler: requireAuth }, async (request) => {
+  app.delete('/marketplace-connections/:marketplace/credentials', { preHandler: requireAuth }, async (request, reply) => {
     const { organizationId, userId } = (request as AuthenticatedRequest).auth
+    if (!(await requireCredentialAdmin(userId, organizationId, reply))) return
     const params = marketplaceParamSchema.parse(request.params)
 
     const connection = await prisma.marketplaceConnection.upsert({

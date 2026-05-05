@@ -2,6 +2,10 @@ import type { PrismaClient } from '@prisma/client'
 import { WbReportStatus, WbReportType } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import { decryptCredentials } from '../../lib/credentials.js'
+import {
+  assertMarketplaceRateLimitAvailable,
+  recordMarketplaceRateLimit,
+} from '../../lib/marketplace-rate-limit.js'
 import type { WbCredentials } from './routes.js'
 import {
   fetchWbApiWeeklyReport,
@@ -95,7 +99,7 @@ export class WbSyncJob {
 
       for (const connection of connections) {
         try {
-          await this.syncOrganization(connection.organizationId, connection.encryptedCredentials!)
+          await this.syncOrganization(connection.organizationId, connection.id, connection.encryptedCredentials!)
         } catch (error) {
           this.app.log.error({
             organizationId: connection.organizationId,
@@ -122,7 +126,7 @@ export class WbSyncJob {
 
   // ─── Per-organization sync ──────────────────────────────────────────────
 
-  private async syncOrganization(organizationId: string, encryptedCredentials: string): Promise<void> {
+  private async syncOrganization(organizationId: string, connectionId: string, encryptedCredentials: string): Promise<void> {
     const credentials = decryptCredentials<WbCredentials>(encryptedCredentials)
     const token = credentials.token
 
@@ -171,23 +175,27 @@ export class WbSyncJob {
       this.app.log.info({ organizationId, dateFrom, dateTo }, 'WB sync job: fetching week from API')
 
       try {
-        await this.fetchAndSaveWeek(organizationId, week.from, week.to, token)
+        await this.fetchAndSaveWeek(organizationId, connectionId, week.from, week.to, token)
       } catch (error) {
-        if (error instanceof WbApiRateLimitError) {
-          const retryAfter = (error.rateLimit?.retryAfter ?? 5) + RATE_LIMIT_GAP_SECONDS
+        const rateLimit = error instanceof WbApiRateLimitError
+          ? error.rateLimit
+          : (error as Error & { rateLimit?: { retryAfter?: number; limit?: number; reset?: number } }).rateLimit
+
+        if (rateLimit) {
+          const retryAfter = (rateLimit.retryAfter ?? 5) + RATE_LIMIT_GAP_SECONDS
           this.app.log.warn({
             organizationId,
             dateFrom,
             dateTo,
             retryAfter,
-            rateLimit: error.rateLimit,
+            rateLimit,
           }, 'WB sync job: rate limited, waiting before retry')
 
           await sleep(retryAfter * 1000)
 
           // Retry once after waiting
           try {
-            await this.fetchAndSaveWeek(organizationId, week.from, week.to, token)
+            await this.fetchAndSaveWeek(organizationId, connectionId, week.from, week.to, token)
           } catch (retryError) {
             this.app.log.error({
               organizationId,
@@ -207,6 +215,7 @@ export class WbSyncJob {
 
   private async fetchAndSaveWeek(
     organizationId: string,
+    connectionId: string,
     periodFrom: Date,
     periodTo: Date,
     token: string,
@@ -248,6 +257,12 @@ export class WbSyncJob {
         })
 
     try {
+      await assertMarketplaceRateLimitAvailable(this.prisma, {
+        marketplace: 'wildberries',
+        organizationId,
+        marketplaceConnectionId: connectionId,
+      })
+
       const rows = await fetchWbApiWeeklyReport(
         token,
         dateFrom,
@@ -285,6 +300,14 @@ export class WbSyncJob {
         rowsCount: rows.length,
       }, 'WB sync job: week fetched and saved')
     } catch (error) {
+      if (error instanceof WbApiRateLimitError) {
+        await recordMarketplaceRateLimit(this.prisma, {
+          marketplace: 'wildberries',
+          organizationId,
+          marketplaceConnectionId: connectionId,
+        }, error.rateLimit ?? {})
+      }
+
       await this.prisma.wbApiReport.update({
         where: { id: report.id },
         data: {

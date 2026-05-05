@@ -10,8 +10,11 @@ import { signAuthToken } from '../../lib/jwt.js'
 import { sendEmailCode } from '../../lib/mailer.js'
 import { hashPassword, verifyPassword } from '../../lib/password.js'
 import { prisma } from '../../lib/prisma.js'
+import { isRateLimited } from '../../lib/rate-limit.js'
 
 const MAX_EMAIL_CODE_ATTEMPTS = 5
+const EMAIL_CODE_REQUEST_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 }
+const LOGIN_REQUEST_LIMIT = { limit: 10, windowMs: 15 * 60 * 1000 }
 
 const registerSchema = z.object({
   email: z.email().toLowerCase(),
@@ -50,8 +53,12 @@ function toAuthResponse(input: {
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/auth/email-code/request', async (request) => {
+  app.post('/auth/email-code/request', async (request, reply) => {
     const body = requestEmailCodeSchema.parse(request.body)
+    if (isRateLimited(`email-code:${request.ip}:${body.email}`, EMAIL_CODE_REQUEST_LIMIT)) {
+      return reply.code(429).send({ error: 'Too many email code requests. Please try again later.' })
+    }
+
     const code = generateEmailCode()
 
     await prisma.emailAuthCode.create({
@@ -274,6 +281,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/auth/login', async (request, reply) => {
     const body = loginSchema.parse(request.body)
+    if (isRateLimited(`login:${request.ip}:${body.email}`, LOGIN_REQUEST_LIMIT)) {
+      return reply.code(429).send({ error: 'Too many login attempts. Please try again later.' })
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: body.email },
       select: {

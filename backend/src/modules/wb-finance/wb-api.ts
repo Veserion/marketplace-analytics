@@ -1,4 +1,4 @@
-import { generateReportFilePath, generateReportFileName, type WB_DEFAULT_FIELDS } from './utils.js'
+import { env } from '../../env.js'
 
 const WB_API_URL = 'https://finance-api.wildberries.ru/api/finance/v1/sales-reports/detailed'
 
@@ -24,6 +24,40 @@ export class WbApiRateLimitError extends Error {
     this.name = 'WbApiRateLimitError'
     this.status = 429
     this.rateLimit = rateLimit
+  }
+}
+
+export class WbApiAuthError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'WbApiAuthError'
+    this.status = status
+  }
+}
+
+export class WbApiTimeoutError extends Error {
+  constructor(message = 'WB Finance API request timed out') {
+    super(message)
+    this.name = 'WbApiTimeoutError'
+  }
+}
+
+export class WbApiServerError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'WbApiServerError'
+    this.status = status
+  }
+}
+
+export class WbApiMalformedResponseError extends Error {
+  constructor(message = 'WB Finance API returned malformed response') {
+    super(message)
+    this.name = 'WbApiMalformedResponseError'
   }
 }
 
@@ -70,25 +104,40 @@ export async function fetchWbApiPage(
   limit: number = 100000,
   fields: readonly string[] = [],
 ): Promise<{ rows: WbApiReportRow[]; lastRrdId: number | null; hasMore: boolean }> {
-  const response = await fetch(WB_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      dateFrom,
-      dateTo,
-      limit,
-      rrdId,
-      fields,
-    }),
-  })
+  const abortController = new AbortController()
+  const timeout = setTimeout(() => abortController.abort(), env.WB_API_TIMEOUT_MS)
+  let response: Response
+
+  try {
+    response = await fetch(WB_API_URL, {
+      method: 'POST',
+      signal: abortController.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        dateFrom,
+        dateTo,
+        limit,
+        rrdId,
+        fields,
+      }),
+    })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new WbApiTimeoutError()
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+
+  if (response.status === 204) {
+    return { rows: [], lastRrdId: null, hasMore: false }
+  }
 
   if (!response.ok) {
-    if (response.status === 204) {
-      return { rows: [], lastRrdId: null, hasMore: false }
-    }
     if (response.status === 429) {
       const rateLimit: WbApiRateLimitInfo = {
         retryAfter: response.headers.get('X-Ratelimit-Retry') ? parseInt(response.headers.get('X-Ratelimit-Retry')!, 10) : undefined,
@@ -98,11 +147,27 @@ export async function fetchWbApiPage(
       const errorText = await response.text()
       throw new WbApiRateLimitError(`WB Finance API rate limit exceeded: ${errorText}`, rateLimit)
     }
+
+    if (response.status === 401 || response.status === 403) {
+      const errorText = await response.text()
+      throw new WbApiAuthError(response.status, `WB Finance API auth error: ${response.status} - ${errorText}`)
+    }
+
     const errorText = await response.text()
-    throw new Error(`WB Finance API error: ${response.status} - ${errorText}`)
+    throw new WbApiServerError(response.status, `WB Finance API error: ${response.status} - ${errorText}`)
   }
 
-  const data = (await response.json()) as unknown[]
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch {
+    throw new WbApiMalformedResponseError()
+  }
+
+  if (!Array.isArray(data)) {
+    throw new WbApiMalformedResponseError()
+  }
+
   const rows = data as WbApiReportRow[]
 
   // Get the last rrdId for pagination

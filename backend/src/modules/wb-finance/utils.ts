@@ -8,14 +8,15 @@ import path from 'path'
  */
 export function getWeekPeriod(date: Date): { from: Date; to: Date } {
   const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
-  const monday = new Date(d.setDate(diff))
-  monday.setHours(0, 0, 0, 0)
+  const day = d.getUTCDay()
+  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
+  const monday = new Date(d)
+  monday.setUTCDate(diff)
+  monday.setUTCHours(0, 0, 0, 0)
   
   const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
+  sunday.setUTCDate(monday.getUTCDate() + 6)
+  sunday.setUTCHours(23, 59, 59, 999)
   
   return { from: monday, to: sunday }
 }
@@ -45,14 +46,14 @@ export function getRequiredWbWeeklyPeriods(periodFrom: Date, periodTo: Date): Ar
  */
 export function getLastClosedWeek(): { from: Date; to: Date } | null {
   const now = new Date()
-  const day = now.getDay()
+  const day = now.getUTCDay()
   
   // If today is Monday, last closed week ended yesterday (Sunday)
   // Otherwise, last closed week ended on the most recent Sunday
-  let daysToSunday = day === 0 ? 0 : day
+  const daysToSunday = day === 0 ? 7 : day
   const lastSunday = new Date(now)
-  lastSunday.setDate(now.getDate() - daysToSunday)
-  lastSunday.setHours(23, 59, 59, 999)
+  lastSunday.setUTCDate(now.getUTCDate() - daysToSunday)
+  lastSunday.setUTCHours(23, 59, 59, 999)
   
   const weekPeriod = getWeekPeriod(lastSunday)
   
